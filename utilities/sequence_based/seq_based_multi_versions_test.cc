@@ -1,5 +1,5 @@
 #include "seq_based_multi_versions.h"
-#include "../third-party/gtest/gtest.h"
+#include "../../third-party/gtest/gtest.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

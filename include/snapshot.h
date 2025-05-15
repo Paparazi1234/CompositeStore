@@ -10,6 +10,7 @@ class Snapshot {
   Snapshot(const Snapshot&) = delete;
   Snapshot& operator=(const Snapshot&) = delete;
 
+  Snapshot() {}
   virtual ~Snapshot() {}
 };
 
@@ -19,7 +20,12 @@ class SnapshotManager {
   SnapshotManager(const SnapshotManager&) = delete;
   SnapshotManager& operator=(const SnapshotManager&) = delete;
 
+  SnapshotManager() {}
   virtual ~SnapshotManager() {}
+
+  virtual const Snapshot* TakeSnapshot() = 0;   
+  virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;
+  virtual void GetAllLivingSnapshot() = 0;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

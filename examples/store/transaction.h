@@ -2,9 +2,11 @@
 
 #include <string>
 
+#include "status.h"
+
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class TransactionOptions {
+struct TransactionOptions {
   
 };
 
@@ -14,15 +16,17 @@ class Transaction {
   Transaction(const Transaction&) = delete;
   Transaction& operator=(const Transaction&) = delete;
 
+  Transaction() {}
   virtual ~Transaction() {}
 
-  virtual int Put(const std::string& key, const std::string& value) = 0; 
-  virtual int Delete(const std::string& key) = 0;
-  virtual int Get(const std::string& key, std::string* value) = 0;
+  virtual Status Put(const std::string& key, const std::string& value) = 0; 
+  virtual Status Delete(const std::string& key) = 0;
 
-  virtual int Prepare() = 0;
-  virtual int Commit() = 0;
-  virtual int Rollback() = 0;
+  virtual Status Get(const std::string& key, std::string* value) = 0;
+
+  virtual Status Prepare() = 0;
+  virtual Status Commit() = 0;
+  virtual Status Rollback() = 0;
   virtual void SetSnapshot() = 0;
 };
 
