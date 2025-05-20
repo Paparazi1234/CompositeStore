@@ -48,24 +48,14 @@
 #include <atomic>
 #include <type_traits>
 
+#include "allocator.h"
+#include "likely.h"
+#include "port_posix.h"
 #include "slice.h"
-
-//#include "memory/allocator.h"
-//#include "port/likely.h"
-//#include "port/port.h"
-//#include "rocksdb/slice.h"
-//#include "util/coding.h"
-//#include "util/random.h"
+#include "coding.h"
+#include "random.h"
 
 namespace ROCKSDB_NAMESPACE {
-
-class Allocator {
- public:
-  virtual ~Allocator() {}
-
-  virtual char* Allocate(size_t bytes) = 0;
-  virtual char* AllocateAligned(size_t bytes) = 0;
-};
 
 class KeyComparator {
   public:

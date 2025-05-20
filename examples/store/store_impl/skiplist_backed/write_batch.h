@@ -2,56 +2,52 @@
 
 #include <string>
 #include <deque>
+#include <map>
 #include <assert.h>
 
-#include "format.h"
+#include "skiplist_rep.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
 class WriteBatch {
  public:
+  WriteBatch() {}
   ~WriteBatch() {}
 
   class BufferedWrite {
    public:
-    BufferedWrite(const std::string& key,
-                  const std::string& value, ValueType value_type)
-        : key_(key),
-          value_(value),
-          value_type_(value_type) {} 
-
-    const std::string& Key() const {
-      return key_;
-    }
+    BufferedWrite(const std::string& value, ValueType type)
+        : value_(value), type_(type) {} 
 
     const std::string& Value() const {
       return value_;
     }
 
     ValueType Type() const {
-      return value_type_;
+      return type_;
     }
 
    private:
-    const std::string key_;
-    const std::string value_;
-    const ValueType value_type_;
+    std::string value_;
+    ValueType type_;
+  };
+
+  class Handler {
+   public:
+    virtual ~Handler() {}
+    virtual Status Put(const std::string& key, const std::string& value) = 0;
+    virtual Status Delete(const std::string& key) = 0;
   };
 
   void Put(const std::string& key, const std::string& value) {
-    buffered_writes_.push_back(
-        std::move(BufferedWrite(key, value, ValueType::kTypeValue)));
+    buffered_writes_.insert_or_assign(key, BufferedWrite(value, kTypeValue));
   }
 
   void Delete(const std::string& key) {
-    buffered_writes_.push_back(
-        std::move(BufferedWrite(key, "", ValueType::kTypeDeletion)));
+    buffered_writes_.insert_or_assign(key, BufferedWrite("", kTypeDeletion));
   }
 
-  const BufferedWrite& GetOneWrite(size_t i) {
-    assert(0 <= i && i < buffered_writes_.size());
-    return buffered_writes_.at(i);
-  }
+  Status Iterate(Handler* handler);
 
   bool IsEmpty() const {
     return buffered_writes_.empty();
@@ -62,8 +58,29 @@ class WriteBatch {
   }
 
  private:
-  using BufferedWrites = std::deque<BufferedWrite>;
+  using BufferedWrites = std::map<std::string, BufferedWrite>;
   BufferedWrites buffered_writes_;
+};
+
+class SkipListInsertHandler : public WriteBatch::Handler {
+ public:
+  SkipListInsertHandler(SkipListBackedRep* skiplist_backed_rep,
+                        const MultiVersionsManager* multi_version_manager,
+                        Version* started_version)
+    : skiplist_backed_rep_(skiplist_backed_rep),
+      multi_version_manager_(multi_version_manager),
+      started_version_(started_version) {
+        assert(started_version_);
+      }
+  ~SkipListInsertHandler() {}
+
+  virtual Status Put(const std::string& key, const std::string& value) override;
+  virtual Status Delete(const std::string& key) override;
+
+ private:
+  SkipListBackedRep* skiplist_backed_rep_;
+  const MultiVersionsManager* multi_version_manager_;
+  Version* started_version_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

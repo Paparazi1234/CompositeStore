@@ -28,7 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdio.h>
-#include "gtest/gtest.h"
+#include "gtest.h"
 
 GTEST_API_ int main(int argc, char **argv) {
   printf("Running main() from %s\n", __FILE__);

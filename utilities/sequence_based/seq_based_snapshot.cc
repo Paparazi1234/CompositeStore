@@ -4,6 +4,10 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
+const Snapshot* SeqBasedSnapshotManager::LatestReadView() {
+  return TakeSnapshotInternal();
+}
+
 const Snapshot* SeqBasedSnapshotManager::TakeSnapshot() {
   std::unique_ptr<const SeqBasedSnapshot> snapshot(TakeSnapshotInternal());
   std::lock_guard<std::mutex> lock(map_mutex_);
@@ -34,18 +38,17 @@ void SeqBasedSnapshotManager::GetAllLivingSnapshot() {
 
 const SeqBasedSnapshot* WriteCommittedSeqBasedSnapshotManager::
     TakeSnapshotInternal() {
-  WriteCommittedSeqBasedMultiVersionsManager* version_manager =
-      reinterpret_cast<WriteCommittedSeqBasedMultiVersionsManager*>
-      (multi_versions_manager_.get());
-  const Version& latest_version = version_manager->LatestVisibleVersion();
-  const SeqBasedVersion* latest_version_ptr =
-    reinterpret_cast<const SeqBasedVersion*>(&latest_version);
-  return new SeqBasedSnapshot(latest_version_ptr->Seq());
+  const WriteCommittedSeqBasedMultiVersionsManager* WC_mvm =
+      reinterpret_cast<const WriteCommittedSeqBasedMultiVersionsManager*>
+      (multi_versions_manager_);
+  SeqBasedVersion* latest_version = reinterpret_cast<SeqBasedVersion*>(
+      WC_mvm->LatestVisibleVersion());
+  return new SeqBasedSnapshot(latest_version->Seq());
 }
 
 const SeqBasedSnapshot* WritePreparedSeqBasedSnapshotManager::
     TakeSnapshotInternal() {
-
+  return new SeqBasedSnapshot(0);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

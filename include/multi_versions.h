@@ -3,15 +3,17 @@
 #include <string>
 
 #include "status.h"
-#include "snapshot.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
+
+class Snapshot;
+class SnapshotManager;
 
 class Version {
  public:
   virtual ~Version() {}
 
-  virtual void EncodeTo(std::string& dest) = 0;
+  virtual void EncodeTo(std::string* dest) const = 0;
   virtual void DecodeFrom(const std::string& input) = 0;
   
   virtual int CompareWith(const Version& rhs) = 0;
@@ -27,7 +29,10 @@ class MultiVersionsManager {
   virtual ~MultiVersionsManager() {}
 
   virtual void Initialize(const Version& orig) = 0;
-  virtual Version* ConstructVersion(const Version& base, size_t i) = 0;
+  // factory func
+  virtual Version* CreateVersion() const = 0;
+  virtual Version* ConstructVersion(
+      const Version& base, size_t i, Version* reused = nullptr) const = 0;
   virtual void AdvanceVersionBy(size_t count) = 0;
   virtual void PrepareVersion(const Version& v) = 0;
   virtual void PrepareVersion(const Version& base, size_t count) = 0;
@@ -35,8 +40,8 @@ class MultiVersionsManager {
   virtual void CommitVersion(const Version& base, size_t count) = 0;
   virtual void RollbackVersion(const Version& v) = 0;
   virtual void RollbackVersion(const Version& base, size_t count) = 0;
-  virtual const Version& MiniUncommittedVersion() const = 0;
-  virtual const Version& LatestVisibleVersion() const = 0;
+  virtual Version* MiniUncommittedVersion() const = 0;
+  virtual Version* LatestVisibleVersion() const = 0;
   virtual bool IsVersionVisibleToSnapshot(
     const Version& v, const Snapshot& s) const = 0;
 };
@@ -69,6 +74,24 @@ class WPSeqBasedMultiVersionsManagerFactory :
   virtual MultiVersionsManager* CreateMultiVersionsManager() override;
   virtual SnapshotManager* CreateSnapshotManager(
       MultiVersionsManager* multi_versions_manager) override;
+};
+
+// Wrapper of MultiVersionsManagerFactory
+class EmptyMultiVersionsManagerFactory : public MultiVersionsManagerFactory {
+ public:
+  ~EmptyMultiVersionsManagerFactory() {}
+
+  virtual MultiVersionsManager* CreateMultiVersionsManager() override {
+    return factory_.CreateMultiVersionsManager();
+  }
+
+  virtual SnapshotManager* CreateSnapshotManager(
+      MultiVersionsManager* multi_versions_manager) {
+    return factory_.CreateSnapshotManager(multi_versions_manager);
+  }
+
+ private:
+  WCSeqBasedMultiVersionsManagerFactory factory_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

@@ -10,7 +10,6 @@
 #include "slice.h"
 
 #include <stdio.h>
-
 #include <algorithm>
 
 namespace ROCKSDB_NAMESPACE {

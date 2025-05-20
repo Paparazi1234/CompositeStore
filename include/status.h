@@ -21,8 +21,9 @@ class Status {
     kNotFound = 0x1,
     kNotSupported = 0x2,
     kInvalidArgument = 0x3,
-    kBusy = 0x4,
-    kTryAgain = 0x5,
+    kCorruption = 0x4,
+    kBusy = 0x5,
+    kTryAgain = 0x6,
     kMaxCode
   };
 
@@ -48,6 +49,10 @@ class Status {
     return Status(kInvalidArgument);
   }
 
+  static Status Corruption() {
+    return Status(kCorruption);
+  }
+
   static Status Busy() {
     return Status(kBusy);
   }
@@ -70,6 +75,10 @@ class Status {
 
   bool IsInvalidArgument() const {
     return code() == kInvalidArgument;
+  }
+
+  bool IsCorruption() const {
+    return code() == kCorruption;
   }
 
   bool IsBusy() const {

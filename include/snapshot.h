@@ -1,6 +1,6 @@
 #pragma once
 
-#include "multi_versions_namespace.h"
+#include "multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -12,6 +12,9 @@ class Snapshot {
 
   Snapshot() {}
   virtual ~Snapshot() {}
+
+  // caller own the returned version
+  virtual const Version* MaxVersionInSnapshot() const = 0;
 };
 
 class SnapshotManager {
@@ -22,8 +25,10 @@ class SnapshotManager {
 
   SnapshotManager() {}
   virtual ~SnapshotManager() {}
-
-  virtual const Snapshot* TakeSnapshot() = 0;   
+  // caller own the returned snapshot
+  virtual const Snapshot* LatestReadView() = 0;
+  // the returned snapshot must be released through ReleaseSnapshot()
+  virtual const Snapshot* TakeSnapshot() = 0;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;
   virtual void GetAllLivingSnapshot() = 0;
 };

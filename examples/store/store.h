@@ -1,6 +1,6 @@
 #pragma once
 
-#include "multi_versions.h"
+#include "../../include/multi_versions.h"
 #include "options.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {

@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <assert.h>
 
-#include "snapshot.h"
-#include <multi_versions.h>
+#include "../../include/snapshot.h"
+#include "seq_based_multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -18,6 +18,9 @@ class SeqBasedSnapshot : public Snapshot {
     return rep_;
   }
 
+  virtual const Version* MaxVersionInSnapshot() const override {
+    return new SeqBasedVersion(Seq());
+  }
  private:
   friend class SeqBasedSnapshotManager;
 
@@ -43,6 +46,7 @@ class SeqBasedSnapshotManager : public SnapshotManager {
       : multi_versions_manager_(multi_versions_manager) {}
   ~SeqBasedSnapshotManager() {}
  
+  virtual const Snapshot* LatestReadView() override;
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
   virtual void GetAllLivingSnapshot() override;
@@ -50,7 +54,7 @@ class SeqBasedSnapshotManager : public SnapshotManager {
  protected:
   virtual const SeqBasedSnapshot* TakeSnapshotInternal() = 0;
 
-  std::shared_ptr<SeqBasedMultiVersionsManager> multi_versions_manager_;
+  const SeqBasedMultiVersionsManager* multi_versions_manager_;
   std::mutex map_mutex_;
   using SnapshotsMap =
     std::unordered_map<uint64_t, std::unique_ptr<const SeqBasedSnapshot>>;

@@ -6,8 +6,8 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-void SeqBasedVersion::EncodeTo(std::string& dest) {
-  dest = std::to_string(rep_);
+void SeqBasedVersion::EncodeTo(std::string* dest) const {
+  *dest = std::to_string(rep_);
 }
 
 void SeqBasedVersion::DecodeFrom(const std::string& input) {
@@ -32,20 +32,30 @@ void SeqBasedMultiVersionsManager::Initialize(const Version& orig) {
   seq_.store(orig_version->Seq(), std::memory_order_seq_cst);
 }
 
+Version* SeqBasedMultiVersionsManager::CreateVersion() const {
+  return new SeqBasedVersion();
+}
+
 Version* SeqBasedMultiVersionsManager::ConstructVersion(
-    const Version& base, size_t i) {
+    const Version& base, size_t i, Version* reused) const {
   const SeqBasedVersion* base_version =
     reinterpret_cast<const SeqBasedVersion*>(&base);
-  return new SeqBasedVersion(base_version->Seq() + i);
+  if (reused == nullptr) {
+    return new SeqBasedVersion(base_version->Seq() + i);
+  }
+  SeqBasedVersion* reused_version =
+      reinterpret_cast<SeqBasedVersion*>(reused);
+  reused_version->SetSeq(base_version->Seq() + i);
+  return reused_version;
 }
 
 void SeqBasedMultiVersionsManager::AdvanceVersionBy(size_t count) {
   seq_.fetch_add(count, std::memory_order_seq_cst);
 }
 
-const Version& SeqBasedMultiVersionsManager::LatestVisibleVersion() const {
+Version* SeqBasedMultiVersionsManager::LatestVisibleVersion() const {
   uint64_t latest_version = seq_.load(std::memory_order_acquire);
-  return SeqBasedVersion(latest_version);
+  return new SeqBasedVersion(latest_version);
 }
 
 void WriteCommittedSeqBasedMultiVersionsManager::PrepareVersion(
@@ -86,10 +96,10 @@ void WriteCommittedSeqBasedMultiVersionsManager::RollbackVersion(
   (void)count;
 }
 
-const Version& WriteCommittedSeqBasedMultiVersionsManager::
+Version* WriteCommittedSeqBasedMultiVersionsManager::
     MiniUncommittedVersion() const {
   uint64_t latest_version = seq_.load(std::memory_order_acquire);
-  return SeqBasedVersion(latest_version + 1);
+  return new SeqBasedVersion(latest_version + 1);
 }
 
 bool WriteCommittedSeqBasedMultiVersionsManager::IsVersionVisibleToSnapshot(
@@ -98,18 +108,6 @@ bool WriteCommittedSeqBasedMultiVersionsManager::IsVersionVisibleToSnapshot(
   const SeqBasedSnapshot* snapshot =
       reinterpret_cast<const SeqBasedSnapshot*>(&s);
   return version->Seq() <= snapshot->Seq();
-}
-
-MultiVersionsManager* WCSeqBasedMultiVersionsManagerFactory::
-    CreateMultiVersionsManager() {
-  return new WriteCommittedSeqBasedMultiVersionsManager();
-}
-
-SnapshotManager* WCSeqBasedMultiVersionsManagerFactory::
-    CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) {
-  SeqBasedMultiVersionsManager* sbmvm =
-      reinterpret_cast<SeqBasedMultiVersionsManager*>(multi_versions_manager);
-  return new WriteCommittedSeqBasedSnapshotManager(sbmvm);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

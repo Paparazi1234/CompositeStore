@@ -23,7 +23,7 @@ class WritePreparedSeqBasedMultiVersionsManager :
   virtual void CommitVersion(const Version& base, size_t count) override;
   virtual void RollbackVersion(const Version& v) override;
   virtual void RollbackVersion(const Version& base, size_t count) override;
-  virtual const Version& MiniUncommittedVersion() const override;
+  virtual Version* MiniUncommittedVersion() const override;
   virtual bool IsVersionVisibleToSnapshot(
       const Version& v, const Snapshot& s) const override;
 };

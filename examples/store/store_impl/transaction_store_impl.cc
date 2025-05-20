@@ -1,7 +1,4 @@
-#pragma once
-
-#include "./skiplist_backed/skliplist_backed_in_memory_txn_store.h"
-#include "transaction_store.h"
+#include "skiplist_backed/skliplist_backed_in_memory_txn_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

@@ -25,6 +25,8 @@
 #include <string>
 #include <string_view>  // RocksDB now requires C++17 support
 
+#include "rocksdb_namespace.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 class Slice {

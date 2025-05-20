@@ -19,27 +19,34 @@ Status SkipListBackedInMemoryStore::Delete(const WriteOptions& write_options,
 
 Status SkipListBackedInMemoryStore::WriteInternal(
     const WriteOptions& write_options, WriteBatch* write_batch) {
-  const Version& latest_version =
+  ManagedWriteLock managed_write_lock = ManagedWriteLock(&write_lock_);
+  Version* latest_version =
       multi_versions_manager_->LatestVisibleVersion();
-  const size_t count = write_batch->Count(); 
-  for (int i = 0; i < count; ++i) {
-    const WriteBatch::BufferedWrite& one_write = write_batch->GetOneWrite(i);
-    Version* version =
-        multi_versions_manager_->ConstructVersion(latest_version, i);
-    SkipListKey skiplist_key(one_write.Key(),
-                             one_write.Value(),
-                             version,
-                             one_write.Type());
-    skiplist_backed_rep_.Insert(skiplist_key);
+  Version* started_version = multi_versions_manager_->ConstructVersion(
+      *latest_version, 1, latest_version);
+  SkipListInsertHandler handler(
+      &skiplist_backed_rep_, multi_versions_manager_.get(), started_version);
+  Status s = write_batch->Iterate(&handler);
+  delete latest_version;
+  if (s.IsOK()) {
+    multi_versions_manager_->AdvanceVersionBy(write_batch->Count());
   }
-  multi_versions_manager_->AdvanceVersionBy(count);
-  return Status::OK();
+  return s;
 }
 
 Status SkipListBackedInMemoryStore::Get(const ReadOptions& read_options,
                                         const std::string& key, 
                                         std::string* value) {
-  
+  assert(value);
+  std::unique_ptr<const Snapshot> read_snapshot_tmp;
+  const Snapshot* read_snapshot;
+  if (read_options.snapshot) {
+    read_snapshot = read_options.snapshot;
+  } else {
+    read_snapshot_tmp.reset(snapshot_manager_->LatestReadView());
+    read_snapshot = read_snapshot_tmp.get();
+  }
+  return skiplist_backed_rep_.Get(key, *read_snapshot, value);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

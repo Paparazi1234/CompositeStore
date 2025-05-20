@@ -6,26 +6,14 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-const Version& WritePreparedSeqBasedMultiVersionsManager::
+Version* WritePreparedSeqBasedMultiVersionsManager::
     MiniUncommittedVersion() const {
-
+  return new SeqBasedVersion(0);
 }
 
 bool WritePreparedSeqBasedMultiVersionsManager::IsVersionVisibleToSnapshot(
     const Version& v, const Snapshot& s) const {
-    
-}
-
-MultiVersionsManager* WPSeqBasedMultiVersionsManagerFactory::
-    CreateMultiVersionsManager() {
-  return new WritePreparedSeqBasedMultiVersionsManager();
-}
-
-SnapshotManager* WPSeqBasedMultiVersionsManagerFactory::
-    CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) {
-  SeqBasedMultiVersionsManager* sbmvm =
-      reinterpret_cast<SeqBasedMultiVersionsManager*>(multi_versions_manager);
-  return new WritePreparedSeqBasedSnapshotManager(sbmvm);
+  return true;
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

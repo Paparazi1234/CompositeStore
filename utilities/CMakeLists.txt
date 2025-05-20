@@ -1,0 +1,14 @@
+add_subdirectory(sequence_based)
+
+set(MULTI_VERSIONS_STATIC_LIB multi_versions)
+set(MULTI_VERSIONS_SHARED_LIB multi_versions-shared)
+set(MULTI_VERSIONS_SOURCES
+        multi_versions_impl.cc)
+
+add_library(${MULTI_VERSIONS_STATIC_LIB} STATIC ${MULTI_VERSIONS_SOURCES})
+target_link_libraries(${MULTI_VERSIONS_STATIC_LIB} PRIVATE ${SEQ_BASED_MULTI_VERSIONS_STATIC_LIB})
+
+if(BUILD_SHARED)
+  add_library(${MULTI_VERSIONS_SHARED_LIB} SHARED ${MULTI_VERSIONS_SOURCES})
+  target_link_libraries(${MULTI_VERSIONS_SHARED_LIB} PRIVATE ${SEQ_BASED_MULTI_VERSIONS_SHARED_LIB})
+endif()
