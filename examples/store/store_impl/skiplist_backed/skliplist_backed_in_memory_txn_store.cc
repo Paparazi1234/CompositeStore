@@ -20,7 +20,7 @@ Status SkipListBackedInMemoryTxnStore::Delete(
 Status SkipListBackedInMemoryTxnStore::Get(const ReadOptions& read_options,
                                            const std::string& key,
                                            std::string* value) {
-  return Status::OK();  
+  return Status::OK();
 }
 
 Transaction* SkipListBackedInMemoryTxnStore::BeginTransaction(

@@ -14,6 +14,12 @@ class WriteBatch {
   WriteBatch() {}
   ~WriteBatch() {}
 
+  enum GetReault : unsigned char {
+    kFound = 0x0,
+    kDeleted,
+    kNotFound
+  };
+
   class BufferedWrite {
    public:
     BufferedWrite(const std::string& value, ValueType type)
@@ -45,6 +51,19 @@ class WriteBatch {
 
   void Delete(const std::string& key) {
     buffered_writes_.insert_or_assign(key, BufferedWrite("", kTypeDeletion));
+  }
+
+  GetReault Get(const std::string& key, std::string* value) {
+    BufferedWrites::iterator iter = buffered_writes_.find(key);
+    if (iter == buffered_writes_.end()) {
+      return kNotFound;
+    }
+    if (iter->second.Type() == kTypeDeletion) {
+      return kDeleted;
+    }
+    assert(iter->second.Type() == kTypeValue);
+    *value = iter->second.Value();
+    return kFound;
   }
 
   Status Iterate(Handler* handler);

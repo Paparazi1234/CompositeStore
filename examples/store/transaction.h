@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "options.h"
 #include "../../include/status.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -22,7 +23,8 @@ class Transaction {
   virtual Status Put(const std::string& key, const std::string& value) = 0; 
   virtual Status Delete(const std::string& key) = 0;
 
-  virtual Status Get(const std::string& key, std::string* value) = 0;
+  virtual Status Get(const ReadOptions& read_options, const std::string& key,
+                     std::string* value) = 0;
 
   virtual Status Prepare() = 0;
   virtual Status Commit() = 0;
