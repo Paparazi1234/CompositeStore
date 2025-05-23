@@ -1,5 +1,7 @@
 #pragma once
 
+#include "write_batch.h"
+#include "../../transaction_store.h"
 #include "../../transaction.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -10,7 +12,8 @@ class MVCCBasedTransaction : public Transaction {
   MVCCBasedTransaction(const MVCCBasedTransaction&) = delete;
   MVCCBasedTransaction& operator=(const MVCCBasedTransaction&) = delete;
 
-  MVCCBasedTransaction();
+  MVCCBasedTransaction(TransactionStore* transaction_store)
+      : transaction_store_(transaction_store) {}
   ~MVCCBasedTransaction() {}
 
   virtual Status Put(const std::string& key, const std::string& value) override; 
@@ -22,8 +25,13 @@ class MVCCBasedTransaction : public Transaction {
   virtual Status Commit() override;
   virtual Status Rollback() override;
   virtual void SetSnapshot() override;
+
  private:
-  
+  Status TryLock(const std::string& key);
+  void UnLock(const std::string& key);
+
+  WriteBatch write_batch_;
+  TransactionStore* transaction_store_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

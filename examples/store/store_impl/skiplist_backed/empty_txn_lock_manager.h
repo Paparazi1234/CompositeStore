@@ -17,8 +17,8 @@ class EmptyTxnLockManager : public TxnLockManager {
     return Status::OK();
   }
 
-  virtual Status UnLock(const std::string& key) override {
-    return Status::OK();
+  virtual void UnLock(const std::string& key) override {
+    return;
   }
 };
 

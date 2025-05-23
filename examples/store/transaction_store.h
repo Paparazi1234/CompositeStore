@@ -22,6 +22,9 @@ class TransactionStore : public Store {
       const WriteOptions& write_options) = 0;
 
   virtual const Snapshot* TakeSnapshot() = 0;
+
+  virtual Status TryLock(const std::string& key) = 0;
+  virtual void UnLock(const std::string& key) = 0;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

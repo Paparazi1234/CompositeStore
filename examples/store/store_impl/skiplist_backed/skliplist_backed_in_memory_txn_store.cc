@@ -32,4 +32,12 @@ const Snapshot* SkipListBackedInMemoryTxnStore::TakeSnapshot() {
   return nullptr;  
 }
 
+Status SkipListBackedInMemoryTxnStore::TryLock(const std::string& key) {
+  return txn_lock_manager_->TryLock(key);
+}
+
+void SkipListBackedInMemoryTxnStore::UnLock(const std::string& key) {
+  txn_lock_manager_->UnLock(key);
+}
+
 }   // namespace MULTI_VERSIONS_NAMESPACE

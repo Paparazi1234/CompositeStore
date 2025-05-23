@@ -16,7 +16,7 @@ class TxnLockManager {
   virtual ~TxnLockManager() {}
 
   virtual Status TryLock(const std::string& key) = 0;
-  virtual Status UnLock(const std::string& key) = 0;
+  virtual void UnLock(const std::string& key) = 0;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

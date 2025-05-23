@@ -36,6 +36,9 @@ class SkipListBackedInMemoryTxnStore : public TransactionStore {
       const WriteOptions& write_options) override;
   virtual const Snapshot* TakeSnapshot() override;
 
+  virtual Status TryLock(const std::string& key) override;
+  virtual void UnLock(const std::string& key) override;
+
  private:
   SkipListBackedInMemoryStore* base_store_;
   std::shared_ptr<TxnLockManager> txn_lock_manager_;
