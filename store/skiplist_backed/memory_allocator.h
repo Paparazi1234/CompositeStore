@@ -3,8 +3,8 @@
 #include <deque>
 #include <memory>
 
-#include "../../../../include/multi_versions_namespace.h"
-#include "../../../../third-party/rocksdb/allocator.h"
+#include "include/multi_versions_namespace.h"
+#include "third-party/rocksdb/allocator.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

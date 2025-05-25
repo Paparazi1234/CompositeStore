@@ -1,6 +1,6 @@
 #include "skiplist_rep.h"
 
-#include "../../../../third-party/rocksdb/coding.h"
+#include "third-party/rocksdb/coding.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

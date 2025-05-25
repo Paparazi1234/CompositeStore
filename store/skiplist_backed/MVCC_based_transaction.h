@@ -1,8 +1,8 @@
 #pragma once
 
 #include "write_batch.h"
-#include "../../transaction_store.h"
-#include "../../transaction.h"
+#include "include/transaction_store.h"
+#include "include/transaction.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

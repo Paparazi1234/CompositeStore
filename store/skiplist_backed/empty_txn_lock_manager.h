@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../../include/txn_lock_manager.h"
+#include "include/txn_lock_manager.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

@@ -2,7 +2,7 @@
 
 #include "store.h"
 #include "transaction.h"
-#include "../../include/snapshot.h"
+#include "include/snapshot.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

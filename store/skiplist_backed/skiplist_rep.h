@@ -1,13 +1,12 @@
 #pragma once
 
-#include "format.h"
-
 #include <memory>
 
+#include "format.h"
 #include "memory_allocator.h"
-#include "../../../../include/snapshot.h"
-#include "../../../../include/multi_versions.h"
-#include "../../../../third-party/rocksdb/inlineskiplist.h"
+#include "include/snapshot.h"
+#include "include/multi_versions.h"
+#include "third-party/rocksdb/inlineskiplist.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

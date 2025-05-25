@@ -1,5 +1,3 @@
-set(SKIPLIST_BACKED_STORE_STATIC_LIB skiplist_backed_store)
-set(SKIPLIST_BACKED_STORE_SHARED_LIB skiplist_backed_store-shared)
 set(SKIPLIST_BACKED_STORE_SOURCES
         memory_allocator.cc
         MVCC_based_transaction.cc
@@ -17,18 +15,16 @@ if(BUILD_SHARED)
 endif()
 
 if(BUILD_TESTS)
-  if(BUILD_SHARED)
-    set(SKIPLIST_BACKED_STORE_LIB ${SKIPLIST_BACKED_STORE_SHARED_LIB})
-  else()
-    set(SKIPLIST_BACKED_STORE_LIB ${SKIPLIST_BACKED_STORE_STATIC_LIB})
-  endif()
-
   set(SKIPLIST_BACKED_STORE_TEST_SOURCES
           MVCC_based_transaction_test.cc)
 
   foreach(sourcefile ${SKIPLIST_BACKED_STORE_TEST_SOURCES})
     get_filename_component(exename ${sourcefile} NAME_WE)
     add_executable(${exename} ${sourcefile})
-    target_link_libraries(${exename} gtest ${SKIPLIST_BACKED_STORE_LIB})
+    if(BUILD_SHARED)
+      target_link_libraries(${exename} ${GTEST_SHARED_LIB} ${SKIPLIST_BACKED_STORE_SHARED_LIB})
+    else()
+      target_link_libraries(${exename} ${GTEST_STATIC_LIB} ${SKIPLIST_BACKED_STORE_STATIC_LIB})
+    endif()
   endforeach(sourcefile ${SKIPLIST_BACKED_STORE_TEST_SOURCES})
 endif()

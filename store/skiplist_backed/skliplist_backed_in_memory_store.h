@@ -5,7 +5,7 @@
 #include "write_lock.h"
 #include "write_batch.h"
 #include "skiplist_rep.h"
-#include "../../store.h"
+#include "include/store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

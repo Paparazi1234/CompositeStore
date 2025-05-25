@@ -1,5 +1,3 @@
-add_subdirectory(store/store_impl)
-
 set(EXAMPLES_SOURCES
         simple_example.cc
         transaction_example.cc)

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../transaction_store.h"
-#include "../../../../include/txn_lock_manager.h"
+#include "include/transaction_store.h"
+#include "include/txn_lock_manager.h"
 #include "skliplist_backed_in_memory_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {

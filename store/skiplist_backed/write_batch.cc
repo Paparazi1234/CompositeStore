@@ -1,6 +1,5 @@
 #include "write_batch.h"
 
-#include "format.h"
 #include <assert.h>
 
 namespace MULTI_VERSIONS_NAMESPACE {

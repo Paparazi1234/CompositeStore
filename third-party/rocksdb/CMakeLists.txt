@@ -1,5 +1,3 @@
-set(ROCKSDB_STATIC_LIB rocksdb_internal)
-set(ROCKSDB_SHARED_LIB rocksdb_internal-shared)
 set(ROCKSDB_SOURCES
         coding.cc
         random.cc

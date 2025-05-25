@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include "../../include/multi_versions.h"
+#include "include/multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

@@ -1,0 +1,25 @@
+set(SEQ_BASED_MULTI_VERSIONS_SOURCES
+        seq_based_multi_versions.cc
+        seq_based_snapshot.cc
+        write_prepared_seq_based_multi_versions.cc)
+
+add_library(${SEQ_BASED_MULTI_VERSIONS_STATIC_LIB} STATIC ${SEQ_BASED_MULTI_VERSIONS_SOURCES})
+
+if(BUILD_SHARED)
+  add_library(${SEQ_BASED_MULTI_VERSIONS_SHARED_LIB} SHARED ${SEQ_BASED_MULTI_VERSIONS_SOURCES})
+endif()
+
+if(BUILD_TESTS)
+  set(SEQ_BASED_MULTI_VERSIONS_TEST_SOURCES
+          seq_based_multi_versions_test.cc)
+
+  foreach(sourcefile ${SEQ_BASED_MULTI_VERSIONS_TEST_SOURCES})
+    get_filename_component(exename ${sourcefile} NAME_WE)
+    add_executable(${exename} ${sourcefile})
+    if(BUILD_SHARED)
+      target_link_libraries(${exename} ${GTEST_SHARED_LIB} ${SEQ_BASED_MULTI_VERSIONS_SHARED_LIB})
+    else()
+      target_link_libraries(${exename} ${GTEST_STATIC_LIB} ${SEQ_BASED_MULTI_VERSIONS_STATIC_LIB})
+    endif()
+  endforeach(sourcefile ${SEQ_BASED_MULTI_VERSIONS_TEST_SOURCES})
+endif()
