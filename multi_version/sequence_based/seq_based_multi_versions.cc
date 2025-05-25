@@ -14,14 +14,15 @@ void SeqBasedVersion::DecodeFrom(const std::string& input) {
   rep_ = std::stoull(input);
 }
 
+// descending order by version
 int SeqBasedVersion::CompareWith(const Version& rhs) {
   const SeqBasedVersion* version_rhs =
       reinterpret_cast<const SeqBasedVersion*>(&rhs);
   if (rep_ != version_rhs->Seq()) {
     if (rep_ < version_rhs->Seq()) {
-      return -1;
+      return +1;
     }
-    return 1;
+    return -1;
   }
   return 0;
 }

@@ -25,6 +25,12 @@ int main() {
   s = store_ptr->Get(read_options, "foo", &value);
   assert(s.IsOK() && value == "bar");
 
+  // read after overwritten
+  s = store_ptr->Put(write_options, "foo", "bar1");
+  assert(s.IsOK());
+  s = store_ptr->Get(read_options, "foo", &value);
+  assert(s.IsOK() && value == "bar1");
+
   // read after deletion
   s = store_ptr->Delete(write_options, "foo");
   assert(s.IsOK());
@@ -35,13 +41,33 @@ int main() {
   s = store_ptr->Get(read_options, "foo1", &value);
   assert(s.IsNotFound());
 
-  // read after overwritten
-  s = store_ptr->Put(write_options, "foo", "bar1");
+  // delete non-exists
+  s = store_ptr->Delete(write_options, "foo1");
   assert(s.IsOK());
+
+  // multi keys interleave manipulation
   s = store_ptr->Put(write_options, "foo", "bar2");
   assert(s.IsOK());
+  s = store_ptr->Put(write_options, "foo1", "bar3");
+  assert(s.IsOK());
+  s = store_ptr->Delete(write_options, "foo");
+  assert(s.IsOK());
+  s = store_ptr->Put(write_options, "foo", "bar4");
+  assert(s.IsOK());
+  s = store_ptr->Put(write_options, "foo", "bar5");
+  assert(s.IsOK());
+  s = store_ptr->Delete(write_options, "foo1");
+  assert(s.IsOK());
+  s = store_ptr->Delete(write_options, "foo1");
+  assert(s.IsOK());
+  s = store_ptr->Put(write_options, "foo1", "bar6");
+  assert(s.IsOK());
+  s = store_ptr->Put(write_options, "foo1", "bar6");
+  assert(s.IsOK());
   s = store_ptr->Get(read_options, "foo", &value);
-  assert(s.IsOK() && value == "bar2");
+  assert(s.IsOK() && value == "bar5");
+  s = store_ptr->Get(read_options, "foo1", &value);
+  assert(s.IsOK() && value == "bar6");
 
   delete store_ptr;
   return 0;
