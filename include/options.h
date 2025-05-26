@@ -22,10 +22,18 @@ enum TxnStoreWritePolicy : unsigned char {
   WRITE_PREPARED = 0x1
 };
 
+enum TxnLockManagerType : unsigned char {
+  kEmptyTxnLoxkManager = 0x0
+};
+
 struct StoreOptions {
   StoreBackedType store_backed_type = StoreBackedType::kTypeSkipList;
   bool enable_txn_if_supported = false;
   TxnStoreWritePolicy write_policy = WRITE_COMMITTED;
+};
+
+struct TxnStoreOptions : public StoreOptions {
+  TxnLockManagerType txn_lock_manager_type = kEmptyTxnLoxkManager;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

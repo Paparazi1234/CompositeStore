@@ -19,4 +19,20 @@ class TxnLockManager {
   virtual void UnLock(const std::string& key) = 0;
 };
 
+// Factory function
+class TxnLockManagerFactory {
+ public:
+  virtual ~TxnLockManagerFactory() {}
+
+  virtual TxnLockManager* CreateTxnLockManager() = 0;
+};
+
+class EmptyTxnLockManagerFactory : public TxnLockManagerFactory {
+ public:
+  EmptyTxnLockManagerFactory() {}
+  ~EmptyTxnLockManagerFactory() {}
+
+  virtual TxnLockManager* CreateTxnLockManager() override;
+};
+
 }   // namespace MULTI_VERSIONS_NAMESPACE

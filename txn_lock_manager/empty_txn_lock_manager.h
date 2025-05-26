@@ -13,13 +13,8 @@ class EmptyTxnLockManager : public TxnLockManager {
   EmptyTxnLockManager() {}
   ~EmptyTxnLockManager() {}
 
-  virtual Status TryLock(const std::string& key) override {
-    return Status::OK();
-  }
-
-  virtual void UnLock(const std::string& key) override {
-    return;
-  }
+  virtual Status TryLock(const std::string& key) override;
+  virtual void UnLock(const std::string& key) override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

@@ -28,3 +28,7 @@ set(MULTI_VERSIONS_SHARED_LIB multi_versions-shared)
 # the library that links all store implementations defined above, don't touch
 set(STORE_STATIC_LIB store)
 set(STORE_SHARED_LIB store-shared)
+
+# txn lock manager library names
+set(TXN_LOCK_MANAGER_STATIC_LIB txn_lock_manager)
+set(TXN_LOCK_MANAGER_SHARED_LIB txn_lock_manager-shared)

@@ -28,6 +28,8 @@ add_subdirectory(third-party/rocksdb)
 
 add_subdirectory(multi_version)
 
+add_subdirectory(txn_lock_manager)
+
 add_subdirectory(store)
 
 if(BUILD_EXAMPLES)

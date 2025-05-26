@@ -69,6 +69,7 @@ int main() {
   s = store_ptr->Get(read_options, "foo1", &value);
   assert(s.IsOK() && value == "bar6");
 
+  // close store
   delete store_ptr;
   return 0;
 }   // namespace MULTI_VERSIONS_NAMESPACE
