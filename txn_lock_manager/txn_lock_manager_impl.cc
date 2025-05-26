@@ -2,7 +2,7 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-TxnLockManager* EmptyTxnLockManagerFactory::CreateTxnLockManager() {
+TxnLockManager* EmptyTxnLockManagerFactory::CreateTxnLockManager() const {
   return new EmptyTxnLockManager();
 }
 

@@ -24,7 +24,7 @@ class TxnLockManagerFactory {
  public:
   virtual ~TxnLockManagerFactory() {}
 
-  virtual TxnLockManager* CreateTxnLockManager() = 0;
+  virtual TxnLockManager* CreateTxnLockManager() const = 0;
 };
 
 class EmptyTxnLockManagerFactory : public TxnLockManagerFactory {
@@ -32,7 +32,7 @@ class EmptyTxnLockManagerFactory : public TxnLockManagerFactory {
   EmptyTxnLockManagerFactory() {}
   ~EmptyTxnLockManagerFactory() {}
 
-  virtual TxnLockManager* CreateTxnLockManager() override;
+  virtual TxnLockManager* CreateTxnLockManager() const override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

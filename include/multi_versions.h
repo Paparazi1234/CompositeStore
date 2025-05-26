@@ -79,9 +79,9 @@ class MultiVersionsManagerFactory {
  public:
   virtual ~MultiVersionsManagerFactory() {}
 
-  virtual MultiVersionsManager* CreateMultiVersionsManager() = 0;
+  virtual MultiVersionsManager* CreateMultiVersionsManager() const = 0;
   virtual SnapshotManager* CreateSnapshotManager(
-      MultiVersionsManager* multi_versions_manager) = 0;
+      MultiVersionsManager* multi_versions_manager) const = 0;
 };
 
 class WCSeqBasedMultiVersionsManagerFactory :
@@ -89,9 +89,9 @@ class WCSeqBasedMultiVersionsManagerFactory :
  public:
   ~WCSeqBasedMultiVersionsManagerFactory() {}
 
-  virtual MultiVersionsManager* CreateMultiVersionsManager() override;
+  virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
-      MultiVersionsManager* multi_versions_manager) override;
+      MultiVersionsManager* multi_versions_manager) const override;
 };
 
 class WPSeqBasedMultiVersionsManagerFactory :
@@ -99,9 +99,9 @@ class WPSeqBasedMultiVersionsManagerFactory :
  public:
   ~WPSeqBasedMultiVersionsManagerFactory() {}
 
-  virtual MultiVersionsManager* CreateMultiVersionsManager() override;
+  virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
-      MultiVersionsManager* multi_versions_manager) override;
+      MultiVersionsManager* multi_versions_manager) const override;
 };
 
 // Wrapper of WCSeqBasedMultiVersionsManagerFactory
@@ -109,12 +109,12 @@ class EmptyMultiVersionsManagerFactory : public MultiVersionsManagerFactory {
  public:
   ~EmptyMultiVersionsManagerFactory() {}
 
-  virtual MultiVersionsManager* CreateMultiVersionsManager() override {
+  virtual MultiVersionsManager* CreateMultiVersionsManager() const override {
     return factory_.CreateMultiVersionsManager();
   }
 
   virtual SnapshotManager* CreateSnapshotManager(
-      MultiVersionsManager* multi_versions_manager) {
+      MultiVersionsManager* multi_versions_manager) const  {
     return factory_.CreateSnapshotManager(multi_versions_manager);
   }
 

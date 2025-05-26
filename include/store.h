@@ -2,12 +2,15 @@
 
 #include "include/multi_versions.h"
 #include "options.h"
+#include "store_traits.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
 class Store {
  public:
-  static Status Open(const StoreOptions& options, Store** store_ptr);
+  static Status Open(const StoreOptions& store_options,
+                     const StoreTraits& store_traits,
+                     Store** store_ptr);
   // No copying allowed
   Store(const Store&) = delete;
   Store& operator=(const Store&) = delete;
@@ -21,8 +24,6 @@ class Store {
                         const std::string& key) = 0;
   virtual Status Get(const ReadOptions& read_options,
                      const std::string& key, std::string* value) = 0;
-
-  virtual MultiVersionsManager* GetMultiVersionsManager() const = 0;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

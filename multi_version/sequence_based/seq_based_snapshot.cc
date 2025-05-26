@@ -18,6 +18,9 @@ const Snapshot* SeqBasedSnapshotManager::TakeSnapshot() {
 }
 
 void SeqBasedSnapshotManager::ReleaseSnapshot(const Snapshot* snapshot) {
+  if (snapshot == nullptr) {
+    return;
+  }
   const SeqBasedSnapshot* s =
       reinterpret_cast<const SeqBasedSnapshot*>(snapshot);
   {

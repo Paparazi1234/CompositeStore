@@ -5,21 +5,28 @@
 using MULTI_VERSIONS_NAMESPACE::Status;
 using MULTI_VERSIONS_NAMESPACE::Store;
 using MULTI_VERSIONS_NAMESPACE::StoreOptions;
+using MULTI_VERSIONS_NAMESPACE::StoreTraits;
 using MULTI_VERSIONS_NAMESPACE::ReadOptions;
 using MULTI_VERSIONS_NAMESPACE::WriteOptions;
 
 int main() {
   Store* store_ptr;
   StoreOptions store_options;
+  StoreTraits store_traits;
   // open store
-  Status s =  Store::Open(store_options, &store_ptr);
+  Status s =  Store::Open(store_options, store_traits, &store_ptr);
   assert(s.IsOK());
 
   ReadOptions read_options;
   WriteOptions write_options;
   std::string value;
 
-  // simple write/read
+  // simple read/write
+  // read non-existence
+  s = store_ptr->Get(read_options, "foo", &value);
+  assert(s.IsNotFound());
+
+  // read existence
   s = store_ptr->Put(write_options, "foo", "bar");
   assert(s.IsOK());
   s = store_ptr->Get(read_options, "foo", &value);
@@ -37,15 +44,11 @@ int main() {
   s = store_ptr->Get(read_options, "foo", &value);
   assert(s.IsNotFound());
 
-  // read non-exists
-  s = store_ptr->Get(read_options, "foo1", &value);
-  assert(s.IsNotFound());
-
-  // delete non-exists
-  s = store_ptr->Delete(write_options, "foo1");
+  // delete non-existence
+  s = store_ptr->Delete(write_options, "foo");
   assert(s.IsOK());
 
-  // multi keys interleave manipulation
+  // multi keys interleaved manipulation
   s = store_ptr->Put(write_options, "foo", "bar2");
   assert(s.IsOK());
   s = store_ptr->Put(write_options, "foo1", "bar3");

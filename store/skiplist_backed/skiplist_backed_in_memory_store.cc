@@ -1,6 +1,16 @@
-#include "skliplist_backed_in_memory_store.h"
+#include "skiplist_backed_in_memory_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
+
+SkipListBackedInMemoryStore::SkipListBackedInMemoryStore(
+    const StoreOptions& store_options,
+    const MultiVersionsManagerFactory& factory)
+		: multi_versions_manager_(factory.CreateMultiVersionsManager()),
+			snapshot_manager_(
+					factory.CreateSnapshotManager(multi_versions_manager_.get())),
+			skiplist_backed_rep_(multi_versions_manager_.get()) {
+  (void)store_options;
+}
 
 Status SkipListBackedInMemoryStore::Put(const WriteOptions& write_options,
                                         const std::string& key,

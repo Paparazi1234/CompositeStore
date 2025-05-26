@@ -16,11 +16,8 @@ class SkipListBackedInMemoryStore : public Store {
   SkipListBackedInMemoryStore& operator=(
       const SkipListBackedInMemoryStore&) = delete;
 
-  SkipListBackedInMemoryStore(MultiVersionsManagerFactory& factory)
-			: multi_versions_manager_(factory.CreateMultiVersionsManager()),
-				snapshot_manager_(
-						factory.CreateSnapshotManager(multi_versions_manager_.get())),
-				skiplist_backed_rep_(multi_versions_manager_.get()) {}
+  SkipListBackedInMemoryStore(const StoreOptions& store_options,
+															const MultiVersionsManagerFactory& factory);
   ~SkipListBackedInMemoryStore() {}
 
   virtual Status Put(const WriteOptions& write_options,
@@ -29,16 +26,27 @@ class SkipListBackedInMemoryStore : public Store {
                 				const std::string& key) override;
   virtual Status Get(const ReadOptions& read_options,
              				 const std::string& key, std::string* value) override;
-	
-	virtual MultiVersionsManager* GetMultiVersionsManager() const override {
-		return multi_versions_manager_.get();
+
+	void DumpKVPairs(std::stringstream* oss, const size_t dump_count = -1) {
+		skiplist_backed_rep_.Dump(oss, dump_count);
 	}
 
  protected:
  	friend class SkipListBackedInMemoryTxnStore;
+	friend class WriteCommittedTransaction;
+
+	MultiVersionsManager* GetMultiVersionsManager() const {
+		return multi_versions_manager_.get();
+	}
+
+	SnapshotManager* GetSnapshotManager() const {
+		return snapshot_manager_.get();
+	}
+
 	Status WriteInternal(
 			const WriteOptions& write_options, WriteBatch* write_batch);
 
+ private:
 	std::unique_ptr<MultiVersionsManager> multi_versions_manager_;
 	std::unique_ptr<SnapshotManager> snapshot_manager_;
 

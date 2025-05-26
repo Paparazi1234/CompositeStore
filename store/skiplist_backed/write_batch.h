@@ -66,6 +66,10 @@ class WriteBatch {
     return kFound;
   }
 
+  void Clear() {
+    buffered_writes_.clear();
+  }
+
   Status Iterate(Handler* handler);
 
   bool IsEmpty() const {
@@ -77,6 +81,9 @@ class WriteBatch {
   }
 
  private:
+  // since write a write_batch to store is all or nothing, it's ok that we 
+  // don't keep the ordering of the writes to a write_batch and use a map is
+  // good with it
   using BufferedWrites = std::map<std::string, BufferedWrite>;
   BufferedWrites buffered_writes_;
 };

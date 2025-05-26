@@ -1,4 +1,4 @@
-#include "skiplist_backed/skliplist_backed_in_memory_store.h"
+#include "skiplist_backed/skiplist_backed_in_memory_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -6,32 +6,36 @@ class StoreFactory {
  public:
   virtual ~StoreFactory() {}
 
-  virtual Store* CreateStore() = 0;
+  virtual Store* CreateStore(const StoreOptions& store_options) const = 0;
 };
 
 class SkipListBackedInMemoryStoreFactory : public StoreFactory {
  public:
   ~SkipListBackedInMemoryStoreFactory() {}
 
-  virtual Store* CreateStore() override {
+  virtual Store* CreateStore(const StoreOptions& store_options) const override {
     EmptyMultiVersionsManagerFactory factory;
-    return new SkipListBackedInMemoryStore(factory);
+    return new SkipListBackedInMemoryStore(store_options, factory);
   }
 };
 
-Status Store::Open(const StoreOptions& options, Store** store_ptr) {
+Status Store::Open(const StoreOptions& store_options,
+                   const StoreTraits& store_traits,
+                   Store** store_ptr) {
   assert(store_ptr);
   *store_ptr == nullptr;
   Status s;
-  switch (options.store_backed_type) {
-    case kTypeSkipList :
-      if (!options.enable_txn_if_supported) {
-        *store_ptr = SkipListBackedInMemoryStoreFactory().CreateStore();
-        s = Status::OK();
-      }
+  switch (store_traits.backed_type) {
+    case kSkipListBacked :
+      *store_ptr =
+          SkipListBackedInMemoryStoreFactory().CreateStore(store_options);
       break;
     default:
-      s = Status::InvalidArgument();
+      *store_ptr == nullptr;
+  }
+
+  if (*store_ptr == nullptr) {
+    s = Status::InvalidArgument();
   }
   return s;
 }

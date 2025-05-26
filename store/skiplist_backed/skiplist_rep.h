@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <sstream>
 
 #include "format.h"
 #include "memory_allocator.h"
@@ -80,7 +81,9 @@ class SkipListBackedRep {
 				comparator_(multi_versions_manager),
 			  allocator_(),
 				version_for_get_(nullptr),
-				skiplist_rep_(comparator_, &allocator_) {}
+				skiplist_rep_(comparator_, &allocator_),
+				num_entries_(0),
+				num_deletes_(0) {}
 	~SkipListBackedRep() {
 		delete version_for_get_;
 	}
@@ -91,6 +94,7 @@ class SkipListBackedRep {
 	Status Get(const std::string& key, const Snapshot& read_snapshot,
 						 std::string* value);
 
+	void Dump(std::stringstream* oss, const size_t dump_count = -1);
 
  private:
 	Version* VersionForGet() {
@@ -103,10 +107,14 @@ class SkipListBackedRep {
 	SkipListKeyComparator comparator_;
 	MemoryAllocator allocator_;
 	
+	// used to decode version out of underlying store in Get path
 	Version* version_for_get_;
 	using SkipListRep =
 			ROCKSDB_NAMESPACE::InlineSkipList<const SkipListKeyComparator&>;
 	SkipListRep skiplist_rep_;
+
+	uint64_t num_entries_;
+	uint64_t num_deletes_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE
