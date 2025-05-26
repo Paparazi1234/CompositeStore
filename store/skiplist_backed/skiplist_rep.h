@@ -4,7 +4,6 @@
 
 #include "format.h"
 #include "memory_allocator.h"
-#include "include/snapshot.h"
 #include "include/multi_versions.h"
 #include "third-party/rocksdb/inlineskiplist.h"
 

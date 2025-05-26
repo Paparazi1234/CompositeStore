@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <assert.h>
 
-#include "include/snapshot.h"
 #include "seq_based_multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {

@@ -1,7 +1,5 @@
 #include "seq_based_snapshot.h"
 
-#include "seq_based_multi_versions.h"
-
 namespace MULTI_VERSIONS_NAMESPACE {
 
 const Snapshot* SeqBasedSnapshotManager::LatestReadView() {

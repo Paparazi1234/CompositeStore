@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/snapshot.h"
+#include "include/multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
