@@ -17,7 +17,8 @@ endif()
 if(BUILD_TESTS)
   set(SKIPLIST_BACKED_STORE_TEST_SOURCES
           MVCC_based_transaction_test.cc
-          skiplist_backed_in_memory_store_test.cc)
+          skiplist_backed_in_memory_store_test.cc
+          write_batch_test.cc)
 
   foreach(sourcefile ${SKIPLIST_BACKED_STORE_TEST_SOURCES})
     get_filename_component(exename ${sourcefile} NAME_WE)

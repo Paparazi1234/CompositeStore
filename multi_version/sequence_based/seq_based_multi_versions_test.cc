@@ -1,20 +1,45 @@
 #include "seq_based_multi_versions.h"
+#include "write_prepared_seq_based_multi_versions.h"
+#include "seq_based_snapshot.h"
 #include "third-party/gtest/gtest.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class BasicTest : public testing::Test {
+class SeqBasedMultiVersionsTest : public testing::Test {
  public:
-  BasicTest() {
-    i = 0;
-  }
-  ~BasicTest() override {}
- private:
-  uint64_t i;
+  SeqBasedMultiVersionsTest() {}
+  ~SeqBasedMultiVersionsTest() {}
 };
 
-TEST_F(BasicTest, basic0) {
-  ASSERT_EQ(0, 0);
+TEST_F(SeqBasedMultiVersionsTest, WCMultiVersionsManager) {
+  WriteCommittedSeqBasedMultiVersionsManager wcsbmvm;
+
+  
+
+
+}
+
+TEST_F(SeqBasedMultiVersionsTest, WPMultiVersionsManager) {
+  WritePreparedSeqBasedMultiVersionsManager wpsbmvm;
+
+  
+
+
+}
+
+TEST_F(SeqBasedMultiVersionsTest, WCSnapshotManager) {
+  WriteCommittedSeqBasedMultiVersionsManager wcsbmvm;
+  WriteCommittedSeqBasedSnapshotManager wcsbsm(&wcsbmvm);
+
+  
+
+
+}
+
+TEST_F(SeqBasedMultiVersionsTest, WPSnapshotManager) {
+  WritePreparedSeqBasedMultiVersionsManager wpsbmvm;
+  WritePreparedSeqBasedSnapshotManager wpsbsm(&wpsbmvm);
+  
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

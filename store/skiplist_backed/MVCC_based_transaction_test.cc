@@ -4,9 +4,9 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class BasicMVCCTxnTest : public testing::Test {
+class MVCCTxnTest : public testing::Test {
  public:
-  BasicMVCCTxnTest() {
+  MVCCTxnTest() {
     StoreOptions store_options;
     EmptyMultiVersionsManagerFactory mvm_factory;
     SkipListBackedInMemoryStore* base_store =
@@ -18,14 +18,14 @@ class BasicMVCCTxnTest : public testing::Test {
     
   }
 
-  ~BasicMVCCTxnTest() {
+  ~MVCCTxnTest() {
     delete txn_store_;
   }
  protected:
   TransactionStore* txn_store_;
 };
 
-TEST_F(BasicMVCCTxnTest, SimpleTxnReadWrite) {
+TEST_F(MVCCTxnTest, SimpleTxnReadWrite) {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -63,7 +63,7 @@ TEST_F(BasicMVCCTxnTest, SimpleTxnReadWrite) {
   delete txn;
 }
 
-TEST_F(BasicMVCCTxnTest, NonTransactionalReadWrite) {
+TEST_F(MVCCTxnTest, NonTransactionalReadWrite) {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -96,7 +96,7 @@ TEST_F(BasicMVCCTxnTest, NonTransactionalReadWrite) {
   ASSERT_TRUE(s.IsOK());
 }
 
-TEST_F(BasicMVCCTxnTest, ReadTxnOwnWrites) {
+TEST_F(MVCCTxnTest, ReadTxnOwnWrites) {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -137,7 +137,7 @@ TEST_F(BasicMVCCTxnTest, ReadTxnOwnWrites) {
   delete txn;
 }
 
-TEST_F(BasicMVCCTxnTest, ReadAfterPrepare) {
+TEST_F(MVCCTxnTest, ReadAfterPrepare) {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -171,7 +171,7 @@ TEST_F(BasicMVCCTxnTest, ReadAfterPrepare) {
   delete txn;
 }
 
-TEST_F(BasicMVCCTxnTest, ReadAfterCommit) {
+TEST_F(MVCCTxnTest, ReadAfterCommit) {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -207,7 +207,7 @@ TEST_F(BasicMVCCTxnTest, ReadAfterCommit) {
   delete txn;
 }
 
-TEST_F(BasicMVCCTxnTest, ReadUnderSnapshot) {
+TEST_F(MVCCTxnTest, ReadUnderSnapshot) {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -272,11 +272,15 @@ TEST_F(BasicMVCCTxnTest, ReadUnderSnapshot) {
   delete txn;
 }
 
-TEST_F(BasicMVCCTxnTest, ReuseTransaction) {
+TEST_F(MVCCTxnTest, ReuseTransaction) {
+  TransactionOptions txn_options;
+  WriteOptions write_options;
+  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
 
+  delete txn;
 }
 
-TEST_F(BasicMVCCTxnTest, SingleTxnExcutionFlow) {
+TEST_F(MVCCTxnTest, SingleTxnExcutionFlow) {
 
 }
 

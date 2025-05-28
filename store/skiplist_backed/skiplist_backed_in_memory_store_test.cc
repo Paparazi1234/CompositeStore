@@ -8,13 +8,13 @@ class SkipListBackedInMemoryStoreTest : public testing::Test {
   SkipListBackedInMemoryStoreTest() {
     StoreOptions options;
     EmptyMultiVersionsManagerFactory mvm_factory;
-    store_ptr = new SkipListBackedInMemoryStore(options, mvm_factory);
+    store_ptr_ = new SkipListBackedInMemoryStore(options, mvm_factory);
   }
   ~SkipListBackedInMemoryStoreTest() {
-    delete store_ptr;
+    delete store_ptr_;
   }
  protected:
-  SkipListBackedInMemoryStore* store_ptr;
+  SkipListBackedInMemoryStore* store_ptr_;
 };
 
 TEST_F(SkipListBackedInMemoryStoreTest, SimpleReadWrite) {
@@ -24,29 +24,29 @@ TEST_F(SkipListBackedInMemoryStoreTest, SimpleReadWrite) {
   Status s;
 
   // read non-existence
-  s = store_ptr->Get(read_options, "foo", &value);
+  s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
   // read existence
-  s = store_ptr->Put(write_options, "foo", "bar");
+  s = store_ptr_->Put(write_options, "foo", "bar");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Get(read_options, "foo", &value);
+  s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar");
 
   // read after overwritten
-  s = store_ptr->Put(write_options, "foo", "bar1");
+  s = store_ptr_->Put(write_options, "foo", "bar1");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Get(read_options, "foo", &value);
+  s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar1");
 
   // read after deletion
-  s = store_ptr->Delete(write_options, "foo");
+  s = store_ptr_->Delete(write_options, "foo");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Get(read_options, "foo", &value);
+  s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
   // delete non-existence
-  s = store_ptr->Delete(write_options, "foo");
+  s = store_ptr_->Delete(write_options, "foo");
   ASSERT_TRUE(s.IsOK());
 }
 
@@ -56,27 +56,27 @@ TEST_F(SkipListBackedInMemoryStoreTest, MultiKeysInterleavedManipulation) {
   std::string value;
   Status s;
   // multi keys interleaved manipulation
-  s = store_ptr->Put(write_options, "foo", "bar2");
+  s = store_ptr_->Put(write_options, "foo", "bar2");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Put(write_options, "foo1", "bar3");
+  s = store_ptr_->Put(write_options, "foo1", "bar3");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Delete(write_options, "foo");
+  s = store_ptr_->Delete(write_options, "foo");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Put(write_options, "foo", "bar4");
+  s = store_ptr_->Put(write_options, "foo", "bar4");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Put(write_options, "foo", "bar5");
+  s = store_ptr_->Put(write_options, "foo", "bar5");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Delete(write_options, "foo1");
+  s = store_ptr_->Delete(write_options, "foo1");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Delete(write_options, "foo1");
+  s = store_ptr_->Delete(write_options, "foo1");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Put(write_options, "foo1", "bar6");
+  s = store_ptr_->Put(write_options, "foo1", "bar6");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Put(write_options, "foo1", "bar6");
+  s = store_ptr_->Put(write_options, "foo1", "bar6");
   ASSERT_TRUE(s.IsOK());
-  s = store_ptr->Get(read_options, "foo", &value);
+  s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar5");
-  s = store_ptr->Get(read_options, "foo1", &value);
+  s = store_ptr_->Get(read_options, "foo1", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar6");
 }
 
@@ -86,19 +86,19 @@ TEST_F(SkipListBackedInMemoryStoreTest, MultiThreadsQuery) {
 
 TEST_F(SkipListBackedInMemoryStoreTest, DumpStoreKVPairs) {
   WriteOptions write_options;
-  store_ptr->Put(write_options, "foo", "bar");
-  store_ptr->Put(write_options, "foo1", "bar");
-  store_ptr->Put(write_options, "foo2", "bar");
-  store_ptr->Delete(write_options, "foo");
-  store_ptr->Delete(write_options, "foo1");
-  store_ptr->Delete(write_options, "foo2");
-  store_ptr->Put(write_options, "foo", "bar1");
-  store_ptr->Put(write_options, "foo1", "bar1");
-  store_ptr->Put(write_options, "foo2", "bar1");
+  store_ptr_->Put(write_options, "foo", "bar");
+  store_ptr_->Put(write_options, "foo1", "bar");
+  store_ptr_->Put(write_options, "foo2", "bar");
+  store_ptr_->Delete(write_options, "foo");
+  store_ptr_->Delete(write_options, "foo1");
+  store_ptr_->Delete(write_options, "foo2");
+  store_ptr_->Put(write_options, "foo", "bar1");
+  store_ptr_->Put(write_options, "foo1", "bar1");
+  store_ptr_->Put(write_options, "foo2", "bar1");
 
   std::stringstream oss;
   oss.str("");
-  store_ptr->DumpKVPairs(&oss);
+  store_ptr_->DumpKVPairs(&oss);
   std::cout<<oss.str();
 }
 

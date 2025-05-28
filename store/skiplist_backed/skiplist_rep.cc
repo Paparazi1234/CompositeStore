@@ -122,7 +122,7 @@ Status SkipListBackedRep::Get(const std::string& key,
 
 namespace {
 void ParseOneKVPair(const char* entry, std::string* key, std::string* value,
-    std::string* version, std::string* type_str) {
+    std::string* version, uint32_t* type) {
   // key format:
   // |key len|key bytes|version len|version bytes|type|value len|value bytes|
   const char* p = entry;
@@ -134,34 +134,34 @@ void ParseOneKVPair(const char* entry, std::string* key, std::string* value,
       ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(p);
   version->assign(version_slice.data(), version_slice.size());
   p = version_slice.data() + version_slice.size();
-  uint32_t type;
-  p = ROCKSDB_NAMESPACE::GetVarint32Ptr(p, p + 5, &type);
-  if (type == kTypeValue) {
-    *type_str = "Put";
+  p = ROCKSDB_NAMESPACE::GetVarint32Ptr(p, p + 5, type);
+  if (*type == kTypeValue) {
     ROCKSDB_NAMESPACE::Slice value_slice =
         ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(p);
     value->assign(value_slice.data(), value_slice.size());
-  } else if (type == kTypeDeletion) {
-    *type_str = "Delete";
-    value->clear();
-  } else {
-    *type_str = "unknown";
-    value->clear();
   }
 }
 };  // anonymous namespace
 
 void SkipListBackedRep::Dump(std::stringstream* oss, const size_t dump_count) {
   std::string key, value, version, type_str;
+  uint32_t type;
   SkipListRep::Iterator iter(&skiplist_rep_);
   size_t count = 0;
+  *oss<<"KV pairs in store:\n";
   for (iter.SeekToFirst(); count < dump_count && iter.Valid(); iter.Next()) {
-    ParseOneKVPair(iter.key(), &key, &value, &version, &type_str);
-    *oss<<"{key: "<<key<<", version: "<<version<<", type: "<<type_str
-        <<", value: "<<value<<"}\n";
+    ParseOneKVPair(iter.key(), &key, &value, &version, &type);
+    *oss<<"  {key: "<<key<<"@"<<version<<",\ttype: ";
+    if (type == kTypeValue) {
+      *oss<<"Put,\tvalue: "<<value<<"}\n";
+    } else if (type == kTypeDeletion) {
+      *oss<<"Delete}\n";
+    } else {
+      *oss<<"unknown}\n";
+    }
     count++;
   }
-  *oss<<"Total count in store: "<<num_entries_<<", dump count: "<<count<<"\n";
+  *oss<<"  Total count in store: "<<num_entries_<<", dump count: "<<count<<"\n";
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE
