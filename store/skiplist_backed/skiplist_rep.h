@@ -70,6 +70,7 @@ class SkipListKeyComparator : ROCKSDB_NAMESPACE::KeyComparator {
 	int CompareImpl(const ROCKSDB_NAMESPACE::Slice& key1,
 								  const ROCKSDB_NAMESPACE::Slice& key2) const;
 	const MultiVersionsManager* multi_versions_manager_;
+	// use to decode version out of underlying stored format
 	std::unique_ptr<Version> version1_;
 	std::unique_ptr<Version> version2_;
 };
@@ -84,9 +85,7 @@ class SkipListBackedRep {
 				skiplist_rep_(comparator_, &allocator_),
 				num_entries_(0),
 				num_deletes_(0) {}
-	~SkipListBackedRep() {
-		delete version_for_get_;
-	}
+	~SkipListBackedRep() {}
 
 	Status Insert(const std::string& key, const std::string& value,
 							  Version* version, ValueType type);
@@ -98,17 +97,17 @@ class SkipListBackedRep {
 
  private:
 	Version* VersionForGet() {
-		if (version_for_get_ == nullptr) {
-			version_for_get_ = multi_versions_manager_->CreateVersion();
+		if (version_for_get_.get() == nullptr) {
+			version_for_get_.reset(multi_versions_manager_->CreateVersion());
 		}
-		return version_for_get_;
+		return version_for_get_.get();;
 	}
 	const MultiVersionsManager* multi_versions_manager_;
 	SkipListKeyComparator comparator_;
 	MemoryAllocator allocator_;
 	
-	// used to decode version out of underlying store in Get path
-	Version* version_for_get_;
+	// used to decode version out of underlying store in Get path, lazy initialize
+	std::unique_ptr<Version> version_for_get_ = nullptr;
 	using SkipListRep =
 			ROCKSDB_NAMESPACE::InlineSkipList<const SkipListKeyComparator&>;
 	SkipListRep skiplist_rep_;

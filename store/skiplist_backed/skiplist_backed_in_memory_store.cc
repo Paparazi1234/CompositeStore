@@ -30,16 +30,14 @@ Status SkipListBackedInMemoryStore::Delete(const WriteOptions& write_options,
 Status SkipListBackedInMemoryStore::WriteInternal(
     const WriteOptions& write_options, WriteBatch* write_batch) {
   ManagedWriteLock managed_write_lock = ManagedWriteLock(&write_lock_);
+  Version* version_for_insert = VersionForInsert();
   Version* latest_version =
-      multi_versions_manager_->LatestVisibleVersion();
-  Version* started_version = multi_versions_manager_->ConstructVersion(
-      *latest_version, 1, latest_version);
+      multi_versions_manager_->LatestVisibleVersion(version_for_insert);
   SkipListInsertHandler handler(
-      &skiplist_backed_rep_, multi_versions_manager_.get(), started_version);
+      &skiplist_backed_rep_, multi_versions_manager_.get(), latest_version);
   Status s = write_batch->Iterate(&handler);
-  delete latest_version;
   if (s.IsOK()) {
-    multi_versions_manager_->AdvanceVersionBy(write_batch->Count());
+    multi_versions_manager_->CommitVersion(*latest_version);
   }
   return s;
 }

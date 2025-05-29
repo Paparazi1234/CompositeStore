@@ -28,22 +28,16 @@ Status WriteBatch::Iterate(Handler* handler) {
 
 Status SkipListInsertHandler::Put(
     const std::string& key, const std::string& value) {
+  started_version_->IncreaseByOne();
   Status s = skiplist_backed_rep_->Insert(
       key, value, started_version_, kTypeValue);
-  if (s.IsOK()) {
-    started_version_ = multi_version_manager_->ConstructVersion(
-        *started_version_, 1, started_version_);
-  }
   return s;
 }
 
 Status SkipListInsertHandler::Delete(const std::string& key) {
+  started_version_->IncreaseByOne();
   Status s = skiplist_backed_rep_->Insert(
       key, "", started_version_, kTypeDeletion);
-  if (s.IsOK()) {
-    started_version_ = multi_version_manager_->ConstructVersion(
-        *started_version_, 1, started_version_);
-  }
   return s;
 }
 

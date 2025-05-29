@@ -43,8 +43,10 @@ const SeqBasedSnapshot* WriteCommittedSeqBasedSnapshotManager::
       reinterpret_cast<const WriteCommittedSeqBasedMultiVersionsManager*>
       (multi_versions_manager_);
   SeqBasedVersion* latest_version = reinterpret_cast<SeqBasedVersion*>(
-      WC_mvm->LatestVisibleVersion());
-  return new SeqBasedSnapshot(latest_version->Seq());
+      WC_mvm->LatestVisibleVersion(nullptr));
+  SeqBasedSnapshot* snapshot = new SeqBasedSnapshot(latest_version->Seq());
+  delete latest_version;
+  return snapshot;
 }
 
 const SeqBasedSnapshot* WritePreparedSeqBasedSnapshotManager::

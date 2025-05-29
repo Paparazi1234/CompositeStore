@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <stdint.h>
 
 #include "status.h"
 
@@ -11,11 +12,13 @@ class Snapshot;
 class Version {
  public:
   virtual ~Version() {}
+  
+  virtual void IncreaseBy(uint32_t count) = 0;
+  virtual void IncreaseByOne() = 0;
+  virtual int CompareWith(const Version& rhs) const = 0;
 
   virtual void EncodeTo(std::string* dest) const = 0;
   virtual void DecodeFrom(const std::string& input) = 0;
-  
-  virtual int CompareWith(const Version& rhs) = 0;
 };
 
 class MultiVersionsManager {
@@ -30,19 +33,16 @@ class MultiVersionsManager {
   virtual void Initialize(const Version& orig) = 0;
   // factory func
   virtual Version* CreateVersion() const = 0;
-  virtual Version* ConstructVersion(
-      const Version& base, size_t i, Version* reused = nullptr) const = 0;
-  virtual void AdvanceVersionBy(size_t count) = 0;
-  virtual void PrepareVersion(const Version& v) = 0;
-  virtual void PrepareVersion(const Version& base, size_t count) = 0;
-  virtual void CommitVersion(const Version& v) = 0;
-  virtual void CommitVersion(const Version& base, size_t count) = 0;
-  virtual void RollbackVersion(const Version& v) = 0;
-  virtual void RollbackVersion(const Version& base, size_t count) = 0;
+  virtual void PrepareVersion(const Version& version) = 0;
+  virtual void PrepareVersion(const Version& base, uint32_t count) = 0;
+  virtual void CommitVersion(const Version& version) = 0;
+  virtual void CommitVersion(const Version& base, uint32_t count) = 0;
+  virtual void RollbackVersion(const Version& version) = 0;
+  virtual void RollbackVersion(const Version& base, uint32_t count) = 0;
   virtual Version* MiniUncommittedVersion() const = 0;
-  virtual Version* LatestVisibleVersion() const = 0;
+  virtual Version* LatestVisibleVersion(Version* reused = nullptr) const = 0;
   virtual bool IsVersionVisibleToSnapshot(
-    const Version& v, const Snapshot& s) const = 0;
+      const Version& version, const Snapshot& snapshot) const = 0;
 };
 
 class Snapshot {

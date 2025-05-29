@@ -12,8 +12,10 @@ class SeqBasedMultiVersionsTest : public testing::Test {
 };
 
 TEST_F(SeqBasedMultiVersionsTest, WCMultiVersionsManager) {
+  // brand new version manager
   WriteCommittedSeqBasedMultiVersionsManager wcsbmvm;
 
+  Version* version = wcsbmvm.CreateVersion();
   
 
 

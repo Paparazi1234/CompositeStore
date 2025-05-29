@@ -17,15 +17,15 @@ class WritePreparedSeqBasedMultiVersionsManager :
   WritePreparedSeqBasedMultiVersionsManager() {}
   ~WritePreparedSeqBasedMultiVersionsManager() {}
 
-  virtual void PrepareVersion(const Version& v) override;
-  virtual void PrepareVersion(const Version& base, size_t count) override;
-  virtual void CommitVersion(const Version& v) override;
-  virtual void CommitVersion(const Version& base, size_t count) override;
-  virtual void RollbackVersion(const Version& v) override;
-  virtual void RollbackVersion(const Version& base, size_t count) override;
+  virtual void PrepareVersion(const Version& version) override;
+  virtual void PrepareVersion(const Version& base, uint32_t count) override;
+  virtual void CommitVersion(const Version& version) override;
+  virtual void CommitVersion(const Version& base, uint32_t count) override;
+  virtual void RollbackVersion(const Version& version) override;
+  virtual void RollbackVersion(const Version& base, uint32_t count) override;
   virtual Version* MiniUncommittedVersion() const override;
   virtual bool IsVersionVisibleToSnapshot(
-      const Version& v, const Snapshot& s) const override;
+      const Version& version, const Snapshot& snapshot) const override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

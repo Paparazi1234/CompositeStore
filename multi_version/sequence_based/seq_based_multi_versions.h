@@ -16,17 +16,42 @@ class SeqBasedVersion : public Version {
     return rep_;
   }
 
-  void SetSeq(uint64_t new_seq) {
-    rep_ = new_seq;
+  virtual void IncreaseBy(uint32_t count) override {
+    if (count != 0) {
+      rep_ += count;
+    }
   }
 
-  virtual void EncodeTo(std::string* dest) const override;
-  virtual void DecodeFrom(const std::string& input) override;
-  
-  virtual int CompareWith(const Version& rhs) override;
+  virtual void IncreaseByOne() override {
+    rep_++;
+  }
+
+  virtual int CompareWith(const Version& rhs) const override {
+    const SeqBasedVersion* version_rhs =
+      reinterpret_cast<const SeqBasedVersion*>(&rhs);
+    if (rep_ != version_rhs->Seq()) {
+      if (rep_ < version_rhs->Seq()) {  // descending order by version
+        return +1;
+      }
+      return -1;
+    }
+    return 0;
+  }
+
+  virtual void EncodeTo(std::string* dest) const override {
+    *dest = std::to_string(rep_);
+  }
+
+  virtual void DecodeFrom(const std::string& input) override {
+    rep_ = std::stoull(input);
+  }
 
  private:
-  // friend class SeqBasedMultiVersionsManager;
+  friend  class SeqBasedMultiVersionsManager;
+
+  void SetSeq(uint64_t seq) {
+    rep_ = seq;
+  }
 
   uint64_t rep_;
 };
@@ -43,10 +68,7 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
 
   virtual void Initialize(const Version& orig) override;
   virtual Version* CreateVersion() const override;
-  virtual Version* ConstructVersion(
-      const Version& base, size_t i, Version* reused = nullptr) const override;
-  virtual void AdvanceVersionBy(size_t count) override;
-  virtual Version* LatestVisibleVersion() const override;
+  virtual Version* LatestVisibleVersion(Version* reused) const override;
 
  protected:
   std::atomic<uint64_t> seq_ = {};
@@ -65,15 +87,15 @@ class WriteCommittedSeqBasedMultiVersionsManager :
   WriteCommittedSeqBasedMultiVersionsManager() {}
   ~WriteCommittedSeqBasedMultiVersionsManager() {}
 
-  virtual void PrepareVersion(const Version& v) override;
-  virtual void PrepareVersion(const Version& base, size_t count) override;
-  virtual void CommitVersion(const Version& v) override;
-  virtual void CommitVersion(const Version& base, size_t count) override;
-  virtual void RollbackVersion(const Version& v) override;
-  virtual void RollbackVersion(const Version& base, size_t count) override;
+  virtual void PrepareVersion(const Version& version) override;
+  virtual void PrepareVersion(const Version& base, uint32_t count) override;
+  virtual void CommitVersion(const Version& version) override;
+  virtual void CommitVersion(const Version& base, uint32_t count) override;
+  virtual void RollbackVersion(const Version& version) override;
+  virtual void RollbackVersion(const Version& base, uint32_t count) override;
   virtual Version* MiniUncommittedVersion() const override;
   virtual bool IsVersionVisibleToSnapshot(
-      const Version& v, const Snapshot& s) const override;
+      const Version& version, const Snapshot& snapshot) const override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

@@ -45,13 +45,21 @@ class SkipListBackedInMemoryStore : public Store {
 
 	Status WriteInternal(
 			const WriteOptions& write_options, WriteBatch* write_batch);
+  
+  Version* VersionForInsert() {
+    if (version_for_insert_.get() == nullptr) {
+      version_for_insert_.reset(multi_versions_manager_->CreateVersion());
+    }
+    return version_for_insert_.get();
+  }
 
  private:
 	std::unique_ptr<MultiVersionsManager> multi_versions_manager_;
 	std::unique_ptr<SnapshotManager> snapshot_manager_;
 
 	WriteLock write_lock_;
-
+	// used to assign version for inserting entries in write path, lazy initialize
+	std::unique_ptr<Version> version_for_insert_ = nullptr;
 	SkipListBackedRep skiplist_backed_rep_;
 };
 

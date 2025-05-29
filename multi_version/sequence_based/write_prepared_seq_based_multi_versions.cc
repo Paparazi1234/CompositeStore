@@ -7,31 +7,31 @@
 namespace MULTI_VERSIONS_NAMESPACE {
 
 void WritePreparedSeqBasedMultiVersionsManager::PrepareVersion(
-    const Version& v) {
+    const Version& version) {
 
 }
 
 void WritePreparedSeqBasedMultiVersionsManager::PrepareVersion(
-    const Version& base, size_t count) {
+    const Version& base, uint32_t count) {
 
 }
 
 void WritePreparedSeqBasedMultiVersionsManager::CommitVersion(
-    const Version& v) {
+    const Version& version) {
 
 }
 
 void WritePreparedSeqBasedMultiVersionsManager::CommitVersion(
-    const Version& base, size_t count) {
+    const Version& base, uint32_t count) {
 
 }
 
 void WritePreparedSeqBasedMultiVersionsManager::RollbackVersion(
-    const Version& v) {
+    const Version& version) {
 
 }
 void WritePreparedSeqBasedMultiVersionsManager::RollbackVersion(
-    const Version& base, size_t count) {
+    const Version& base, uint32_t count) {
 
 }
 
@@ -41,7 +41,7 @@ Version* WritePreparedSeqBasedMultiVersionsManager::
 }
 
 bool WritePreparedSeqBasedMultiVersionsManager::IsVersionVisibleToSnapshot(
-    const Version& v, const Snapshot& s) const {
+    const Version& version, const Snapshot& snapshot) const {
   return true;
 }
 
