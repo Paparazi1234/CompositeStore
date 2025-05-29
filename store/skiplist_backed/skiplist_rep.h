@@ -100,7 +100,7 @@ class SkipListBackedRep {
 		if (version_for_get_.get() == nullptr) {
 			version_for_get_.reset(multi_versions_manager_->CreateVersion());
 		}
-		return version_for_get_.get();;
+		return version_for_get_.get();
 	}
 	const MultiVersionsManager* multi_versions_manager_;
 	SkipListKeyComparator comparator_;

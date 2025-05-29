@@ -125,7 +125,7 @@ TEST_F(WriteBatchTest, IterateThroughWriteBatch) {
     "{key: foo5,\ttype: Put\tvalue: bar}";
   WriteBatchDumpHandler handler;
   wb.Iterate(&handler);
-  ASSERT_EQ(expected, handler.GetDumpString());
+  ASSERT_STREQ(expected.c_str(), handler.GetDumpString().c_str());
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

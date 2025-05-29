@@ -275,7 +275,38 @@ TEST_F(MVCCTxnTest, ReadUnderSnapshot) {
 TEST_F(MVCCTxnTest, ReuseTransaction) {
   TransactionOptions txn_options;
   WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
   Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  s = txn->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Delete("foo1");
+  ASSERT_TRUE(s.IsOK());
+
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  // reuse transaction
+  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  s = txn->Put("foo", "bar1");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo1", "bar1");
+  ASSERT_TRUE(s.IsOK());
+
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+
+  s = txn->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
 
   delete txn;
 }
@@ -284,6 +315,9 @@ TEST_F(MVCCTxnTest, SingleTxnExcutionFlow) {
 
 }
 
+TEST_F(MVCCTxnTest, MultiThreadsTxnExcution) {
+
+}
 
 }   // namespace MULTI_VERSIONS_NAMESPACE
 

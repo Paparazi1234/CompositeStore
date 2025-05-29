@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <string>
 #include <stdint.h>
 
@@ -71,7 +72,11 @@ class SnapshotManager {
   // the returned snapshot must be released through ReleaseSnapshot()
   virtual const Snapshot* TakeSnapshot() = 0;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;
-  virtual void GetAllLivingSnapshot() = 0;
+
+  virtual bool IsEmpty() const = 0;
+  virtual uint32_t NumLivingSnapshot() const = 0;
+  virtual void GetAllLivingSnapshot(
+      std::vector<const Snapshot*>& snapshots) const = 0;
 };
 
 // Factory function

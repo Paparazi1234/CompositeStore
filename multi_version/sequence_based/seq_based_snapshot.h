@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <mutex>
-#include <unordered_map>
+#include <map>
 #include <assert.h>
 
 #include "seq_based_multi_versions.h"
@@ -48,15 +48,18 @@ class SeqBasedSnapshotManager : public SnapshotManager {
   virtual const Snapshot* LatestReadView() override;
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
-  virtual void GetAllLivingSnapshot() override;
+  virtual bool IsEmpty() const override;
+  virtual uint32_t NumLivingSnapshot() const override;
+  virtual void GetAllLivingSnapshot(
+      std::vector<const Snapshot*>& snapshots) const override;
 
  protected:
   virtual const SeqBasedSnapshot* TakeSnapshotInternal() = 0;
 
   const SeqBasedMultiVersionsManager* multi_versions_manager_;
-  std::mutex map_mutex_;
+  mutable std::mutex map_mutex_;
   using SnapshotsMap =
-    std::unordered_map<uint64_t, std::unique_ptr<const SeqBasedSnapshot>>;
+    std::map<uint64_t, std::unique_ptr<const SeqBasedSnapshot>>;
   SnapshotsMap snapshots_map_;
 };
 

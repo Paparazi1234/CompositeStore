@@ -96,10 +96,23 @@ TEST_F(SkipListBackedInMemoryStoreTest, DumpStoreKVPairs) {
   store_ptr_->Put(write_options, "foo1", "bar1");
   store_ptr_->Put(write_options, "foo2", "bar1");
 
+  std::string expected =
+  "KV pairs in store:\n"
+  "  {key: foo@7,\ttype: Put,\tvalue: bar1}\n"
+  "  {key: foo@4,\ttype: Delete}\n"
+  "  {key: foo@1,\ttype: Put,\tvalue: bar}\n"
+  "  {key: foo1@8,\ttype: Put,\tvalue: bar1}\n"
+  "  {key: foo1@5,\ttype: Delete}\n"
+  "  {key: foo1@2,\ttype: Put,\tvalue: bar}\n"
+  "  {key: foo2@9,\ttype: Put,\tvalue: bar1}\n"
+  "  {key: foo2@6,\ttype: Delete}\n"
+  "  {key: foo2@3,\ttype: Put,\tvalue: bar}\n"
+  "  Total count in store: 9, dump count: 9\n";
+
   std::stringstream oss;
   oss.str("");
   store_ptr_->DumpKVPairs(&oss);
-  std::cout<<oss.str();
+  ASSERT_STREQ(oss.str().c_str(), expected.c_str());
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE
