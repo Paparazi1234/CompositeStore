@@ -36,7 +36,7 @@ void WritePreparedSeqBasedMultiVersionsManager::RollbackVersion(
 }
 
 Version* WritePreparedSeqBasedMultiVersionsManager::
-    MiniUncommittedVersion() const {
+    MiniUncommittedVersion(Version* reused) const {
   return new SeqBasedVersion(0);
 }
 

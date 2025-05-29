@@ -16,6 +16,10 @@ class SeqBasedVersion : public Version {
     return rep_;
   }
 
+  void SetSeq(uint64_t seq) {
+    rep_ = seq;
+  }
+
   virtual void IncreaseBy(uint32_t count) override {
     if (count != 0) {
       rep_ += count;
@@ -26,11 +30,12 @@ class SeqBasedVersion : public Version {
     rep_++;
   }
 
+  // descending ordered by version
   virtual int CompareWith(const Version& rhs) const override {
     const SeqBasedVersion* version_rhs =
       reinterpret_cast<const SeqBasedVersion*>(&rhs);
     if (rep_ != version_rhs->Seq()) {
-      if (rep_ < version_rhs->Seq()) {  // descending order by version
+      if (rep_ < version_rhs->Seq()) {
         return +1;
       }
       return -1;
@@ -47,12 +52,6 @@ class SeqBasedVersion : public Version {
   }
 
  private:
-  friend  class SeqBasedMultiVersionsManager;
-
-  void SetSeq(uint64_t seq) {
-    rep_ = seq;
-  }
-
   uint64_t rep_;
 };
 
@@ -93,7 +92,7 @@ class WriteCommittedSeqBasedMultiVersionsManager :
   virtual void CommitVersion(const Version& base, uint32_t count) override;
   virtual void RollbackVersion(const Version& version) override;
   virtual void RollbackVersion(const Version& base, uint32_t count) override;
-  virtual Version* MiniUncommittedVersion() const override;
+  virtual Version* MiniUncommittedVersion(Version* reused) const override;
   virtual bool IsVersionVisibleToSnapshot(
       const Version& version, const Snapshot& snapshot) const override;
 };

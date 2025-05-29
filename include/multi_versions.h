@@ -39,7 +39,7 @@ class MultiVersionsManager {
   virtual void CommitVersion(const Version& base, uint32_t count) = 0;
   virtual void RollbackVersion(const Version& version) = 0;
   virtual void RollbackVersion(const Version& base, uint32_t count) = 0;
-  virtual Version* MiniUncommittedVersion() const = 0;
+  virtual Version* MiniUncommittedVersion(Version* reused = nullptr) const = 0;
   virtual Version* LatestVisibleVersion(Version* reused = nullptr) const = 0;
   virtual bool IsVersionVisibleToSnapshot(
       const Version& version, const Snapshot& snapshot) const = 0;

@@ -66,10 +66,17 @@ void WriteCommittedSeqBasedMultiVersionsManager::RollbackVersion(
   (void)count;
 }
 
+// seq 0 is always considered committed
 Version* WriteCommittedSeqBasedMultiVersionsManager::
-    MiniUncommittedVersion() const {
+    MiniUncommittedVersion(Version* reused) const {
   uint64_t latest_version = seq_.load(std::memory_order_acquire);
-  return new SeqBasedVersion(latest_version + 1);
+  if (reused != nullptr) {
+    SeqBasedVersion* version_impl = reinterpret_cast<SeqBasedVersion*>(reused);
+    version_impl->SetSeq(latest_version + 1);
+    return reused;
+  } else {
+    return new SeqBasedVersion(latest_version + 1);
+  }
 }
 
 bool WriteCommittedSeqBasedMultiVersionsManager::IsVersionVisibleToSnapshot(
