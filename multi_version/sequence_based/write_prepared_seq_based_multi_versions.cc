@@ -45,4 +45,24 @@ bool WritePreparedSeqBasedMultiVersionsManager::IsVersionVisibleToSnapshot(
   return true;
 }
 
+bool CommitCache::GetCommitEntry(const uint64_t indexed_seq,
+                                 CommitEntry64b* entry_64b,
+                                 CommitEntry* entry) const {
+  *entry_64b = commit_cache_[static_cast<size_t>(indexed_seq)].load(
+      std::memory_order_acquire);
+  bool valid = entry_64b->Parse(indexed_seq, entry, FORMAT);
+  return valid;
+}
+
+bool CommitCache::ExchangeCommitEntry(const uint64_t indexed_seq,
+                                      CommitEntry64b& expected_entry_64b,
+                                      const CommitEntry& new_entry) {
+  auto& atomic_entry = commit_cache_[static_cast<size_t>(indexed_seq)];
+  CommitEntry64b new_entry_64b(new_entry, FORMAT);
+  bool succ = atomic_entry.compare_exchange_strong(
+      expected_entry_64b, new_entry_64b, std::memory_order_acq_rel,
+      std::memory_order_acquire);
+  return succ;
+}
+
 }   // namespace MULTI_VERSIONS_NAMESPACE
