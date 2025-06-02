@@ -1,4 +1,4 @@
-#include "MVCC_based_transaction.h"
+#include "MVCC_based_txn.h"
 #include "include/txn_lock_manager.h"
 #include "third-party/gtest/gtest.h"
 
@@ -8,14 +8,11 @@ class MVCCTxnTest : public testing::Test {
  public:
   MVCCTxnTest() {
     StoreOptions store_options;
-    EmptyMultiVersionsManagerFactory mvm_factory;
-    SkipListBackedInMemoryStore* base_store =
-        new SkipListBackedInMemoryStore(store_options, mvm_factory);
     TransactionStoreOptions txn_store_options;
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
-    txn_store_ = new WriteCommittedTransactionStore(txn_store_options,
-        base_store, txn_lock_mgr_factory);
-    
+    txn_store_ = new WriteCommittedTxnStore(store_options,
+                                            txn_store_options,
+                                            txn_lock_mgr_factory);
   }
 
   ~MVCCTxnTest() {
@@ -32,7 +29,7 @@ TEST_F(MVCCTxnTest, SimpleTxnReadWrite) {
   std::string value;
   Status s;
 
-  // begine transaction
+  // begin transaction
   Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
 
   s = txn->Put("foo", "bar");
@@ -311,11 +308,103 @@ TEST_F(MVCCTxnTest, ReuseTransaction) {
   delete txn;
 }
 
-TEST_F(MVCCTxnTest, SingleTxnExcutionFlow) {
+TEST_F(MVCCTxnTest, SingleTxnExcutionFlowTest) {
+  TransactionOptions txn_options;
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
 
+  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  // write stage
+  s = txn->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+  
+  // can't write after prepared
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo1", "bar");
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  // can't prepare after prepared
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  // can't write after committed(2PC here)
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Delete("foo");
+  ASSERT_TRUE(s.IsInvalidArgument());
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  // can't prepare after commited
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  // can't commit after committed
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  // can't rollback after committed
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  // write stage
+  s = txn->Put("foo", "bar1");
+  ASSERT_TRUE(s.IsOK());
+
+  // rollback during write stage(equivalent to rollback to savepoint, txn will
+  // be in initial state after rollback so act as a newly created txn)
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  // can write、prepare and commit
+  s = txn->Put("foo", "bar2");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar2");
+
+  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  // write stage
+  s = txn->Put("foo", "bar1");
+  ASSERT_TRUE(s.IsOK());
+
+  // rollback after prepared
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
+
+  // can't write after rollback with prepare executed
+  s = txn->Delete("foo1");
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  // can't prepare after rollback with prepare executed
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  // can't commit after rollback with prepare executed
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsInvalidArgument());
+
+  // can't rollback after rollback with prepare executed
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsInvalidArgument());
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar2");
+
+  delete txn;
 }
 
-TEST_F(MVCCTxnTest, MultiThreadsTxnExcution) {
+TEST_F(MVCCTxnTest, MultiThreadsTxnsExcution) {
 
 }
 

@@ -2,9 +2,9 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class TransactionStoreFactory {
+class TxnStoreFactory {
  public:
-  virtual ~TransactionStoreFactory() {}
+  virtual ~TxnStoreFactory() {}
 
   virtual TransactionStore* CreateTransactionStore(
       const StoreOptions& store_options,
@@ -12,7 +12,7 @@ class TransactionStoreFactory {
       const StoreTraits& store_traits) const = 0;
 };
 
-class SkipListBackedInMemoryTxnStoreFactory : public TransactionStoreFactory {
+class SkipListBackedInMemoryTxnStoreFactory : public TxnStoreFactory {
  public:
   ~SkipListBackedInMemoryTxnStoreFactory() {}
 
@@ -20,42 +20,21 @@ class SkipListBackedInMemoryTxnStoreFactory : public TransactionStoreFactory {
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const StoreTraits& store_traits) const override {
-    SkipListBackedInMemoryStore* base_store = nullptr;
+    SkipListBackedInMemoryTxnStore* txn_store = nullptr;
+    EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     switch (store_traits.txn_write_policy) {
-      case WRITE_COMMITTED: {
-          WCSeqBasedMultiVersionsManagerFactory wcmvm_factory;
-          base_store =
-              new SkipListBackedInMemoryStore(store_options, wcmvm_factory);
-        }
+      case WRITE_COMMITTED:
+        txn_store = new WriteCommittedTxnStore(store_options,
+                                               txn_store_options,
+                                               txn_lock_mgr_factory);
         break;
-      case WRITE_PREPARED: {
-          WPSeqBasedMultiVersionsManagerFactory wpmvm_factory;
-          base_store =
-              new SkipListBackedInMemoryStore(store_options, wpmvm_factory);
-        }
-        break;
-      default:
-        base_store = nullptr;
-    }
-
-    if (!base_store) {
-      return nullptr;
-    }
-    
-    TransactionStore* txn_store = nullptr;
-    switch (store_traits.txn_lock_manager_type) {
-      case kEmptyTxnLoxkManager: {
-          EmptyTxnLockManagerFactory tlm_factory;
-          txn_store = new WriteCommittedTransactionStore(txn_store_options,
-              base_store, tlm_factory);
-        }
+      case WRITE_PREPARED:
+        txn_store = new WritePreparedTxnStore(store_options,
+                                              txn_store_options,
+                                              txn_lock_mgr_factory);
         break;
       default:
         txn_store = nullptr;
-    }
-    
-    if (!txn_store) {
-      delete base_store;
     }
     return txn_store;
   }

@@ -5,19 +5,20 @@
 #include "write_lock.h"
 #include "write_batch.h"
 #include "skiplist_rep.h"
-#include "include/store.h"
+#include "include/transaction_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class SkipListBackedInMemoryStore : public Store {
+class SkipListBackedInMemoryStore : public TransactionStore {
  public:
   // No copying allowed
   SkipListBackedInMemoryStore(const SkipListBackedInMemoryStore&) = delete;
   SkipListBackedInMemoryStore& operator=(
       const SkipListBackedInMemoryStore&) = delete;
 
-  SkipListBackedInMemoryStore(const StoreOptions& store_options,
-															const MultiVersionsManagerFactory& factory);
+  SkipListBackedInMemoryStore(
+			const StoreOptions& store_options,
+			const MultiVersionsManagerFactory& multi_versions_mgr_factory);
   ~SkipListBackedInMemoryStore() {}
 
   virtual Status Put(const WriteOptions& write_options,
@@ -31,9 +32,15 @@ class SkipListBackedInMemoryStore : public Store {
 		skiplist_backed_rep_.Dump(oss, dump_count);
 	}
 
+	virtual Transaction* BeginTransaction(
+			const TransactionOptions& txn_options,
+			const WriteOptions& write_options,
+			Transaction* old_txn = nullptr) override;
+  virtual const Snapshot* TakeSnapshot() override;
+  virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
+
  protected:
- 	friend class SkipListBackedInMemoryTxnStore;
-	friend class WriteCommittedTransaction;
+	friend class WriteCommittedTxn;
 
 	MultiVersionsManager* GetMultiVersionsManager() const {
 		return multi_versions_manager_.get();

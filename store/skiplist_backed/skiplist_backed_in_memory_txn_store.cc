@@ -1,14 +1,15 @@
 #include "skiplist_backed_in_memory_txn_store.h"
 
-#include "MVCC_based_transaction.h"
+#include "MVCC_based_txn.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
 SkipListBackedInMemoryTxnStore::SkipListBackedInMemoryTxnStore(
+    const StoreOptions& store_options,
     const TransactionStoreOptions& txn_store_options,
-    SkipListBackedInMemoryStore* base_store,
+    const MultiVersionsManagerFactory& multi_versions_mgr_factory,
     const TxnLockManagerFactory& txn_lock_mgr_factory)
-    : base_store_(base_store),
+    : SkipListBackedInMemoryStore(store_options, multi_versions_mgr_factory),
       txn_lock_manager_(txn_lock_mgr_factory.CreateTxnLockManager()) {
   (void)txn_store_options;
 }
@@ -39,16 +40,16 @@ Status SkipListBackedInMemoryTxnStore::Delete(
 Status SkipListBackedInMemoryTxnStore::Get(const ReadOptions& read_options,
                                            const std::string& key,
                                            std::string* value) {
-  return base_store_->Get(read_options, key, value);
+  return SkipListBackedInMemoryStore::Get(read_options, key, value);
 }
 
 const Snapshot* SkipListBackedInMemoryTxnStore::TakeSnapshot() {
-  SnapshotManager* snapshot_manager = base_store_->GetSnapshotManager();
+  SnapshotManager* snapshot_manager = GetSnapshotManager();
   return snapshot_manager->TakeSnapshot();
 }
 
 void SkipListBackedInMemoryTxnStore::ReleaseSnapshot(const Snapshot* snapshot) {
-  SnapshotManager* snapshot_manager = base_store_->GetSnapshotManager();
+  SnapshotManager* snapshot_manager = GetSnapshotManager();
   snapshot_manager->ReleaseSnapshot(snapshot);
 }
 
@@ -62,7 +63,7 @@ void SkipListBackedInMemoryTxnStore::UnLock(const std::string& key) {
 
 void SkipListBackedInMemoryTxnStore::ReinitializeTransaction(Transaction* txn,
     const TransactionOptions& txn_options, const WriteOptions& write_options) {
-  MVCCBasedTransaction* mvcc_txn = reinterpret_cast<MVCCBasedTransaction*>(txn);
+  MVCCBasedTxn* mvcc_txn = reinterpret_cast<MVCCBasedTxn*>(txn);
   mvcc_txn->Reinitialize(this, txn_options, write_options);
 }
 
@@ -73,15 +74,21 @@ Transaction* SkipListBackedInMemoryTxnStore::BeginInternalTransaction(
   return txn;
 }
 
-Transaction* WriteCommittedTransactionStore::BeginTransaction(
+Transaction* WriteCommittedTxnStore::BeginTransaction(
     const TransactionOptions& txn_options, const WriteOptions& write_options,
     Transaction* old_txn) {
   if (old_txn) {
     ReinitializeTransaction(old_txn, txn_options, write_options);
     return old_txn;
   } else {
-    return new WriteCommittedTransaction(this, txn_options, write_options);
+    return new WriteCommittedTxn(this, txn_options, write_options);
   }
+}
+
+Transaction* WritePreparedTxnStore::BeginTransaction(
+    const TransactionOptions& txn_options, const WriteOptions& write_options,
+    Transaction* old_txn) {
+  return nullptr;
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

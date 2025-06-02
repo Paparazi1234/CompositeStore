@@ -1,27 +1,27 @@
-#include "MVCC_based_transaction.h"
+#include "MVCC_based_txn.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-MVCCBasedTransaction::MVCCBasedTransaction(
-    TransactionStore* transaction_store, const TransactionOptions& txn_options,
-    const WriteOptions& write_options)
-    : write_options_(write_options),
-      txn_state_(STAGE_WRITING) {
-  transaction_store_ =
-    reinterpret_cast<SkipListBackedInMemoryTxnStore*>(transaction_store);
-  base_store_ = transaction_store_->GetBaseStore();
-}
-                      
-Status MVCCBasedTransaction::TryLock(const std::string& key) {
-  return transaction_store_->TryLock(key);
+MVCCBasedTxn::MVCCBasedTxn(TransactionStore* txn_store,
+                          const TransactionOptions& txn_options,
+                          const WriteOptions& write_options)
+                          : write_options_(write_options),
+                            txn_state_(STAGE_WRITING) {
+  txn_store_ = reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store);
 }
 
-void MVCCBasedTransaction::UnLock(const std::string& key) {
-  transaction_store_->TryLock(key);
+Status MVCCBasedTxn::TryLock(const std::string& key) {
+  return txn_store_->TryLock(key);
 }
 
-Status MVCCBasedTransaction::Put(const std::string& key,
-                                 const std::string& value) {
+void MVCCBasedTxn::UnLock(const std::string& key) {
+  txn_store_->TryLock(key);
+}
+
+Status MVCCBasedTxn::Put(const std::string& key, const std::string& value) {
+  if (!IsInWriteStage()) {
+    return Status::InvalidArgument();
+  }
   Status s = TryLock(key);
   if (s.IsOK()) {
     write_batch_.Put(key, value);
@@ -29,7 +29,10 @@ Status MVCCBasedTransaction::Put(const std::string& key,
   return s;
 }
 
-Status MVCCBasedTransaction::Delete(const std::string& key) {
+Status MVCCBasedTxn::Delete(const std::string& key) {
+  if (!IsInWriteStage()) {
+    return Status::InvalidArgument();
+  }
   Status s = TryLock(key);
   if (s.IsOK()) {
     write_batch_.Delete(key);
@@ -37,10 +40,10 @@ Status MVCCBasedTransaction::Delete(const std::string& key) {
   return s;
 }
 
-// first get from transaction self buffered writes, if not found then get from
+// first get from transaction's self buffered writes, if not found then get from
 // store
-Status MVCCBasedTransaction::Get(const ReadOptions& read_options,
-                                const std::string& key, std::string* value) {
+Status MVCCBasedTxn::Get(const ReadOptions& read_options,
+                         const std::string& key, std::string* value) {
   assert(value);
   value->clear();
   WriteBatch::GetReault result = write_batch_.Get(key, value);
@@ -50,13 +53,13 @@ Status MVCCBasedTransaction::Get(const ReadOptions& read_options,
     return Status::NotFound();
   } else {
     assert(result == WriteBatch::GetReault::kNotFound);
-    return transaction_store_->Get(read_options, key, value);
+    return txn_store_->Get(read_options, key, value);
   }
 }
 
 // only control the transaction excution behavior, let derived class
 // implements the details
-Status MVCCBasedTransaction::Prepare() {
+Status MVCCBasedTxn::Prepare() {
   Status s;
   if (txn_state_ == STAGE_WRITING) {
     txn_state_.store(STAGE_PREPARING, std::memory_order_relaxed);
@@ -76,7 +79,7 @@ Status MVCCBasedTransaction::Prepare() {
   return s;
 }
 
-Status MVCCBasedTransaction::Commit() {
+Status MVCCBasedTxn::Commit() {
   Status s;
   if (txn_state_ == STAGE_WRITING) {
     txn_state_.store(STAGE_COMMITTING, std::memory_order_relaxed);
@@ -100,10 +103,10 @@ Status MVCCBasedTransaction::Commit() {
   return s;
 }
 
-Status MVCCBasedTransaction::Rollback() {
+Status MVCCBasedTxn::Rollback() {
   Status s;
   // if rollback during write stage, then txn remains in STAGE_WRITING state and
-  // can be used to future writes(equivalent to rollback to savepoint)
+  // can be used to do future writes(equivalent to rollback to savepoint)
   if (txn_state_ == STAGE_WRITING) {
     s = RollbackImpl();
   } else if (txn_state_ == STAGE_PREPARED) {
@@ -124,15 +127,14 @@ Status MVCCBasedTransaction::Rollback() {
   return s;
 }
 
-void MVCCBasedTransaction::SetSnapshot() {
+void MVCCBasedTxn::SetSnapshot() {
 
 }
 
-void MVCCBasedTransaction::Reinitialize(TransactionStore* transaction_store,
-    const TransactionOptions& txn_options, const WriteOptions& write_options) {
-  transaction_store_ =
-    reinterpret_cast<SkipListBackedInMemoryTxnStore*>(transaction_store);
-  base_store_ = transaction_store_->GetBaseStore();
+void MVCCBasedTxn::Reinitialize(TransactionStore* txn_store,
+                                const TransactionOptions& txn_options,
+                                const WriteOptions& write_options) {
+  txn_store_ = reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store);
   write_options_ = write_options;
   txn_state_ = STAGE_WRITING;
   Clear();
@@ -140,7 +142,7 @@ void MVCCBasedTransaction::Reinitialize(TransactionStore* transaction_store,
 
 class ReleaseTxnLockHandler : public WriteBatch::Handler {
  public:
-  ReleaseTxnLockHandler(MVCCBasedTransaction* txn) : txn_(txn) {}
+  ReleaseTxnLockHandler(MVCCBasedTxn* txn) : txn_(txn) {}
   ~ReleaseTxnLockHandler() {}
   virtual Status Put(const std::string& key,
                      const std::string& value) override {
@@ -154,10 +156,10 @@ class ReleaseTxnLockHandler : public WriteBatch::Handler {
   }
  
  private:
-  MVCCBasedTransaction* txn_;
+  MVCCBasedTxn* txn_;
 };
 
-void MVCCBasedTransaction::ClearTxnLocks() {
+void MVCCBasedTxn::ClearTxnLocks() {
   if (write_batch_.IsEmpty()) {
     return;
   }
@@ -166,25 +168,25 @@ void MVCCBasedTransaction::ClearTxnLocks() {
   assert(s.IsOK());
 }
 
-Status WriteCommittedTransaction::PrepareImpl() {
+Status WriteCommittedTxn::PrepareImpl() {
   // in-memory only store, so nothing to do when prepare(because prepare mainly
   // deals with WAL)
   return Status::OK();
 }
 
-Status WriteCommittedTransaction::CommitWithPrepareImpl() {
-  Status s = base_store_->WriteInternal(write_options_, &write_batch_);
+Status WriteCommittedTxn::CommitWithPrepareImpl() {
+  Status s = txn_store_->WriteInternal(write_options_, &write_batch_);
   Clear();
   return s;
 }
 
-Status WriteCommittedTransaction::CommitWithoutPrepareImpl() {
-  Status s = base_store_->WriteInternal(write_options_, &write_batch_);
+Status WriteCommittedTxn::CommitWithoutPrepareImpl() {
+  Status s = txn_store_->WriteInternal(write_options_, &write_batch_);
   Clear();
   return s;
 }
 
-Status WriteCommittedTransaction::RollbackImpl() {
+Status WriteCommittedTxn::RollbackImpl() {
   Clear();
   return Status::OK();
 }

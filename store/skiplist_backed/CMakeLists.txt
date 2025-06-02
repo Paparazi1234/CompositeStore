@@ -1,9 +1,9 @@
 set(SKIPLIST_BACKED_STORE_SOURCES
         memory_allocator.cc
-        MVCC_based_transaction.cc
-        skiplist_rep.cc
+        MVCC_based_txn.cc
         skiplist_backed_in_memory_store.cc
         skiplist_backed_in_memory_txn_store.cc
+        skiplist_rep.cc
         write_batch.cc)
 
 add_library(${SKIPLIST_BACKED_STORE_STATIC_LIB} STATIC ${SKIPLIST_BACKED_STORE_SOURCES})
@@ -16,7 +16,7 @@ endif()
 
 if(BUILD_TESTS)
   set(SKIPLIST_BACKED_STORE_TEST_SOURCES
-          MVCC_based_transaction_test.cc
+          MVCC_based_txn_test.cc
           skiplist_backed_in_memory_store_test.cc
           write_batch_test.cc)
 

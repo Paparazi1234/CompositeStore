@@ -6,16 +6,16 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class MVCCBasedTransaction : public Transaction {
+class MVCCBasedTxn : public Transaction {
  public:
   // No copying allowed
-  MVCCBasedTransaction(const MVCCBasedTransaction&) = delete;
-  MVCCBasedTransaction& operator=(const MVCCBasedTransaction&) = delete;
+  MVCCBasedTxn(const MVCCBasedTxn&) = delete;
+  MVCCBasedTxn& operator=(const MVCCBasedTxn&) = delete;
 
-  MVCCBasedTransaction(TransactionStore* transaction_store,
-                       const TransactionOptions& txn_options,
-                       const WriteOptions& write_options);
-  ~MVCCBasedTransaction() {}
+  MVCCBasedTxn(TransactionStore* txn_store,
+               const TransactionOptions& txn_options,
+               const WriteOptions& write_options);
+  ~MVCCBasedTxn() {}
 
   virtual Status Put(const std::string& key, const std::string& value) override; 
   virtual Status Delete(const std::string& key) override;
@@ -29,8 +29,9 @@ class MVCCBasedTransaction : public Transaction {
 
   virtual void SetSnapshot() override;
 
-  void Reinitialize(TransactionStore* transaction_store,
-      const TransactionOptions& txn_options, const WriteOptions& write_options);
+  void Reinitialize(TransactionStore* txn_store,
+                    const TransactionOptions& txn_options,
+                    const WriteOptions& write_options);
 
  protected:
   friend class ReleaseTxnLockHandler;
@@ -49,7 +50,7 @@ class MVCCBasedTransaction : public Transaction {
   virtual Status CommitWithoutPrepareImpl() = 0;
   virtual Status RollbackImpl() = 0;
 
-  Status TryLock(const std::string& key); 
+  Status TryLock(const std::string& key);
   void UnLock(const std::string& key);
 
   void ClearTxnLocks();
@@ -60,8 +61,11 @@ class MVCCBasedTransaction : public Transaction {
     write_batch_.Clear();
   }
 
-  SkipListBackedInMemoryStore* base_store_;
-  SkipListBackedInMemoryTxnStore* transaction_store_;
+  bool IsInWriteStage() {
+    return txn_state_ == STAGE_WRITING;
+  }
+
+  SkipListBackedInMemoryTxnStore* txn_store_;
 
   WriteOptions write_options_;
 
@@ -69,19 +73,19 @@ class MVCCBasedTransaction : public Transaction {
   WriteBatch write_batch_;
 };
 
-class WriteCommittedTransaction : public MVCCBasedTransaction {
+class WriteCommittedTxn : public MVCCBasedTxn {
  public:
   // No copying allowed
-  WriteCommittedTransaction(const WriteCommittedTransaction&) = delete;
-  WriteCommittedTransaction& operator=(
-      const WriteCommittedTransaction&) = delete;
+  WriteCommittedTxn(const WriteCommittedTxn&) = delete;
+  WriteCommittedTxn& operator=(const WriteCommittedTxn&) = delete;
 
-  WriteCommittedTransaction(TransactionStore* transaction_store,
-      const TransactionOptions& txn_options, const WriteOptions& write_options)
-        : MVCCBasedTransaction(transaction_store, txn_options, write_options) {}
-  ~WriteCommittedTransaction() {}
+  WriteCommittedTxn(TransactionStore* txn_store,
+                    const TransactionOptions& txn_options,
+                    const WriteOptions& write_options)
+                    : MVCCBasedTxn(txn_store, txn_options, write_options) {}
+  ~WriteCommittedTxn() {}
 
- protected:
+ private:
   virtual Status PrepareImpl() override;
   virtual Status CommitWithPrepareImpl() override;
   virtual Status CommitWithoutPrepareImpl() override;

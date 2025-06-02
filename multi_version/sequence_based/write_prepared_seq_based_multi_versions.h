@@ -1,5 +1,9 @@
 #pragma once
 
+#include <assert.h>
+#include <stdexcept>
+#include <memory>
+
 #include "seq_based_multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -26,6 +30,7 @@ class WritePreparedSeqBasedMultiVersionsManager :
   virtual Version* MiniUncommittedVersion(Version* reused) const override;
   virtual bool IsVersionVisibleToSnapshot(
       const Version& version, const Snapshot& snapshot) const override;
+
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

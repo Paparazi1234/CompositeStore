@@ -38,7 +38,7 @@ char* MemoryAllocator::AllocateFallback(size_t bytes, bool aligned) {
     return AllocateNewBlock(bytes);
   }
 
-  // required size less than or equal 1/4 kBlockSize and active block can`t
+  // required size less than or equal 1/4 kBlockSize and active block can't
   // offer it, then switch to a new block and waste remaining bytes in active 
   // block
   size_t block_size = kBlockSize;

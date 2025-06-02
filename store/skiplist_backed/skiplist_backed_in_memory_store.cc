@@ -4,10 +4,11 @@ namespace MULTI_VERSIONS_NAMESPACE {
 
 SkipListBackedInMemoryStore::SkipListBackedInMemoryStore(
     const StoreOptions& store_options,
-    const MultiVersionsManagerFactory& factory)
-		: multi_versions_manager_(factory.CreateMultiVersionsManager()),
-			snapshot_manager_(
-					factory.CreateSnapshotManager(multi_versions_manager_.get())),
+    const MultiVersionsManagerFactory& multi_versions_mgr_factory)
+		: multi_versions_manager_(
+          multi_versions_mgr_factory.CreateMultiVersionsManager()),
+			snapshot_manager_(multi_versions_mgr_factory.CreateSnapshotManager(
+          multi_versions_manager_.get())),
 			skiplist_backed_rep_(multi_versions_manager_.get()) {
   (void)store_options;
 }
@@ -55,6 +56,25 @@ Status SkipListBackedInMemoryStore::Get(const ReadOptions& read_options,
     read_snapshot = read_snapshot_tmp.get();
   }
   return skiplist_backed_rep_.Get(key, *read_snapshot, value);
+}
+
+// invalidate transaction relative interfaces
+Transaction* SkipListBackedInMemoryStore::BeginTransaction(
+    const TransactionOptions& /*txn_options*/,
+    const WriteOptions& /*write_options*/,
+    Transaction* /*old_txn*/) {
+  assert(false);
+  return nullptr;
+}
+
+const Snapshot* SkipListBackedInMemoryStore::TakeSnapshot() {
+  assert(false);
+  return nullptr;
+}
+
+void SkipListBackedInMemoryStore::ReleaseSnapshot(
+    const Snapshot* /*snapshot*/) {
+  assert(false);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

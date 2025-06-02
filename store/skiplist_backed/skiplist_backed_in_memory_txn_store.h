@@ -1,12 +1,12 @@
 #pragma once
 
-#include "include/transaction_store.h"
+#include "include/multi_versions.h"
 #include "include/txn_lock_manager.h"
 #include "skiplist_backed_in_memory_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class SkipListBackedInMemoryTxnStore : public TransactionStore {
+class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
  public:
   // No copying allowed
   SkipListBackedInMemoryTxnStore(
@@ -15,12 +15,11 @@ class SkipListBackedInMemoryTxnStore : public TransactionStore {
       const SkipListBackedInMemoryTxnStore&) = delete;
 
   SkipListBackedInMemoryTxnStore(
+      const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
-      SkipListBackedInMemoryStore* base_store,
+      const MultiVersionsManagerFactory& multi_versions_mgr_factory,
       const TxnLockManagerFactory& txn_lock_mgr_factory);
-  ~SkipListBackedInMemoryTxnStore() {
-    delete base_store_;
-  }
+  ~SkipListBackedInMemoryTxnStore() {}
 
   // non-transactional write
   virtual Status Put(const WriteOptions& write_options,
@@ -29,6 +28,7 @@ class SkipListBackedInMemoryTxnStore : public TransactionStore {
                         const std::string& key) override;
 
   // non-transactional read
+  using SkipListBackedInMemoryStore::Get;
   virtual Status Get(const ReadOptions& read_options,
                   const std::string& key, std::string* value) override;
 
@@ -38,40 +38,54 @@ class SkipListBackedInMemoryTxnStore : public TransactionStore {
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
 
  protected:
-  friend class MVCCBasedTransaction;
+  friend class MVCCBasedTxn;
 
   Status TryLock(const std::string& key);
   void UnLock(const std::string& key);
-
-  SkipListBackedInMemoryStore* GetBaseStore() {
-    return base_store_;
-  }
 
   void ReinitializeTransaction(Transaction* txn,
       const TransactionOptions& txn_options, const WriteOptions& write_options);
 
   Transaction* BeginInternalTransaction(const WriteOptions& write_options);
 
-  SkipListBackedInMemoryStore* base_store_;
   std::unique_ptr<TxnLockManager> txn_lock_manager_;
 };
 
-class WriteCommittedTransactionStore : public SkipListBackedInMemoryTxnStore {
+class WriteCommittedTxnStore : public SkipListBackedInMemoryTxnStore {
  public:
   // No copying allowed
-  WriteCommittedTransactionStore(
-      const WriteCommittedTransactionStore&) = delete;
-  WriteCommittedTransactionStore& operator=(
-      const WriteCommittedTransactionStore&) = delete;
+  WriteCommittedTxnStore(const WriteCommittedTxnStore&) = delete;
+  WriteCommittedTxnStore& operator=(const WriteCommittedTxnStore&) = delete;
 
-  WriteCommittedTransactionStore(
+  WriteCommittedTxnStore(
+      const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
-      SkipListBackedInMemoryStore* base_store,
       const TxnLockManagerFactory& txn_lock_mgr_factory)
-      : SkipListBackedInMemoryTxnStore(txn_store_options,
-                                       base_store,
+      : SkipListBackedInMemoryTxnStore(store_options,
+                                       txn_store_options,
+                                       WCSeqBasedMultiVersionsManagerFactory(),
                                        txn_lock_mgr_factory) {}
-  ~WriteCommittedTransactionStore() {}
+  ~WriteCommittedTxnStore() {}
+
+  Transaction* BeginTransaction(const TransactionOptions& txn_options,
+      const WriteOptions& write_options, Transaction* old_txn) override;
+};
+
+class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
+ public:
+  // No copying allowed
+  WritePreparedTxnStore(const WritePreparedTxnStore&) = delete;
+  WritePreparedTxnStore& operator=(const WritePreparedTxnStore&) = delete;
+
+  WritePreparedTxnStore(
+      const StoreOptions& store_options,
+      const TransactionStoreOptions& txn_store_options,
+      const TxnLockManagerFactory& txn_lock_mgr_factory)
+      : SkipListBackedInMemoryTxnStore(store_options,
+                                       txn_store_options,
+                                       WPSeqBasedMultiVersionsManagerFactory(),
+                                       txn_lock_mgr_factory) {}
+  ~WritePreparedTxnStore() {}
 
   Transaction* BeginTransaction(const TransactionOptions& txn_options,
       const WriteOptions& write_options, Transaction* old_txn) override;

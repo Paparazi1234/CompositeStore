@@ -16,7 +16,7 @@ option(BUILD_EXAMPLES "build with examples" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 include(third_party_defines)
-include(pluggable_defines)
+include(pluggables_defines)
 
 # if need to build test, then build gtest first
 if(BUILD_TESTS)
