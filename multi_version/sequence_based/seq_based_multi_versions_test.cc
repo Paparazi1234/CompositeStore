@@ -18,8 +18,8 @@ TEST_F(SeqBasedMultiVersionsTest, SeqBasedVersionTest) {
   SeqBasedVersion* version2 =
       reinterpret_cast<SeqBasedVersion*>(versions_manager.CreateVersion());
 
-  ASSERT_EQ(version1->Seq(), 0);
-  ASSERT_EQ(version2->Seq(), 0);
+  ASSERT_EQ(version1->Seq(), uint64_t(0));
+  ASSERT_EQ(version2->Seq(), uint64_t(0));
 
   version1->IncreaseByOne();
   version2->IncreaseByOne();
@@ -30,8 +30,8 @@ TEST_F(SeqBasedMultiVersionsTest, SeqBasedVersionTest) {
   ASSERT_TRUE(version1->CompareWith(*version2) > 0);
   ASSERT_TRUE(version2->CompareWith(*version1) < 0);
 
-  ASSERT_EQ(version1->Seq(), 1);
-  ASSERT_EQ(version2->Seq(), 3);
+  ASSERT_EQ(version1->Seq(), uint64_t(1));
+  ASSERT_EQ(version2->Seq(), uint64_t(3));
 
   // encode to
   std::string encoded;
@@ -41,7 +41,7 @@ TEST_F(SeqBasedMultiVersionsTest, SeqBasedVersionTest) {
   // decode from
   encoded = "10";
   version1->DecodeFrom(encoded);
-  ASSERT_EQ(version1->Seq(), 10);
+  ASSERT_EQ(version1->Seq(), uint64_t(10));
 
   delete version1;
   delete version2;
@@ -91,7 +91,7 @@ void TestWCMultiVersionsManager(
   delete latest_visible1;
   delete mini_uncommitted;
 }
-};  // anonymous namespace
+}  // anonymous namespace
 
 TEST_F(SeqBasedMultiVersionsTest, WCMultiVersionsManager) {
   // brand new version manager
@@ -109,12 +109,6 @@ TEST_F(SeqBasedMultiVersionsTest, WCMultiVersionsManager) {
 }
 
 namespace {
-void EchoVersionSeq(int num, Version* version, const Snapshot* snapshot) {
-  SeqBasedVersion* version_impl = reinterpret_cast<SeqBasedVersion*>(version);
-  const SeqBasedSnapshot* snapshot_impl = reinterpret_cast<const SeqBasedSnapshot*>(snapshot);
-  std::cout<<num<<": version seq: "<<version_impl->Seq()
-      <<" snapshot seq: "<<snapshot_impl->Seq()<<std::endl;
-}
 void TestWCSnapshotManagerReadView(
     WriteCommittedSeqBasedMultiVersionsManager& versions_manager,
     WriteCommittedSeqBasedSnapshotManager& snapshot_manager) {
@@ -176,7 +170,7 @@ void TestWCSnapshotManagerReadView(
   delete read_view2;
   delete read_view3;
 }
-};  // anonymous namespace
+}  // anonymous namespace
 
 TEST_F(SeqBasedMultiVersionsTest, WCSnapshotManagerReadView) {
   // brand new version manager
@@ -213,27 +207,27 @@ void TestWCSnapshotManagerTakeSnapshot(
       reinterpret_cast<SeqBasedVersion*>(latest_visible)->Seq();
   snapshot1 = snapshot_manager.TakeSnapshot();
   ASSERT_FALSE(snapshot_manager.IsEmpty());
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 1);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(1));
 
   latest_visible->IncreaseBy(5);
   versions_manager.CommitVersion(*latest_visible);
   snapshot2 = snapshot_manager.TakeSnapshot();
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 2);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
   // no new version committed, so the same snapshot is returned
   snapshot3 = snapshot_manager.TakeSnapshot();
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 2);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
   ASSERT_EQ(snapshot2, snapshot3);
 
   latest_visible->IncreaseBy(5);
   versions_manager.CommitVersion(*latest_visible);
   snapshot4 = snapshot_manager.TakeSnapshot();
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 3);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(3));
 
   std::vector<const Snapshot*> snapshots;
   snapshot_manager.GetAllLivingSnapshot(snapshots);
-  ASSERT_EQ(snapshots.size(), 3);
+  ASSERT_EQ(snapshots.size(), size_t(3));
   uint32_t expected_step[3] = {0, 5, 10};
-  for (int i = 0; i < snapshots.size(); ++i) {
+  for (size_t i = 0; i < snapshots.size(); ++i) {
     const SeqBasedSnapshot* snapshot_impl =
         reinterpret_cast<const SeqBasedSnapshot*>(snapshots[i]);
     ASSERT_EQ(snapshot_impl->Seq(), latest_visible_seq + expected_step[i]);
@@ -241,24 +235,24 @@ void TestWCSnapshotManagerTakeSnapshot(
 
   snapshot_manager.ReleaseSnapshot(snapshot1);
   snapshot1 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 2);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
 
   snapshot_manager.ReleaseSnapshot(snapshot2);
   snapshot2 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 2);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
 
   snapshot_manager.ReleaseSnapshot(snapshot3);
   snapshot3 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 1);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(1));
 
   snapshot_manager.ReleaseSnapshot(snapshot4);
   snapshot4 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), 0);
+  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(0));
   ASSERT_TRUE(snapshot_manager.IsEmpty());
 
   delete latest_visible;
 }
-};
+}  // anonymous namespace
 
 TEST_F(SeqBasedMultiVersionsTest, WCSnapshotManagerTakeSnapshot) {
   // brand new version manager

@@ -141,7 +141,7 @@ void ParseOneKVPair(const char* entry, std::string* key, std::string* value,
     value->assign(value_slice.data(), value_slice.size());
   }
 }
-};  // anonymous namespace
+}  // anonymous namespace
 
 void SkipListBackedRep::Dump(std::stringstream* oss, const size_t dump_count) {
   std::string key, value, version, type_str;

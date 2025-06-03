@@ -23,7 +23,7 @@ Status Store::Open(const StoreOptions& store_options,
                    const StoreTraits& store_traits,
                    Store** store_ptr) {
   assert(store_ptr);
-  *store_ptr == nullptr;
+  *store_ptr = nullptr;
   Status s;
   switch (store_traits.backed_type) {
     case kSkipListBacked :
@@ -31,7 +31,7 @@ Status Store::Open(const StoreOptions& store_options,
           SkipListBackedInMemoryStoreFactory().CreateStore(store_options);
       break;
     default:
-      *store_ptr == nullptr;
+      *store_ptr = nullptr;
   }
 
   if (*store_ptr == nullptr) {
