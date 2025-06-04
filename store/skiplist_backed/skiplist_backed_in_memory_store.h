@@ -33,8 +33,8 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 	}
 
 	virtual Transaction* BeginTransaction(
-			const TransactionOptions& /*txn_options*/,
 			const WriteOptions& /*write_options*/,
+			const TransactionOptions& /*txn_options*/,
 			Transaction* /*old_txn*/) override;
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* /*snapshot*/) override;

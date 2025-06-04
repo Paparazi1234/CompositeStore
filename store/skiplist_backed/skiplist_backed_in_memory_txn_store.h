@@ -32,8 +32,8 @@ class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
   virtual Status Get(const ReadOptions& read_options,
                   const std::string& key, std::string* value) override;
 
-  Transaction* BeginTransaction(const TransactionOptions& txn_options,
-      const WriteOptions& write_options, Transaction* old_txn) override = 0;
+  Transaction* BeginTransaction(const WriteOptions& write_options,
+      const TransactionOptions& txn_options, Transaction* old_txn) override = 0;
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
 
@@ -61,14 +61,12 @@ class WriteCommittedTxnStore : public SkipListBackedInMemoryTxnStore {
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const TxnLockManagerFactory& txn_lock_mgr_factory)
-      : SkipListBackedInMemoryTxnStore(store_options,
-                                       txn_store_options,
-                                       WCSeqBasedMultiVersionsManagerFactory(),
-                                       txn_lock_mgr_factory) {}
+      : SkipListBackedInMemoryTxnStore(store_options, txn_store_options,
+          WriteCommittedMultiVersionsManagerFactory(), txn_lock_mgr_factory) {}
   ~WriteCommittedTxnStore() {}
 
-  Transaction* BeginTransaction(const TransactionOptions& txn_options,
-      const WriteOptions& write_options, Transaction* old_txn) override;
+  Transaction* BeginTransaction(const WriteOptions& write_options,
+      const TransactionOptions& txn_options, Transaction* old_txn) override;
 };
 
 class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
@@ -81,14 +79,12 @@ class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const TxnLockManagerFactory& txn_lock_mgr_factory)
-      : SkipListBackedInMemoryTxnStore(store_options,
-                                       txn_store_options,
-                                       WPSeqBasedMultiVersionsManagerFactory(),
-                                       txn_lock_mgr_factory) {}
+      : SkipListBackedInMemoryTxnStore(store_options, txn_store_options,
+          WritePreparedMultiVersionsManagerFactory(), txn_lock_mgr_factory) {}
   ~WritePreparedTxnStore() {}
 
-  Transaction* BeginTransaction(const TransactionOptions& txn_options,
-      const WriteOptions& write_options, Transaction* old_txn) override;
+  Transaction* BeginTransaction(const WriteOptions& write_options,
+      const TransactionOptions& txn_options, Transaction* old_txn) override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

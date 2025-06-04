@@ -60,8 +60,8 @@ Status SkipListBackedInMemoryStore::Get(const ReadOptions& read_options,
 
 // invalidate transaction relative interfaces
 Transaction* SkipListBackedInMemoryStore::BeginTransaction(
-    const TransactionOptions& /*txn_options*/,
     const WriteOptions& /*write_options*/,
+    const TransactionOptions& /*txn_options*/,
     Transaction* /*old_txn*/) {
   assert(false);
   return nullptr;

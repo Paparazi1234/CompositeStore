@@ -5,7 +5,7 @@
 #include <map>
 #include <assert.h>
 
-#include "seq_based_multi_versions.h"
+#include "write_prepared_multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -50,7 +50,7 @@ class SeqBasedSnapshotManager : public SnapshotManager {
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
   virtual bool IsEmpty() const override;
   virtual uint32_t NumLivingSnapshot() const override;
-  virtual void GetAllLivingSnapshot(
+  virtual void GetAllLivingSnapshots(
       std::vector<const Snapshot*>& snapshots) const override;
 
  protected:
@@ -63,36 +63,50 @@ class SeqBasedSnapshotManager : public SnapshotManager {
   SnapshotsMap snapshots_map_;
 };
 
-class  WriteCommittedSeqBasedSnapshotManager : public SeqBasedSnapshotManager {
+class  WriteCommittedSnapshotManager : public SeqBasedSnapshotManager {
  public:
   // No copying allowed
-  WriteCommittedSeqBasedSnapshotManager(
-      const WriteCommittedSeqBasedSnapshotManager&) = delete;
-  WriteCommittedSeqBasedSnapshotManager&
-      operator=(const WriteCommittedSeqBasedSnapshotManager&) = delete;
+  WriteCommittedSnapshotManager(const WriteCommittedSnapshotManager&) = delete;
+  WriteCommittedSnapshotManager& operator=(
+      const WriteCommittedSnapshotManager&) = delete;
   
-  WriteCommittedSeqBasedSnapshotManager(
+  WriteCommittedSnapshotManager(
       SeqBasedMultiVersionsManager* multi_versions_manager)
-          : SeqBasedSnapshotManager(multi_versions_manager) {}
-  ~WriteCommittedSeqBasedSnapshotManager() {}
+      : SeqBasedSnapshotManager(multi_versions_manager) {}
+  ~WriteCommittedSnapshotManager() {}
 
  private:
   virtual const SeqBasedSnapshot* TakeSnapshotInternal() override;
 };
 
-class  WritePreparedSeqBasedSnapshotManager : public SeqBasedSnapshotManager {
+class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
  public:
   // No copying allowed
-  WritePreparedSeqBasedSnapshotManager(
-      const WritePreparedSeqBasedSnapshotManager&) = delete;
-  WritePreparedSeqBasedSnapshotManager&
-      operator=(const WritePreparedSeqBasedSnapshotManager&) = delete;
+  WritePreparedSnapshotManager(const WritePreparedSnapshotManager&) = delete;
+  WritePreparedSnapshotManager& operator=(
+      const WritePreparedSnapshotManager&) = delete;
   
-  WritePreparedSeqBasedSnapshotManager(
+  WritePreparedSnapshotManager(
       SeqBasedMultiVersionsManager* multi_versions_manager)
-          : SeqBasedSnapshotManager(multi_versions_manager) {}
-  ~WritePreparedSeqBasedSnapshotManager() {}
+      : SeqBasedSnapshotManager(multi_versions_manager) {
+    WritePreparedMultiVersionsManager* mgr_impl =
+        reinterpret_cast<WritePreparedMultiVersionsManager*>(
+            multi_versions_manager);
+    GetSnapshotsFunctor functor(this);
+    mgr_impl->SetSnapshotsRetrieveFunc(functor);
+  }
+  ~WritePreparedSnapshotManager() {}
+  void GetSnapshots(uint64_t max, std::vector<uint64_t>& snapshots) const;
 
+  class GetSnapshotsFunctor {
+   public:
+    GetSnapshotsFunctor(const WritePreparedSnapshotManager* mgr) : mgr_(mgr) {}
+    void operator()(uint64_t max, std::vector<uint64_t>& snapshots) {
+      mgr_->GetSnapshots(max, snapshots);
+    }
+   private:
+    const WritePreparedSnapshotManager* const mgr_;
+  };
  private:
   virtual const SeqBasedSnapshot* TakeSnapshotInternal() override;
 };

@@ -75,7 +75,7 @@ class SnapshotManager {
 
   virtual bool IsEmpty() const = 0;
   virtual uint32_t NumLivingSnapshot() const = 0;
-  virtual void GetAllLivingSnapshot(
+  virtual void GetAllLivingSnapshots(
       std::vector<const Snapshot*>& snapshots) const = 0;
 };
 
@@ -89,27 +89,27 @@ class MultiVersionsManagerFactory {
       MultiVersionsManager* multi_versions_manager) const = 0;
 };
 
-class WCSeqBasedMultiVersionsManagerFactory :
+class WriteCommittedMultiVersionsManagerFactory :
     public MultiVersionsManagerFactory {
  public:
-  ~WCSeqBasedMultiVersionsManagerFactory() {}
+  ~WriteCommittedMultiVersionsManagerFactory() {}
 
   virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
       MultiVersionsManager* multi_versions_manager) const override;
 };
 
-class WPSeqBasedMultiVersionsManagerFactory :
+class WritePreparedMultiVersionsManagerFactory :
     public MultiVersionsManagerFactory {
  public:
-  ~WPSeqBasedMultiVersionsManagerFactory() {}
+  ~WritePreparedMultiVersionsManagerFactory() {}
 
   virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
       MultiVersionsManager* multi_versions_manager) const override;
 };
 
-// Wrapper of WCSeqBasedMultiVersionsManagerFactory
+// Wrapper of WriteCommittedMultiVersionsManagerFactory
 class EmptyMultiVersionsManagerFactory : public MultiVersionsManagerFactory {
  public:
   ~EmptyMultiVersionsManagerFactory() {}
@@ -124,7 +124,7 @@ class EmptyMultiVersionsManagerFactory : public MultiVersionsManagerFactory {
   }
 
  private:
-  WCSeqBasedMultiVersionsManagerFactory factory_;
+  WriteCommittedMultiVersionsManagerFactory factory_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

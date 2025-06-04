@@ -1,33 +1,33 @@
 #include "sequence_based/seq_based_multi_versions.h"
-#include "sequence_based/write_prepared_seq_based_multi_versions.h"
+#include "sequence_based/write_prepared_multi_versions.h"
 #include "sequence_based/seq_based_snapshot.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
 // write committed
-MultiVersionsManager* WCSeqBasedMultiVersionsManagerFactory::
+MultiVersionsManager* WriteCommittedMultiVersionsManagerFactory::
     CreateMultiVersionsManager() const {
-  return new WriteCommittedSeqBasedMultiVersionsManager();
+  return new WriteCommittedMultiVersionsManager();
 }
 
-SnapshotManager* WCSeqBasedMultiVersionsManagerFactory::
+SnapshotManager* WriteCommittedMultiVersionsManagerFactory::
     CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) const {
   SeqBasedMultiVersionsManager* sbmvm =
       reinterpret_cast<SeqBasedMultiVersionsManager*>(multi_versions_manager);
-  return new WriteCommittedSeqBasedSnapshotManager(sbmvm);
+  return new WriteCommittedSnapshotManager(sbmvm);
 }
 
 // write prepared
-MultiVersionsManager* WPSeqBasedMultiVersionsManagerFactory::
+MultiVersionsManager*  WritePreparedMultiVersionsManagerFactory::
     CreateMultiVersionsManager() const {
-  return new WritePreparedSeqBasedMultiVersionsManager();
+  return new WritePreparedMultiVersionsManager();
 }
 
-SnapshotManager* WPSeqBasedMultiVersionsManagerFactory::
+SnapshotManager* WritePreparedMultiVersionsManagerFactory::
     CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) const {
   SeqBasedMultiVersionsManager* sbmvm =
       reinterpret_cast<SeqBasedMultiVersionsManager*>(multi_versions_manager);
-  return new WritePreparedSeqBasedSnapshotManager(sbmvm);
+  return new WritePreparedSnapshotManager(sbmvm);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

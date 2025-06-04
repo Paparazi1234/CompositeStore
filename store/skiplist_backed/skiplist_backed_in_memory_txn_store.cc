@@ -70,12 +70,12 @@ void SkipListBackedInMemoryTxnStore::ReinitializeTransaction(Transaction* txn,
 Transaction* SkipListBackedInMemoryTxnStore::BeginInternalTransaction(
     const WriteOptions& write_options) {
   TransactionOptions txn_options;
-  Transaction* txn = BeginTransaction(txn_options, write_options, nullptr);
+  Transaction* txn = BeginTransaction(write_options, txn_options, nullptr);
   return txn;
 }
 
 Transaction* WriteCommittedTxnStore::BeginTransaction(
-    const TransactionOptions& txn_options, const WriteOptions& write_options,
+    const WriteOptions& write_options, const TransactionOptions& txn_options,
     Transaction* old_txn) {
   if (old_txn) {
     ReinitializeTransaction(old_txn, txn_options, write_options);
@@ -86,7 +86,7 @@ Transaction* WriteCommittedTxnStore::BeginTransaction(
 }
 
 Transaction* WritePreparedTxnStore::BeginTransaction(
-    const TransactionOptions& txn_options, const WriteOptions& write_options,
+    const WriteOptions& write_options, const TransactionOptions& txn_options,
     Transaction* old_txn) {
   return nullptr;
 }

@@ -13,7 +13,7 @@ struct WriteOptions {
 };
 
 struct StoreOptions {
-
+  bool enable_two_write_queue = false;
 };
 
 struct TransactionStoreOptions : public StoreOptions {

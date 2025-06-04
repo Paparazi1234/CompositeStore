@@ -59,8 +59,8 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
  public:
   // No copying allowed
   SeqBasedMultiVersionsManager(const SeqBasedMultiVersionsManager&) = delete;
-  SeqBasedMultiVersionsManager&
-      operator=(const SeqBasedMultiVersionsManager&) = delete;
+  SeqBasedMultiVersionsManager& operator=(
+      const SeqBasedMultiVersionsManager&) = delete;
 
   SeqBasedMultiVersionsManager() {}
   ~SeqBasedMultiVersionsManager() {}
@@ -73,18 +73,17 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
   std::atomic<uint64_t> seq_ = {};
 };
 
-class WriteCommittedSeqBasedMultiVersionsManager :
-  public SeqBasedMultiVersionsManager {
+class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {
 
  public:
   // No copying allowed
-  WriteCommittedSeqBasedMultiVersionsManager(
-      const WriteCommittedSeqBasedMultiVersionsManager&) = delete;
-  WriteCommittedSeqBasedMultiVersionsManager& operator=(
-      const WriteCommittedSeqBasedMultiVersionsManager&) = delete;
+  WriteCommittedMultiVersionsManager(
+      const WriteCommittedMultiVersionsManager&) = delete;
+  WriteCommittedMultiVersionsManager& operator=(
+      const WriteCommittedMultiVersionsManager&) = delete;
 
-  WriteCommittedSeqBasedMultiVersionsManager() {}
-  ~WriteCommittedSeqBasedMultiVersionsManager() {}
+  WriteCommittedMultiVersionsManager() {}
+  ~WriteCommittedMultiVersionsManager() {}
 
   virtual void PrepareVersion(const Version& version) override;
   virtual void PrepareVersion(const Version& base, uint32_t count) override;

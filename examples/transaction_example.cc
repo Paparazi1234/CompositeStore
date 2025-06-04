@@ -23,14 +23,12 @@ int main() {
     store_options, txn_store_options, store_traits, &txn_store_ptr);
   assert(s.IsOK());
 
-  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
 
   // begin transaction
-  Transaction* txn =
-      txn_store_ptr->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_ptr->BeginTransaction(write_options);
   assert(txn != nullptr);
 
   s = txn->Put("foo", "bar");

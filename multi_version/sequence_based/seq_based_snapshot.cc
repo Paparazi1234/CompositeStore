@@ -42,7 +42,7 @@ uint32_t SeqBasedSnapshotManager::NumLivingSnapshot() const {
   return snapshots_map_.size();
 }
 
-void SeqBasedSnapshotManager::GetAllLivingSnapshot(
+void SeqBasedSnapshotManager::GetAllLivingSnapshots(
     std::vector<const Snapshot*>& snapshots) const {
   snapshots.clear();
   std::lock_guard<std::mutex> lock(map_mutex_);
@@ -51,10 +51,9 @@ void SeqBasedSnapshotManager::GetAllLivingSnapshot(
   }
 }
 
-const SeqBasedSnapshot* WriteCommittedSeqBasedSnapshotManager::
-    TakeSnapshotInternal() {
-  const WriteCommittedSeqBasedMultiVersionsManager* WC_mvm =
-      reinterpret_cast<const WriteCommittedSeqBasedMultiVersionsManager*>
+const SeqBasedSnapshot* WriteCommittedSnapshotManager::TakeSnapshotInternal() {
+  const WriteCommittedMultiVersionsManager* WC_mvm =
+      reinterpret_cast<const WriteCommittedMultiVersionsManager*>
       (multi_versions_manager_);
   SeqBasedVersion* latest_version = reinterpret_cast<SeqBasedVersion*>(
       WC_mvm->LatestVisibleVersion(nullptr));
@@ -63,8 +62,21 @@ const SeqBasedSnapshot* WriteCommittedSeqBasedSnapshotManager::
   return snapshot;
 }
 
-const SeqBasedSnapshot* WritePreparedSeqBasedSnapshotManager::
-    TakeSnapshotInternal() {
+void WritePreparedSnapshotManager::GetSnapshots(
+    uint64_t max, std::vector<uint64_t>& snapshots) const {
+  snapshots.clear();
+  std::lock_guard<std::mutex> lock(map_mutex_);
+  for (auto it = snapshots_map_.cbegin(); it != snapshots_map_.end(); ++it) {
+    uint64_t snapshot_seq = it->first;
+    if (snapshot_seq > max) {
+      break;
+    }
+    snapshots.push_back(snapshot_seq);
+  }
+
+}
+
+const SeqBasedSnapshot* WritePreparedSnapshotManager::TakeSnapshotInternal() {
   return new SeqBasedSnapshot(0);
 }
 

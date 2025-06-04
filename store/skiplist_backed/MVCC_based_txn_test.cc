@@ -23,14 +23,13 @@ class MVCCTxnTest : public testing::Test {
 };
 
 TEST_F(MVCCTxnTest, SimpleTxnReadWrite) {
-  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
   Status s;
 
   // begin transaction
-  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
 
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
@@ -94,13 +93,12 @@ TEST_F(MVCCTxnTest, NonTransactionalReadWrite) {
 }
 
 TEST_F(MVCCTxnTest, ReadTxnOwnWrites) {
-  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
   Status s;
 
-  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
   s = txn->Put("foo1", "bar");
@@ -135,13 +133,12 @@ TEST_F(MVCCTxnTest, ReadTxnOwnWrites) {
 }
 
 TEST_F(MVCCTxnTest, ReadAfterPrepare) {
-  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
   Status s;
 
-  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
   s = txn->Put("foo1", "bar");
@@ -169,13 +166,12 @@ TEST_F(MVCCTxnTest, ReadAfterPrepare) {
 }
 
 TEST_F(MVCCTxnTest, ReadAfterCommit) {
-  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
   Status s;
 
-  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
   s = txn->Put("foo1", "bar");
@@ -213,21 +209,21 @@ TEST_F(MVCCTxnTest, ReadUnderSnapshot) {
   const Snapshot* snapshot1;
   const Snapshot* snapshot2;
 
-  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
   s = txn->Commit();  // commit without prepare
   ASSERT_TRUE(s.IsOK());
   snapshot1 = txn_store_->TakeSnapshot();   // take a snapshot
 
-  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar1");
   ASSERT_TRUE(s.IsOK());
   s = txn->Commit();  // commit without prepare
   ASSERT_TRUE(s.IsOK());
   snapshot2 = txn_store_->TakeSnapshot();   // take another snapshot
 
-  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar2");
   ASSERT_TRUE(s.IsOK());
   read_options.snapshot = snapshot1;
@@ -276,7 +272,7 @@ TEST_F(MVCCTxnTest, ReuseTransaction) {
   std::string value;
   Status s;
 
-  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
   s = txn->Delete("foo1");
@@ -288,7 +284,7 @@ TEST_F(MVCCTxnTest, ReuseTransaction) {
   ASSERT_TRUE(s.IsOK());
 
   // reuse transaction
-  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar1");
   ASSERT_TRUE(s.IsOK());
   s = txn->Put("foo1", "bar1");
@@ -315,7 +311,7 @@ TEST_F(MVCCTxnTest, SingleTxnExcutionFlowTest) {
   std::string value;
   Status s;
 
-  Transaction* txn = txn_store_->BeginTransaction(txn_options, write_options);
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
   // write stage
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
@@ -350,7 +346,7 @@ TEST_F(MVCCTxnTest, SingleTxnExcutionFlowTest) {
   s = txn->Rollback();
   ASSERT_TRUE(s.IsInvalidArgument());
 
-  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   // write stage
   s = txn->Put("foo", "bar1");
   ASSERT_TRUE(s.IsOK());
@@ -372,7 +368,7 @@ TEST_F(MVCCTxnTest, SingleTxnExcutionFlowTest) {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar2");
 
-  txn = txn_store_->BeginTransaction(txn_options, write_options, txn);
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   // write stage
   s = txn->Put("foo", "bar1");
   ASSERT_TRUE(s.IsOK());

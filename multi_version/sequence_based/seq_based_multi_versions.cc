@@ -28,27 +28,26 @@ Version* SeqBasedMultiVersionsManager::LatestVisibleVersion(
   }
 }
 
-void WriteCommittedSeqBasedMultiVersionsManager::PrepareVersion(
+void WriteCommittedMultiVersionsManager::PrepareVersion(
     const Version& version) {
   (void)version;
 }
 
-void WriteCommittedSeqBasedMultiVersionsManager::PrepareVersion(
-    const Version& base, uint32_t count) {
+void WriteCommittedMultiVersionsManager::PrepareVersion(const Version& base,
+                                                        uint32_t count) {
   (void)base;
   (void)count;
 }
 
-void WriteCommittedSeqBasedMultiVersionsManager::CommitVersion(
-    const Version& version) {
+void WriteCommittedMultiVersionsManager::CommitVersion(const Version& version) {
   const SeqBasedVersion* version_impl =
       reinterpret_cast<const SeqBasedVersion*>(&version);
   assert(version_impl->Seq() >= seq_);
   seq_.store(version_impl->Seq(), std::memory_order_seq_cst);
 }
 
-void WriteCommittedSeqBasedMultiVersionsManager::CommitVersion(
-    const Version& base, uint32_t count) {
+void WriteCommittedMultiVersionsManager::CommitVersion(const Version& base,
+                                                       uint32_t count) {
   const SeqBasedVersion* version_impl =
       reinterpret_cast<const SeqBasedVersion*>(&base);
   uint64_t end_version_seq = version_impl->Seq() + count;
@@ -56,19 +55,19 @@ void WriteCommittedSeqBasedMultiVersionsManager::CommitVersion(
   seq_.store(end_version_seq, std::memory_order_seq_cst);
 }
 
-void WriteCommittedSeqBasedMultiVersionsManager::RollbackVersion(
+void WriteCommittedMultiVersionsManager::RollbackVersion(
     const Version& version) {
   (void)version;
 }
-void WriteCommittedSeqBasedMultiVersionsManager::RollbackVersion(
-    const Version& base, uint32_t count) {
+void WriteCommittedMultiVersionsManager::RollbackVersion(const Version& base,
+                                                         uint32_t count) {
   (void)base;
   (void)count;
 }
 
 // seq 0 is always considered committed
-Version* WriteCommittedSeqBasedMultiVersionsManager::
-    MiniUncommittedVersion(Version* reused) const {
+Version* WriteCommittedMultiVersionsManager::MiniUncommittedVersion(
+    Version* reused) const {
   uint64_t latest_version = seq_.load(std::memory_order_acquire);
   if (reused != nullptr) {
     SeqBasedVersion* version_impl = reinterpret_cast<SeqBasedVersion*>(reused);
@@ -79,7 +78,7 @@ Version* WriteCommittedSeqBasedMultiVersionsManager::
   }
 }
 
-bool WriteCommittedSeqBasedMultiVersionsManager::IsVersionVisibleToSnapshot(
+bool WriteCommittedMultiVersionsManager::IsVersionVisibleToSnapshot(
     const Version& version, const Snapshot& snapshot) const {
   const SeqBasedVersion* version_impl =
       reinterpret_cast<const SeqBasedVersion*>(&version);
