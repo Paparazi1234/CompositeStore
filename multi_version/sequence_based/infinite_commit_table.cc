@@ -56,7 +56,7 @@ void HistoryCommitteds::AddHistoryCommitted(
 
 bool HistoryCommitteds::UpdateSnapshotInvisibleVersionsLowerBounds(
     const uint64_t& prepared_version, const uint64_t& committed_version,
-    const uint64_t& snapshot, const bool next_is_larger = true) {
+    const uint64_t& snapshot, const bool next_is_larger) {
   // if the committed version <= snapshot, then the corresponding prepared
   // version is visible to the snapshot, just throw away(no need to keep track
   // of this committed entry for the snapshot any more), next time when we check
@@ -74,8 +74,12 @@ bool HistoryCommitteds::UpdateSnapshotInvisibleVersionsLowerBounds(
     return next_is_larger;
   }
 
+  // note: prepared_version == committed_version is filter out by the above
+  // conditions
+
   // we keep track of an overlapping committed entry of a snapshot, and the
-  // committed entry serve as an invisible lower bound version of the snapshot
+  // committed entry serve as one of invisible lower bound versions of the
+  // snapshot
   assert(prepared_version < committed_version);
   assert(prepared_version <= snapshot && snapshot < committed_version);
   snap_invisible_versions_lower_bounds_.AddLowerBound(
@@ -93,8 +97,7 @@ void HistoryCommitteds::AdvanceHistoryBoundary(
     // with a more recent vesion by a concrrent thread
     update_snapshots = true;
     // We only care about snapshots lower than max
-    assert(get_snapshots_func_);
-    get_snapshots_func_(new_boundary, new_snapshots);
+    get_snapshots_callback_->GetSnapshots(new_boundary, new_snapshots);
   }
   if (update_snapshots) {
     UpdateLongLiveSnapshots(new_snapshots, new_snapshots_version);
@@ -218,15 +221,6 @@ void InfiniteCommitTable::AddCommittedVersion(uint64_t prepared_version,
   }
 }
 
-void InfiniteCommitTable::AddUnCommittedVersion(uint64_t version, bool locked) {
-  uncommitteds_tracker_.AddUnCommitted(version, locked);
-}
-
-void InfiniteCommitTable::EraseUnCommittedVersion(uint64_t started,
-                                                  uint32_t count) {
-  uncommitteds_tracker_.EraseUnCommitted(started, count);
-}
-
 // return false && *snap_exists == true: means version is sure invisible to 
 // snapshot in this examine
 // return false && *snap_exists == false: means version can't be determined
@@ -238,8 +232,9 @@ bool InfiniteCommitTable::IsVersionVisibleToSnapshot(uint64_t version,
                                                      uint64_t snapshot,
                                                      uint64_t min_uncommitted,
                                                      bool* snap_exists) const {
-  assert(min_uncommitted >= kMinUnCommittedSeq);
-  assert(snap_exists != nullptr && *snap_exists == true);
+  assert(min_uncommitted >= kUnCommittedLimitsMin);
+  assert(snap_exists != nullptr);
+  *snap_exists = true;
 
   // fast check
   if (snapshot < version) {
@@ -316,7 +311,7 @@ bool InfiniteCommitTable::IsVersionVisibleToSnapshot(uint64_t version,
           uncommitteds_tracker_.GetCommittedOfVersion(version,
                                                       &committed_of_version);
       if (exists_in_longlive_uncommitteds) {
-        if (committed_of_version == kMaxSequenceNumber) {// still not commit yet
+        if (committed_of_version == kSeqNumberLimitsMax) {// still not commit yet
           return false;
         }
         return committed_of_version <= snapshot;   // commit and not cleanup yet
@@ -371,28 +366,27 @@ bool InfiniteCommitTable::IsVersionVisibleToSnapshot(uint64_t version,
 }
 
 uint64_t InfiniteCommitTable::MiniUnCommittedVersion() const {
-  uint64_t next_uncommitted =
-      last_allocated_version_->load(std::memory_order_acquire);
-  uint64_t mini_uncommitted = uncommitteds_tracker_.MiniUnCommitted();
-  if (mini_uncommitted == kMaxSequenceNumber) {
-    return next_uncommitted;
+  uint64_t max_readable = MaxReadableVersion();
+  uint64_t min_uncommitted = uncommitteds_tracker_.MiniUnCommitted();
+  if (min_uncommitted == kSeqNumberLimitsMax) { // no uncommitteds currently
+    // max_readable alse means max_committed
+    uint64_t max_committed = max_readable;
+    uint64_t curr_min_uncommitted = max_committed + 1;
+    return curr_min_uncommitted;
   }
-  return std::min(mini_uncommitted, next_uncommitted);
-}
 
-CreateSnapshotFunc InfiniteCommitTable::GetSnapshotCreationFunc() const {
-  
+  return std::min(min_uncommitted, max_readable + 1);
 }
 
 uint64_t InfiniteCommitTable::CalculateNewHistoryBoundry(uint64_t based) const {
-  uint64_t latest_visible_version =
-      latest_visible_version_->load(std::memory_order_acquire);
+  uint64_t max_committed_version =
+      max_committed_version_.load(std::memory_order_acquire);
   uint64_t new_history_boundary;
-  if (LIKELY(based < latest_visible_version)) {
-    assert(latest_visible_version > 0);
+  if (LIKELY(based < max_committed_version)) {
+    assert(max_committed_version > 0);
     // Inc max in larger steps to avoid frequent updates
     new_history_boundary =
-        std::min(based + HISTORY_BOUNDARY_INC_STEP, latest_visible_version - 1);
+        std::min(based + HISTORY_BOUNDARY_INC_STEP, max_committed_version - 1);
   } else {
     // legit when a commit entry in a write batch overwrite the previous one
     new_history_boundary = based;
@@ -421,6 +415,47 @@ void InfiniteCommitTable::AdvanceHistoryBoundary(
                                                   std::memory_order_acq_rel,
                                                   std::memory_order_relaxed)) {
   };
+}
+
+void InfiniteCommitTable::TakeSnapshot(uint64_t* snapshot_seq,
+                                       uint64_t* min_uncommitted) {
+  *min_uncommitted = kUnCommittedLimitsMin;
+  uint64_t beforehand_min_uncommitted = MiniUnCommittedVersion();
+  uint64_t max_committed = MaxCommittedVersion();
+  if (UNLIKELY(max_committed != 0 &&
+               max_committed <= future_history_boundary_)) {
+    // There is a very rare case in which the commit entry evicts another commit
+    // entry that is not published yet thus advancing max evicted seq beyond the
+    // last published seq. This case is not likely in real-world setup so we
+    // handle it with a few retries.
+    size_t retry = 0;
+    uint64_t future_history_boundary = future_history_boundary_.load();
+    while (future_history_boundary != 0 &&
+            max_committed <= future_history_boundary &&
+            retry < MAX_CAS_RETRIES) {
+      // Wait for last visible seq to catch up with max, and also go beyond it
+      // by one.
+      assert(advance_max_committed_by_one_cb.get() != nullptr);
+      advance_max_committed_by_one_cb->AdvanceLatestVisibleByOne();
+      max_committed = MaxCommittedVersion();
+      future_history_boundary = future_history_boundary_.load();
+      retry++;
+    }
+    assert(max_committed > future_history_boundary);
+    if (max_committed <= future_history_boundary) {
+      throw std::runtime_error(
+          "Snapshot seq " + std::to_string(max_committed) +
+          " after " + std::to_string(retry) +
+          " retries is still less than future_history_boundary_" +
+          std::to_string(future_history_boundary));
+    }
+  }
+  *min_uncommitted = beforehand_min_uncommitted;
+  *snapshot_seq = max_committed;
+}
+
+TakeSnapshotCallback* InfiniteCommitTable::GetSnapshotCreationCallback() {
+  return new TakeSnapshotCallbackImpl(this);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

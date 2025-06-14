@@ -1,12 +1,8 @@
-#include "include/transaction_store.h"
-
-// Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
-
 #include <iostream>
 #include <assert.h>
+
+#include "store/skiplist_backed/skiplist_backed_in_memory_txn_store.h"
+#include "include/transaction_store.h"
 
 #define AssertTrue(cond)                                       \
   if (!(cond)) {                                               \
@@ -79,11 +75,16 @@ class MyTest {
     TransactionStoreOptions txn_store_options;
     Status s;
 
-    store_options.enable_two_write_queue = enable_two_write_queues_;
+    store_options.enable_two_write_queues = enable_two_write_queues_;
     store_traits.txn_write_policy = write_policy_;
     s = TransactionStore::Open(
         store_options, txn_store_options, store_traits, &txn_store_);
     AssertTrue(s.IsOK());
+    txn_store_impl_ =
+        reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store_);
+    multi_versions_manager_impl_ =
+        reinterpret_cast<SeqBasedMultiVersionsManager*>(
+            txn_store_impl_->GetMultiVersionsManager());
   }
 
   void EchoTestSetups() const {
@@ -100,13 +101,15 @@ class MyTest {
 
   void EchoSeq(const char* tips) const {
     std::cout<<tips<<"\t";
-    std::cout<<"  {last_sequence_: "<<versions_->LastSequence()
-        <<", last_published_sequence_: "<<versions_->LastPublishedSequence()
-        <<", last_allocated_sequence_: "<<versions_->LastAllocatedSequence()
+    std::cout<<"  {max_readable_seq_: "<<multi_versions_manager_impl_->MaxReadableVersion()
+        <<", max_visible_seq_: "<<multi_versions_manager_impl_->MaxVisibleVersion()
+        <<", so_far_allocated_: "<<multi_versions_manager_impl_->seq_allocator_.SoFarAllocatd()
         <<"}"<<std::endl;
   }
 
   TransactionStore* txn_store_;
+  SkipListBackedInMemoryTxnStore* txn_store_impl_;
+  SeqBasedMultiVersionsManager* multi_versions_manager_impl_;
   TxnStoreWritePolicy write_policy_;
   bool commit_with_prepare_;
   bool enable_two_write_queues_;

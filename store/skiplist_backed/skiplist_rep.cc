@@ -97,8 +97,9 @@ Status SkipListBackedRep::Get(const std::string& key,
       std::string version_str = version_slice.ToString();
       Version* version = VersionForGet();
       version->DecodeFrom(version_str);
-      if (multi_versions_manager_->IsVersionVisibleToSnapshot(
-          *version, read_snapshot)) {
+      Status s;
+      bool found = ValidateVisibility(*version, read_snapshot, &s);
+      if (found) {
         const char* p = version_slice.data() + version_slice.size();
         uint32_t type;
         p = ROCKSDB_NAMESPACE::GetVarint32Ptr(p, p + 5, &type);
@@ -112,6 +113,12 @@ Status SkipListBackedRep::Get(const std::string& key,
         } else {
           return Status::Corruption();
         }
+      } else if (!s.IsOK()) {
+        assert(s.IsTryAgain());
+        return s;
+      } else {
+        assert(!found && s.IsOK());
+        // !found && s.IsOK(): then continue to search skiplist
       }
     } else {
       return Status::NotFound();

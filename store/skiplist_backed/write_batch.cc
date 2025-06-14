@@ -10,11 +10,9 @@ Status WriteBatch::Iterate(Handler* handler) {
     switch (buffered_write.second.Type()) {
       case kTypeValue :
         s = handler->Put(buffered_write.first, buffered_write.second.Value());
-        assert(s.IsOK());
         break;
       case kTypeDeletion :
         s = handler->Delete(buffered_write.first);
-        assert(s.IsOK());
         break;
       default:
         s = Status::Corruption();
@@ -28,16 +26,18 @@ Status WriteBatch::Iterate(Handler* handler) {
 
 Status SkipListInsertHandler::Put(
     const std::string& key, const std::string& value) {
-  started_version_->IncreaseByOne();
+  MaybeAdvanceVersion();
   Status s = skiplist_backed_rep_->Insert(
       key, value, started_version_, kTypeValue);
+  is_first_iterated_entry_ = false;
   return s;
 }
 
 Status SkipListInsertHandler::Delete(const std::string& key) {
-  started_version_->IncreaseByOne();
+  MaybeAdvanceVersion();
   Status s = skiplist_backed_rep_->Insert(
       key, "", started_version_, kTypeDeletion);
+  is_first_iterated_entry_ = false;
   return s;
 }
 

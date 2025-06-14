@@ -96,6 +96,32 @@ class SkipListBackedRep {
 	void Dump(std::stringstream* oss, const size_t dump_count = -1);
 
  private:
+	bool ValidateVisibility(const Version& version, const Snapshot& snapshot,
+													Status* status) {
+		assert(status);
+		bool found = true;
+		*status = Status::OK();
+		bool snap_exist;
+		bool visible = multi_versions_manager_->IsVersionVisibleToSnapshot(
+				version, snapshot, &snap_exist);
+		if (visible && snap_exist) {
+			found = true;
+			*status = Status::OK();
+		} else if (!visible && snap_exist) {
+			found = false;
+			*status = Status::OK();
+		} else if (!visible && !snap_exist) {
+			found = false;
+			*status = Status::TryAgain();
+		} else {	// won't return (visible && !snap_exist)
+			assert(false);
+		}
+		assert((found && status->IsOK()) ||
+					 (!found && status->IsOK()) ||
+					 (!found && status->IsTryAgain()));
+		return found;
+	}
+
 	Version* VersionForGet() {
 		if (version_for_get_.get() == nullptr) {
 			version_for_get_.reset(multi_versions_manager_->CreateVersion());

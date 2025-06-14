@@ -404,6 +404,45 @@ TEST_F(MVCCTxnTest, MultiThreadsTxnsExcution) {
 
 }
 
+TEST_F(MVCCTxnTest, TestWritePreparedTxn) {
+  // StoreOptions store_options;
+  // TransactionStoreOptions txn_store_options;
+  // EmptyTxnLockManagerFactory txn_lock_mgr_factory;
+  // TransactionStore* WP_txn_store = new WritePreparedTxnStore(store_options,
+  //     txn_store_options, txn_lock_mgr_factory);
+
+  // TransactionOptions txn_options;
+  // WriteOptions write_options;
+  // ReadOptions read_options;
+  // std::string value;
+  // Status s;
+  // const Snapshot* snapshot1;
+  // const Snapshot* snapshot2;
+
+  // Transaction* txn = WP_txn_store->BeginTransaction(write_options);
+  // s = txn->Put("foo", "bar");
+  // ASSERT_TRUE(s.IsOK());
+  // s = txn->Commit();  // commit without prepare
+  // ASSERT_TRUE(s.IsOK());
+  // snapshot1 = WP_txn_store->TakeSnapshot();   // take a snapshot
+
+  // txn = WP_txn_store->BeginTransaction(write_options, txn_options, txn);
+  // s = txn->Put("foo", "bar1");
+  // ASSERT_TRUE(s.IsOK());
+  // s = txn->Commit();  // commit without prepare
+  // ASSERT_TRUE(s.IsOK());
+  // snapshot2 = WP_txn_store->TakeSnapshot();   // take another snapshot
+
+  // // transactional read
+  // read_options.snapshot = snapshot1;
+  // s = txn->Get(read_options, "foo", &value);
+  // ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  // read_options.snapshot = snapshot2;
+  // s = txn->Get(read_options, "foo", &value);
+  // ASSERT_TRUE(s.IsOK() && value == "bar1");
+}
+
 }   // namespace MULTI_VERSIONS_NAMESPACE
 
 int main(int argc, char** argv) {

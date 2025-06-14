@@ -1,7 +1,6 @@
 #pragma once
 
 #include "store.h"
-#include "store_traits.h"
 #include "transaction.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {

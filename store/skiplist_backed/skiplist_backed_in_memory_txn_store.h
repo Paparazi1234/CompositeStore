@@ -1,8 +1,10 @@
 #pragma once
 
+
+#include "skiplist_backed_in_memory_store.h"
+#include "multi_version/sequence_based/seq_based_snapshot.h"
 #include "include/multi_versions.h"
 #include "include/txn_lock_manager.h"
-#include "skiplist_backed_in_memory_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -18,6 +20,8 @@ class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const MultiVersionsManagerFactory& multi_versions_mgr_factory,
+      WriteLock& prepare_queue,
+      WriteLock& commit_queue,
       const TxnLockManagerFactory& txn_lock_mgr_factory);
   ~SkipListBackedInMemoryTxnStore() {}
 
@@ -37,16 +41,34 @@ class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
 
+  WriteLock& GetPrepareQueue() {
+    return prepare_queue_;
+  }
+
+  WriteLock& GetCommitQueue() {
+    return commit_queue_;
+  }
+
+  bool IsEnableTwoWriteQueues() const {
+    return enable_two_write_queues_;
+  }
  protected:
   friend class MVCCBasedTxn;
+  virtual WriteLock& CalcuPrepareQueue(bool enable_two_write_queues) = 0;
+  virtual WriteLock& CalcuCommitQueue(bool enable_two_write_queues) = 0;
 
   Status TryLock(const std::string& key);
   void UnLock(const std::string& key);
 
   void ReinitializeTransaction(Transaction* txn,
-      const TransactionOptions& txn_options, const WriteOptions& write_options);
+                               const WriteOptions& write_options,
+                               const TransactionOptions& txn_options);
 
   Transaction* BeginInternalTransaction(const WriteOptions& write_options);
+
+  bool enable_two_write_queues_ = false;
+  WriteLock& prepare_queue_;
+  WriteLock& commit_queue_;
 
   std::unique_ptr<TxnLockManager> txn_lock_manager_;
 };
@@ -61,12 +83,46 @@ class WriteCommittedTxnStore : public SkipListBackedInMemoryTxnStore {
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const TxnLockManagerFactory& txn_lock_mgr_factory)
-      : SkipListBackedInMemoryTxnStore(store_options, txn_store_options,
-          WriteCommittedMultiVersionsManagerFactory(), txn_lock_mgr_factory) {}
+      : SkipListBackedInMemoryTxnStore(
+          store_options, txn_store_options,
+          WriteCommittedMultiVersionsManagerFactory(
+              store_options.enable_two_write_queues),
+          CalcuPrepareQueue(store_options.enable_two_write_queues),
+          CalcuCommitQueue(store_options.enable_two_write_queues),
+          txn_lock_mgr_factory) {
+    assert(std::addressof(commit_queue_) == &write_lock_);
+    if (store_options.enable_two_write_queues) {
+      assert(std::addressof(prepare_queue_) == &second_write_lock_);
+    } else {
+      assert(std::addressof(prepare_queue_) == &write_lock_);
+    }
+    if (!store_options.enable_two_write_queues) {
+      assert(std::addressof(prepare_queue_) == std::addressof(commit_queue_));
+    }
+  }
   ~WriteCommittedTxnStore() {}
 
   Transaction* BeginTransaction(const WriteOptions& write_options,
       const TransactionOptions& txn_options, Transaction* old_txn) override;
+
+ protected:
+  WriteLock& CalcuPrepareQueue(bool enable_two_write_queues) override {
+    if (enable_two_write_queues) {
+      // for WriteCommitted txn, we use the second write queue to prepare when
+      // enable two_write_queues
+      return second_write_lock_;
+    } else {
+      // for WriteCommitted txn, we use the first write queue to prepare when
+      // not enable two_write_queues
+      return write_lock_;
+    }
+  }
+
+  WriteLock& CalcuCommitQueue(bool /*enable_two_write_queues*/) override {
+    // for WriteCommitted txn, we use the first write queue to commit no mater
+    // enable two_write_queues or not
+    return write_lock_;
+  }
 };
 
 class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
@@ -79,12 +135,96 @@ class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const TxnLockManagerFactory& txn_lock_mgr_factory)
-      : SkipListBackedInMemoryTxnStore(store_options, txn_store_options,
-          WritePreparedMultiVersionsManagerFactory(), txn_lock_mgr_factory) {}
+      : SkipListBackedInMemoryTxnStore(
+          store_options, txn_store_options,
+          WritePreparedMultiVersionsManagerFactory(
+              store_options.enable_two_write_queues),
+          CalcuPrepareQueue(store_options.enable_two_write_queues),
+          CalcuCommitQueue(store_options.enable_two_write_queues),
+          txn_lock_mgr_factory) {
+    assert(std::addressof(prepare_queue_) == &write_lock_);
+    if (store_options.enable_two_write_queues) {
+      assert(std::addressof(commit_queue_) == &second_write_lock_);
+    } else {
+      assert(std::addressof(commit_queue_) == &write_lock_);
+    }
+    if (!store_options.enable_two_write_queues) {
+      assert(std::addressof(prepare_queue_) == std::addressof(commit_queue_));
+    }
+
+    PostInitializeMultiVersionManager();
+  }
   ~WritePreparedTxnStore() {}
 
   Transaction* BeginTransaction(const WriteOptions& write_options,
       const TransactionOptions& txn_options, Transaction* old_txn) override;
+
+  class WPAdvanceMaxCommittedByOneCallback :
+      public AdvanceMaxCommittedByOneCallback {
+   public:
+    WPAdvanceMaxCommittedByOneCallback(WritePreparedTxnStore* txn_store)
+        : txn_store_(txn_store) {}
+    ~WPAdvanceMaxCommittedByOneCallback() {}
+
+    void AdvanceLatestVisibleByOne() override {
+      WriteOptions write_options;
+      TransactionOptions txn_options;
+      Transaction* txn = txn_store_->BeginTransaction(write_options,
+                                                      txn_options, nullptr);
+      Status s = txn->Prepare();
+      assert(s.IsOK());
+      s = txn->Commit();    // commit an empty write batch will consume a seq
+      assert(s.IsOK());
+      delete txn;
+    }
+   private:
+    WritePreparedTxnStore* txn_store_;         
+  };
+
+ protected:
+  void PostInitializeMultiVersionManager() {
+    WritePreparedMultiVersionsManager* multi_version_manager_impl =
+        reinterpret_cast<WritePreparedMultiVersionsManager*>(
+            GetMultiVersionsManager());
+    WritePreparedSnapshotManager* snapshot_manager_impl =
+        reinterpret_cast<WritePreparedSnapshotManager*>(
+            GetSnapshotManager());
+    // set AdvanceMaxCommittedByOneCallback to multi versions manager
+    multi_version_manager_impl->SetAdvanceMaxCommittedByOneCallback(
+        new WPAdvanceMaxCommittedByOneCallback(this));
+    // set SnapshotsRetrieveCallback to multi versions manager
+    multi_version_manager_impl->SetSnapshotsRetrieveCallback(
+        new WritePreparedSnapshotManager::WPGetSnapshotsCallback(
+            snapshot_manager_impl));
+    // set SnapshotCreationCallback to snapshot manager
+    snapshot_manager_impl->SetSnapshotCreationCallback(
+        multi_version_manager_impl->GetSnapshotCreationCallback());
+  }
+
+  virtual uint64_t CalculateSeqIncForWriteBatch(
+			const WriteBatch* write_batch) const override {
+    // we employ seq per batch in WritePrepared policy, when we use an empty
+    // write batch for commit purpose, it also consume a seq
+		return 1;
+	}
+
+  WriteLock& CalcuPrepareQueue(bool /*enable_two_write_queues*/) override {
+    // for WritePrepared txn, we use the first write queue to prepare no mater
+    // enable two_write_queues or not
+    return write_lock_;
+  }
+
+  WriteLock& CalcuCommitQueue(bool enable_two_write_queues) override {
+    if (enable_two_write_queues) {
+      // for WritePrepared txn, we use the second write queue to commit when
+      // enable two_write_queues
+      return second_write_lock_;
+    } else {
+      // for WritePrepared txn, we use the first write queue to commit when
+      // not enable two_write_queues
+      return write_lock_;
+    }
+  }
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

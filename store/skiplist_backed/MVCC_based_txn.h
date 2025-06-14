@@ -13,8 +13,8 @@ class MVCCBasedTxn : public Transaction {
   MVCCBasedTxn& operator=(const MVCCBasedTxn&) = delete;
 
   MVCCBasedTxn(TransactionStore* txn_store,
-               const TransactionOptions& txn_options,
-               const WriteOptions& write_options);
+               const WriteOptions& write_options,
+               const TransactionOptions& txn_options);
   ~MVCCBasedTxn() {}
 
   virtual Status Put(const std::string& key, const std::string& value) override; 
@@ -30,8 +30,12 @@ class MVCCBasedTxn : public Transaction {
   virtual void SetSnapshot() override;
 
   void Reinitialize(TransactionStore* txn_store,
-                    const TransactionOptions& txn_options,
-                    const WriteOptions& write_options);
+                    const WriteOptions& write_options,
+                    const TransactionOptions& txn_options);
+
+  SkipListBackedInMemoryTxnStore* GetTxnStore() const {
+    return txn_store_;
+  }
 
  protected:
   friend class ReleaseTxnLockHandler;
@@ -80,9 +84,9 @@ class WriteCommittedTxn : public MVCCBasedTxn {
   WriteCommittedTxn& operator=(const WriteCommittedTxn&) = delete;
 
   WriteCommittedTxn(TransactionStore* txn_store,
-                    const TransactionOptions& txn_options,
-                    const WriteOptions& write_options)
-                    : MVCCBasedTxn(txn_store, txn_options, write_options) {}
+                    const WriteOptions& write_options,
+                    const TransactionOptions& txn_options)
+                    : MVCCBasedTxn(txn_store, write_options, txn_options) {}
   ~WriteCommittedTxn() {}
 
  private:
@@ -90,6 +94,45 @@ class WriteCommittedTxn : public MVCCBasedTxn {
   virtual Status CommitWithPrepareImpl() override;
   virtual Status CommitWithoutPrepareImpl() override;
   virtual Status RollbackImpl() override;
+};
+
+class WritePreparedTxn : public MVCCBasedTxn {
+ public:
+  // No copying allowed
+  WritePreparedTxn(const WritePreparedTxn&) = delete;
+  WritePreparedTxn& operator=(const WritePreparedTxn&) = delete;
+
+  WritePreparedTxn(TransactionStore* txn_store,
+                   const WriteOptions& write_options,
+                   const TransactionOptions& txn_options)
+                   : MVCCBasedTxn(txn_store, write_options, txn_options) {}
+  ~WritePreparedTxn() {}
+
+  void SetPreparedSeqs(uint64_t started, uint32_t count) {
+    assert(started > 0 && count > 0);
+    assert(txn_store_->CalculateSeqIncForWriteBatch(&write_batch_) == count);
+    started_prepared_seq_ = started;
+    num_prepared_seq_ = count;
+  }
+
+  void GetPreparedSeqs(uint64_t* started, uint32_t* count) const {
+    *started = started_prepared_seq_;
+    *count = num_prepared_seq_;
+  }
+
+  void ResetPreparedSeqs() {
+    started_prepared_seq_ = 0;
+    num_prepared_seq_ = 0;
+  }
+  class RollbackWriteBatchBuilder;
+ private:
+  virtual Status PrepareImpl() override;
+  virtual Status CommitWithPrepareImpl() override;
+  virtual Status CommitWithoutPrepareImpl() override;
+  virtual Status RollbackImpl() override;
+
+  uint64_t started_prepared_seq_ = 0;
+  uint64_t num_prepared_seq_ = 0;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

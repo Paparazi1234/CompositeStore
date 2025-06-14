@@ -1,11 +1,13 @@
 #include "MVCC_based_txn.h"
 
+#include "multi_version/sequence_based/seq_based_snapshot.h"
+
 namespace MULTI_VERSIONS_NAMESPACE {
 
 MVCCBasedTxn::MVCCBasedTxn(TransactionStore* txn_store,
-                          const TransactionOptions& txn_options,
-                          const WriteOptions& write_options)
-                          : write_options_(write_options),
+                           const WriteOptions& write_options,
+                           const TransactionOptions& txn_options)
+                           : write_options_(write_options),
                             txn_state_(STAGE_WRITING) {
   txn_store_ = reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store);
 }
@@ -132,8 +134,8 @@ void MVCCBasedTxn::SetSnapshot() {
 }
 
 void MVCCBasedTxn::Reinitialize(TransactionStore* txn_store,
-                                const TransactionOptions& txn_options,
-                                const WriteOptions& write_options) {
+                                const WriteOptions& write_options,
+                                const TransactionOptions& txn_options) {
   txn_store_ = reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store);
   write_options_ = write_options;
   txn_state_ = STAGE_WRITING;
@@ -174,14 +176,46 @@ Status WriteCommittedTxn::PrepareImpl() {
   return Status::OK();
 }
 
+namespace {
+class WCTxnAfterInsertWBCB :
+		public MaintainVersionsCallbacks::AfterInsertWriteBufferCallback {
+ public:
+  WCTxnAfterInsertWBCB(TransactionStore* store) {
+    store_impl_ = reinterpret_cast<WriteCommittedTxnStore*>(store);
+    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
+  }
+  ~WCTxnAfterInsertWBCB() {}
+
+  virtual Status DoCallback(const Version* version) override {
+    const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
+    multi_versions_manager_->EndCommitVersions(dummy_version, *version);
+    return Status::OK();
+  }
+
+ private:
+  WriteCommittedTxnStore* store_impl_;
+  MultiVersionsManager* multi_versions_manager_;
+};
+}   // anonymous namespace
+
 Status WriteCommittedTxn::CommitWithPrepareImpl() {
-  Status s = txn_store_->WriteInternal(write_options_, &write_batch_);
+  WCTxnAfterInsertWBCB after_insert_wb_cb(txn_store_);
+  MaintainVersionsCallbacks commit_callbacks;
+  commit_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
+  Status s = txn_store_->WriteInternal(write_options_, &write_batch_,
+                                       commit_callbacks,
+                                       txn_store_->GetCommitQueue());
   Clear();
   return s;
 }
 
 Status WriteCommittedTxn::CommitWithoutPrepareImpl() {
-  Status s = txn_store_->WriteInternal(write_options_, &write_batch_);
+  WCTxnAfterInsertWBCB after_insert_wb_cb(txn_store_);
+  MaintainVersionsCallbacks commit_callbacks;
+  commit_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
+  Status s = txn_store_->WriteInternal(write_options_, &write_batch_,
+                                       commit_callbacks,
+                                       txn_store_->GetCommitQueue());
   Clear();
   return s;
 }
@@ -189,6 +223,320 @@ Status WriteCommittedTxn::CommitWithoutPrepareImpl() {
 Status WriteCommittedTxn::RollbackImpl() {
   Clear();
   return Status::OK();
+}
+
+namespace {
+class WPTxnPrepareBeforeInsertWBCB :
+    public MaintainVersionsCallbacks::BeforeInsertWriteBufferCallback {
+ public:
+  WPTxnPrepareBeforeInsertWBCB(WritePreparedTxn* txn)
+      : txn_(txn) {
+    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
+    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
+  }
+  ~WPTxnPrepareBeforeInsertWBCB() {}
+
+  virtual Status DoCallback(const Version* version, uint32_t count) override {
+    const SeqBasedVersion* version_impl =
+        reinterpret_cast<const SeqBasedVersion*>(version);
+    // record prepared versions info
+    txn_->SetPreparedSeqs(version_impl->Seq(), count);
+    multi_versions_manager_->BeginPrepareVersions(*version, count);
+    return Status::OK();
+  }
+
+ private:
+  WritePreparedTxn* txn_;
+  WritePreparedTxnStore* store_impl_;
+  MultiVersionsManager* multi_versions_manager_;
+};
+
+class WPTxnPrepareAfterInsertWBCB :
+    public MaintainVersionsCallbacks::AfterInsertWriteBufferCallback {
+ public:
+  WPTxnPrepareAfterInsertWBCB(WritePreparedTxn* txn)
+      :txn_(txn) {
+    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
+    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
+  }
+  ~WPTxnPrepareAfterInsertWBCB() {}
+
+  virtual Status DoCallback(const Version* version) override {
+    // advance max_readable_seq_ after insert to write buffer
+    multi_versions_manager_->EndPrepareVersions(*version);
+    return Status::OK();
+  }
+
+ private:
+  WritePreparedTxn* txn_;
+  WritePreparedTxnStore* store_impl_;
+  MultiVersionsManager* multi_versions_manager_;
+};
+}   // anonymous namespace
+
+Status WritePreparedTxn::PrepareImpl() {
+  WPTxnPrepareBeforeInsertWBCB before_insert_wb_cb(this);
+  WPTxnPrepareAfterInsertWBCB after_insert_wb_cb(this);
+  MaintainVersionsCallbacks prepare_callbacks;
+  prepare_callbacks.before_insert_write_buffer_ = &before_insert_wb_cb;
+  prepare_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
+  Status s = txn_store_->WriteInternal(write_options_, &write_batch_,
+                                       prepare_callbacks,
+                                       txn_store_->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+  return s;
+}
+
+namespace {
+class WPTxnCommitWithPrepareBeforeInsertWBCB :
+		public MaintainVersionsCallbacks::BeforeInsertWriteBufferCallback {
+ public:
+  WPTxnCommitWithPrepareBeforeInsertWBCB(WritePreparedTxn* txn)
+      : txn_(txn) {
+    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
+    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
+  }
+  ~WPTxnCommitWithPrepareBeforeInsertWBCB() {}
+
+  virtual Status DoCallback(const Version* version,
+                            uint32_t /*count*/) override {
+    uint64_t started_uncommitted_seq;
+    uint32_t num_uncommitted_seq;
+    txn_->GetPreparedSeqs(&started_uncommitted_seq, &num_uncommitted_seq);
+    assert(started_uncommitted_seq > 0 && num_uncommitted_seq > 0);
+    SeqBasedVersion started_uncommitted(started_uncommitted_seq);
+    const Version& committed = *version;
+    multi_versions_manager_->BeginCommitVersions(started_uncommitted,
+                                                 committed,
+                                                 num_uncommitted_seq);
+    return Status::OK();
+  }
+
+ private:
+  WritePreparedTxn* txn_;
+  WritePreparedTxnStore* store_impl_;
+  MultiVersionsManager* multi_versions_manager_;
+};
+
+class WPTxnCommitWithPrepareAfterInsertWBCB :
+    public MaintainVersionsCallbacks::AfterInsertWriteBufferCallback {
+ public:
+  WPTxnCommitWithPrepareAfterInsertWBCB(WritePreparedTxn* txn)
+      : txn_(txn) {
+    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
+    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
+  }
+  ~WPTxnCommitWithPrepareAfterInsertWBCB() {}
+
+  virtual Status DoCallback(const Version* version) override {
+    uint64_t started_uncommitted_seq;
+    uint32_t num_uncommitted_seq;
+    txn_->GetPreparedSeqs(&started_uncommitted_seq, &num_uncommitted_seq);
+    assert(started_uncommitted_seq > 0 && num_uncommitted_seq > 0);
+    SeqBasedVersion started_uncommitted(started_uncommitted_seq);
+    const Version& committed = *version;
+    multi_versions_manager_->EndCommitVersions(started_uncommitted,
+                                               committed,
+                                               num_uncommitted_seq);
+    return Status::OK();
+  }
+
+ private:
+  WritePreparedTxn* txn_;
+  WritePreparedTxnStore* store_impl_;
+  MultiVersionsManager* multi_versions_manager_;
+};
+
+class WPTxnCommitWithoutPrepareBeforeInsertWBCB :
+		public MaintainVersionsCallbacks::BeforeInsertWriteBufferCallback {
+ public:
+  WPTxnCommitWithoutPrepareBeforeInsertWBCB() {}
+  ~WPTxnCommitWithoutPrepareBeforeInsertWBCB() {}
+
+  virtual Status DoCallback(const Version* version,
+                            uint32_t /*count*/) override {
+    // when commit without prepare takes effect, WritePrepared txn behaves like
+    // WriteCommitted txn, so there is no need to interact with commit_table_,
+    // all we need to do is to AdvanceMaxVisibleVersion() after insert write
+    // buffer 
+    return Status::OK();
+  }
+};
+
+class WPTxnCommitWithoutPrepareAfterInsertWBCB :
+    public MaintainVersionsCallbacks::AfterInsertWriteBufferCallback {
+ public:
+  WPTxnCommitWithoutPrepareAfterInsertWBCB(WritePreparedTxn* txn)
+      : txn_(txn) {
+    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
+    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
+  }
+  ~WPTxnCommitWithoutPrepareAfterInsertWBCB() {}
+
+  virtual Status DoCallback(const Version* version) override {
+    const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
+    uint32_t num_uncommitted_seq = 0;
+    const Version& committed = *version;
+    // here EndCommitVersions() will only AdvanceMaxVisibleVersion()
+    multi_versions_manager_->EndCommitVersions(dummy_version,
+                                               committed,
+                                               num_uncommitted_seq);
+    return Status::OK();
+  }
+
+ private:
+  WritePreparedTxn* txn_;
+  WritePreparedTxnStore* store_impl_;
+  MultiVersionsManager* multi_versions_manager_;
+};
+}   // anonymous namespace
+
+Status WritePreparedTxn::CommitWithPrepareImpl() {
+  WPTxnCommitWithPrepareBeforeInsertWBCB before_insert_wb_cb(this);
+  WPTxnCommitWithPrepareAfterInsertWBCB after_insert_wb_cb(this);
+  MaintainVersionsCallbacks commit_callbacks;
+  commit_callbacks.before_insert_write_buffer_ = &before_insert_wb_cb;
+  commit_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
+  // use an empty write batch for commit purpose, it will consume a seq
+  WriteBatch empty_write_batch;
+  return txn_store_->WriteInternal(write_options_, &empty_write_batch,
+                                   commit_callbacks,
+                                   txn_store_->GetCommitQueue());   // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+}
+
+Status WritePreparedTxn::CommitWithoutPrepareImpl() {
+  bool enable_two_write_queues = txn_store_->IsEnableTwoWriteQueues();
+  // commit without prepare only takes effect when
+  // enable_two_write_queues == false, when enable_two_write_queues == true, we
+  // will switch commit without prepare to commit with prepare internally
+  if (!enable_two_write_queues) {
+    WPTxnCommitWithoutPrepareBeforeInsertWBCB before_insert_wb_cb;
+    WPTxnCommitWithoutPrepareAfterInsertWBCB after_insert_wb_cb(this);
+    MaintainVersionsCallbacks commit_callbacks;
+    commit_callbacks.before_insert_write_buffer_ = &before_insert_wb_cb;
+    commit_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
+    return txn_store_->WriteInternal(write_options_, &write_batch_,
+                                     commit_callbacks,
+                                     txn_store_->GetCommitQueue());
+  }
+
+  // enable_two_write_queues == true
+  // first prepare: insert write batch into write buffer
+  WPTxnPrepareBeforeInsertWBCB prepare_before_insert_wb_cb(this);
+  WPTxnPrepareAfterInsertWBCB prepare_after_insert_wb_cb(this);
+  MaintainVersionsCallbacks prepare_callbacks;
+  prepare_callbacks.before_insert_write_buffer_ = &prepare_before_insert_wb_cb;
+  prepare_callbacks.after_insert_write_buffer_ = &prepare_after_insert_wb_cb;
+  Status s = txn_store_->WriteInternal(write_options_, &write_batch_,
+                                       prepare_callbacks,
+                                       txn_store_->GetPrepareQueue());
+  if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+    return s;
+  }
+  // then commit: write an empty write batch
+  WPTxnCommitWithPrepareBeforeInsertWBCB commit_before_insert_wb_cb(this);
+  WPTxnCommitWithPrepareAfterInsertWBCB commit_after_insert_wb_cb(this);
+  MaintainVersionsCallbacks commit_callbacks;
+  commit_callbacks.before_insert_write_buffer_ = &commit_before_insert_wb_cb;
+  commit_callbacks.after_insert_write_buffer_ = &commit_after_insert_wb_cb;
+  // use an empty write batch for commit purpose, it will consume a seq
+  WriteBatch empty_write_batch;
+  return txn_store_->WriteInternal(write_options_, &empty_write_batch,
+                                   commit_callbacks,
+                                   txn_store_->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+}
+
+class WritePreparedTxn::RollbackWriteBatchBuilder : public WriteBatch::Handler {
+ public:
+  RollbackWriteBatchBuilder(WritePreparedTxnStore* txn_store,
+                            WriteBatch* rollback_write_batch)
+                            : snapshot_limit_max_(kSeqNumberLimitsMax),
+                              txn_store_(txn_store),
+                              rollback_write_batch_(rollback_write_batch) {
+    read_options_.snapshot = &snapshot_limit_max_;
+  }
+  ~RollbackWriteBatchBuilder() {}
+
+  Status Put(const std::string& key, const std::string& /*value*/) override {
+    return GetLatestCommittedOfKey(key);
+  }
+
+  Status Delete(const std::string& key) override {
+    return GetLatestCommittedOfKey(key);
+  }
+
+  Status GetLatestCommittedOfKey(const std::string& key) {
+    std::string value;
+    Status s = txn_store_->GetInternal(read_options_, key, &value);
+    if (s.IsOK()) {
+      rollback_write_batch_->Put(key, value);
+    } else if (s.IsNotFound()) {
+      rollback_write_batch_->Delete(key);
+      s = Status::OK();
+    } else {
+      assert(!s.IsTryAgain());
+    }
+    return s;
+  }
+
+ private:
+  ReadOptions read_options_;
+  // can see all version during GetInternal(), but only care about latest
+  // committed of target key 
+  WPSeqBasedSnapshot snapshot_limit_max_;
+  WritePreparedTxnStore* txn_store_;
+  WriteBatch* rollback_write_batch_;
+};
+
+Status WritePreparedTxn::RollbackImpl() {
+  WriteBatch rollback_write_batch;
+  RollbackWriteBatchBuilder rollback_builder(
+      reinterpret_cast<WritePreparedTxnStore*>(txn_store_),
+      &rollback_write_batch);
+  Status s = write_batch_.Iterate(&rollback_builder);
+  if (!s.IsOK()) {
+    return s;
+  }
+  // insert the rollback_write_batch into write buffer to eliminate this txn's
+  // footprint in the write buffer
+  bool enable_two_write_queues = txn_store_->IsEnableTwoWriteQueues();
+  // commit without prepare only takes effect when
+  // enable_two_write_queues == false, when enable_two_write_queues == true, we
+  // will switch commit without prepare to commit with prepare internally
+  if (!enable_two_write_queues) {
+    WPTxnCommitWithoutPrepareBeforeInsertWBCB before_insert_wb_cb;
+    WPTxnCommitWithoutPrepareAfterInsertWBCB after_insert_wb_cb(this);
+    MaintainVersionsCallbacks commit_callbacks;
+    commit_callbacks.before_insert_write_buffer_ = &before_insert_wb_cb;
+    commit_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
+    return txn_store_->WriteInternal(write_options_, &rollback_write_batch,
+                                     commit_callbacks,
+                                     txn_store_->GetCommitQueue());
+  }
+
+  // enable_two_write_queues == true
+  // first prepare: insert rollback write batch into write buffer
+  WPTxnPrepareBeforeInsertWBCB prepare_before_insert_wb_cb(this);
+  WPTxnPrepareAfterInsertWBCB prepare_after_insert_wb_cb(this);    // Todo: 将prepare_callbacks和commit_callbacks实例化到类中
+  MaintainVersionsCallbacks prepare_callbacks;
+  prepare_callbacks.before_insert_write_buffer_ = &prepare_before_insert_wb_cb;
+  prepare_callbacks.after_insert_write_buffer_ = &prepare_after_insert_wb_cb;
+  s = txn_store_->WriteInternal(write_options_, &rollback_write_batch,
+                                prepare_callbacks,
+                                txn_store_->GetPrepareQueue());
+  if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+    return s;
+  }
+  // then commit: write an empty write batch
+  WPTxnCommitWithPrepareBeforeInsertWBCB commit_before_insert_wb_cb(this);
+  WPTxnCommitWithPrepareAfterInsertWBCB commit_after_insert_wb_cb(this);
+  MaintainVersionsCallbacks commit_callbacks;
+  commit_callbacks.before_insert_write_buffer_ = &commit_before_insert_wb_cb;
+  commit_callbacks.after_insert_write_buffer_ = &commit_after_insert_wb_cb;
+  // use an empty write batch for commit purpose, it will consume a seq
+  WriteBatch empty_write_batch;
+  return txn_store_->WriteInternal(write_options_, &empty_write_batch,
+                                   commit_callbacks,
+                                   txn_store_->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

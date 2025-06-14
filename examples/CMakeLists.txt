@@ -1,4 +1,5 @@
 set(EXAMPLES_SOURCES
+        my_test.cc
         simple_example.cc
         transaction_example.cc)
 

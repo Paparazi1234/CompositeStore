@@ -14,18 +14,32 @@
 #include <algorithm>
 #include <functional>
 
-#include "include/multi_versions_namespace.h"
+#include "seq_limits.h"
 #include "third-party/rocksdb/likely.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
 using SequenceNumber = uint64_t;
-const uint64_t kMaxSequenceNumber = std::numeric_limits<uint64_t>::max();
-const uint64_t kMinUnCommittedSeq = 1;
 
-using GetSnapshotsFunc = 
-    std::function<void(uint64_t max, std::vector<uint64_t>& snapshots)>;
-using CreateSnapshotFunc = std::function<uint64_t()>;
+class GetSnapshotsCallback {
+ public:
+  virtual ~GetSnapshotsCallback() {}
+  virtual void GetSnapshots(uint64_t max,
+                            std::vector<uint64_t>& snapshots) const = 0;
+};
+
+class TakeSnapshotCallback {
+ public:
+  virtual ~TakeSnapshotCallback() {}
+  virtual void TakeSnapshot(uint64_t* snapshot_seq,
+                            uint64_t* min_uncommitted) = 0;
+};
+
+class AdvanceMaxCommittedByOneCallback {
+ public:
+  virtual ~AdvanceMaxCommittedByOneCallback() {}
+  virtual void AdvanceLatestVisibleByOne() = 0;
+};
 
 // a heap that keep track of recently prepared versions
 class UnCommittedsHeap {
@@ -40,7 +54,7 @@ class UnCommittedsHeap {
                                                                                   // 后续需要对main heap执行pop时，检查erased_heap_的堆顶和main heap的堆顶是否相等，如果是，那么同时将二者的堆顶删除直到满足erased_heap_
                                                                                   // 的堆顶比main heap的堆顶大为止（if any），由此也可以知道，每次对PreparedHeap执行完pop操作之后，如果main heap中还有entry，那么堆顶
                                                                                   // 就是当前除开delayed_prepared_之外的最早执行prepare阶段且还没有commit的事务。
-  std::atomic<uint64_t> heap_top_ = {kMaxSequenceNumber};   // 记录PreparedHeap当前的堆顶，如果heap_top_=kMaxSequenceNumber，表示PreparedHeap当前为空；每次对PreparedHeap执行pop时都需要维护heap_top_
+  std::atomic<uint64_t> heap_top_ = {kSeqNumberLimitsMax};   // 记录PreparedHeap当前的堆顶，如果heap_top_=kMaxSequenceNumber，表示PreparedHeap当前为空；每次对PreparedHeap执行pop时都需要维护heap_top_
 
   public:
   ~UnCommittedsHeap() {
@@ -53,9 +67,9 @@ class UnCommittedsHeap {
   // 1、当本函数返回true时，PreparedHeap肯定为空
   // 2、当本函数返回false时，返回的这一时刻，PreparedHeap不一定不为空，在加锁后对PreparedHeap继续访问时，需要double check（即empty()==false存在false positive）
   inline bool empty() const {
-    return top() == kMaxSequenceNumber;
+    return top() == kSeqNumberLimitsMax;
   }
-  // Returns kMaxSequenceNumber if empty() and the smallest otherwise.
+  // Returns kSeqNumberLimitsMax if empty() and the smallest otherwise.
   // 获取PreparedHeap当前的堆顶，无锁操作
   // 1、如果PreparedHeap当前不为空，那么返回的是当前除开delayed_prepared_之外的最早执行prepare阶段且还没有commit的事务
   // 2、如果PreparedHeap当前为空，那么返回kMaxSequenceNumber
@@ -99,7 +113,7 @@ class UnCommittedsHeap {
     while (heap_.empty() && !erased_heap_.empty()) {    // 如果main heap为空，那么erased_heap_也需要为空
       erased_heap_.pop();
     }
-    heap_top_.store(!heap_.empty() ? heap_.front() : kMaxSequenceNumber,
+    heap_top_.store(!heap_.empty() ? heap_.front() : kSeqNumberLimitsMax,
                     std::memory_order_release);
     if (!locked) {
       push_pop_mutex()->unlock();
@@ -135,12 +149,12 @@ class RecentUnCommitteds {
  public:
   ~RecentUnCommitteds() {}
 
-  bool GetMiniUnCommittedIfNotEmpty(uint64_t* mini_uncommitted) {
-    assert(mini_uncommitted);
+  bool GetMiniUnCommittedIfNotEmpty(uint64_t* min_uncommitted) {
+    assert(min_uncommitted);
     const uint64_t top = uncommitteds_.top();
-    const bool empty = (top == kMaxSequenceNumber);
+    const bool empty = (top == kSeqNumberLimitsMax);
     if (!empty) {
-      *mini_uncommitted = top;
+      *min_uncommitted = top;
     }
     return empty;
   }
@@ -216,7 +230,7 @@ class LongLiveUnCommitteds {
 
   bool GetCommittedOfVersion(uint64_t version, uint64_t* committed) const {
     assert(committed);
-    *committed = kMaxSequenceNumber;
+    *committed = kSeqNumberLimitsMax;
     bool exists = false;
     if (longlive_uncommitteds_.find(version) != longlive_uncommitteds_.end()) {
       exists = true;
@@ -225,9 +239,9 @@ class LongLiveUnCommitteds {
         *committed = iter->second;
       }
     }
-    assert((exists && *committed == kMaxSequenceNumber) ||
-           (exists && *committed != kMaxSequenceNumber) ||
-           (!exists && *committed == kMaxSequenceNumber));
+    assert((exists && *committed == kSeqNumberLimitsMax) ||
+           (exists && *committed != kSeqNumberLimitsMax) ||
+           (!exists && *committed == kSeqNumberLimitsMax));
     return exists;
   }
 
@@ -248,26 +262,28 @@ class LongLiveUnCommitteds {
 // a class that keep track of uncommitted versions
 class UncommittedsTracker {
  public:
-  UncommittedsTracker(const std::atomic<uint64_t>* history_boundary)
-      : history_boundary_(history_boundary) {}
+  UncommittedsTracker(const std::atomic<uint64_t>* future_history_boundary)
+      : future_history_boundary_(future_history_boundary) {}
   ~UncommittedsTracker() {}
 
-  void AddUnCommitted(uint64_t uncommitted, bool locked) {
-    if (!locked) {
-      recent_uncommitteds_.EnterExclusive();
+  void AddUnCommitted(uint64_t uncommitted, uint32_t count) {
+    assert(count > 0);
+    recent_uncommitteds_.EnterExclusive();
+    for (uint32_t i = 0; i < count; ++i) {
+      uint64_t uncommitted_version = uncommitted + i;
+      recent_uncommitteds_.Push(uncommitted_version);   // 将目标事务添加到prepared_txns_中
+      uint64_t future_history_boundary = future_history_boundary_->load();
+      if (UNLIKELY(uncommitted_version <= future_history_boundary)) {   // 这种场景基本不会发生，如果出现这种场景，那么执行一次CheckPreparedAgainstMax，将prepared_txns_中小于等于future_max_evicted_seq_的未提交seq移动到delayed_prepared_中
+        // This should not happen in normal case
+        AdvanceHistoryBoundary(future_history_boundary, true /*locked*/);
+      }
     }
-    recent_uncommitteds_.Push(uncommitted);     // 将目标事务添加到prepared_txns_中
-    auto curr_history_boundary = history_boundary_->load();
-    if (UNLIKELY(uncommitted <= curr_history_boundary)) {   // 这种场景基本不会发生，如果出现这种场景，那么执行一次CheckPreparedAgainstMax，将prepared_txns_中小于等于future_max_evicted_seq_的未提交seq移动到delayed_prepared_中
-      // This should not happen in normal case
-      AdvanceHistoryBoundary(curr_history_boundary, true /*locked*/);
-    }
-    if (!locked) {
-      recent_uncommitteds_.ExitExclusive();
-    }
+    recent_uncommitteds_.ExitExclusive();
   }
 
+
   void EraseUnCommitted(uint64_t started, uint32_t count) {
+    assert(count > 0);
     std::unique_lock<std::shared_mutex> write_lock(uncommitteds_mutex_);   // 对prepared_mutex_加写锁，此时只有本线程能够访问prepared_txns_、delayed_prepared_和delayed_prepared_commits_
     for (uint32_t i = 0; i < count; ++i) {
       recent_uncommitteds_.Earse(started + i);
@@ -320,17 +336,17 @@ class UncommittedsTracker {
   }
 
   uint64_t MiniUnCommitted() const {
-    uint64_t mini_uncommitted = recent_uncommitteds_.MiniUnCommitted();
+    uint64_t min_uncommitted = recent_uncommitteds_.MiniUnCommitted();
     if (!longlive_uncommitteds_.IsEmpty()) {
       std::shared_lock<std::shared_mutex> read_lock(uncommitteds_mutex_);
-      mini_uncommitted = longlive_uncommitteds_.MiniUnCommitted();
+      min_uncommitted = longlive_uncommitteds_.MiniUnCommitted();
     }
-    return mini_uncommitted;
+    return min_uncommitted;
   }
 
   bool GetCommittedOfVersion(uint64_t version, uint64_t* committed) const {
     std::shared_lock<std::shared_mutex> read_lock(uncommitteds_mutex_);
-    longlive_uncommitteds_.GetCommittedOfVersion(version, committed);
+    return longlive_uncommitteds_.GetCommittedOfVersion(version, committed);
   }
 
   bool IsLongLiveUnCommittedsEmpty() const {
@@ -338,7 +354,7 @@ class UncommittedsTracker {
   }
 
  private:
-  const std::atomic<uint64_t>* const history_boundary_;
+  const std::atomic<uint64_t>* const future_history_boundary_;
   mutable std::shared_mutex uncommitteds_mutex_;
   RecentUnCommitteds recent_uncommitteds_;
   LongLiveUnCommitteds longlive_uncommitteds_;
@@ -379,7 +395,7 @@ class RecentCommitteds {
             DELTA_UPPERBOUND(static_cast<uint64_t>((1ull << COMMIT_BITS))) {}
       // Number of higher bits of a sequence number that is not used. They are
       // used to encode the value type, ...
-      const size_t PAD_BITS = static_cast<size_t>(0);
+      const size_t PAD_BITS = static_cast<size_t>(8);
       // Number of lower bits from prepare seq that can be skipped as they are
       // implied by the index of the entry in the array
       const size_t INDEX_BITS;
@@ -404,6 +420,8 @@ class RecentCommitteds {
                     const CommitEntry64bFormat& format) {
         assert(ps < static_cast<uint64_t>(
                         (1ull << (format.PREP_BITS + format.INDEX_BITS))));
+        // in write withot prepare and not enable two write queues case, we
+        // have ps == cs
         assert(ps <= cs);
         uint64_t delta = cs - ps + 1;  // make initialized delta always >= 1
         // zero is reserved for uninitialized entries
@@ -468,7 +486,7 @@ class RecentCommitteds {
     bool GetCommittedOfVersion(const uint64_t version,
                                uint64_t* committed) const {
       assert(committed);
-      *committed = kMaxSequenceNumber;
+      *committed = kSeqNumberLimitsMax;
       uint64_t index = version % COMMIT_CACHE_SIZE;
       CommitEntry64b entry_64b;
       CommitEntry entry;
@@ -480,8 +498,8 @@ class RecentCommitteds {
       } else {  // not exists or exists but entry.prep_seq != version
         exists = false;
       }
-      assert((exists && *committed != kMaxSequenceNumber) ||
-             (!exists && *committed == kMaxSequenceNumber));
+      assert((exists && *committed != kSeqNumberLimitsMax) ||
+             (!exists && *committed == kSeqNumberLimitsMax));
       return exists;
     }
 
@@ -547,8 +565,10 @@ class HistoryCommitteds {
         version, snapshot, snap_exists);
   }
 
-  void SetSnapshotsRetrieveFunc(const GetSnapshotsFunc& get_snapshots_func) {
-    get_snapshots_func_ = get_snapshots_func;
+  void SetSnapshotsRetrieveCallback(
+      const GetSnapshotsCallback* get_snapshots_cb) {
+    assert(get_snapshots_cb);
+    get_snapshots_callback_.reset(get_snapshots_cb);
   }
 
  private:
@@ -655,7 +675,7 @@ class HistoryCommitteds {
   const uint32_t SNAPSHOT_CACHE_SIZE_BITS;
   const uint32_t SNAPSHOT_CACHE_SIZE;
   const std::atomic<uint64_t>* const history_boundary_;
-  GetSnapshotsFunc get_snapshots_func_;
+  std::unique_ptr<const GetSnapshotsCallback> get_snapshots_callback_;
   std::shared_mutex snapshots_mutex_;
   SequenceNumber snapshots_version_ = 0;
   std::unique_ptr<std::atomic<SequenceNumber>[]> long_live_snapshots_;
@@ -678,12 +698,16 @@ struct CommitTableOptions {
 // encountered during store reading is visible to a specific snapshot
 class InfiniteCommitTable {
  public:
-  InfiniteCommitTable(const CommitTableOptions& options)
+  InfiniteCommitTable(const CommitTableOptions& options,
+                      const std::atomic<uint64_t>& max_readable_version,
+                      const std::atomic<uint64_t>& max_committed_version)
       : MAX_CAS_RETRIES(options.max_CAS_retries),
         recent_committeds_(options.commit_cache_size_bits),
         history_committeds_(options.snapshot_cache_size_bits,
                             &(this->history_boundary_)),
-        uncommitteds_tracker_(&(this->future_history_boundary_)) {
+        uncommitteds_tracker_(&(this->future_history_boundary_)),
+        max_readable_version_(max_readable_version),
+        max_committed_version_(max_committed_version) {
     HISTORY_BOUNDARY_INC_STEP =
         std::max((0x1u<<options.commit_cache_size_bits) / 100,
                  static_cast<uint32_t>(1));
@@ -694,22 +718,41 @@ class InfiniteCommitTable {
   void AddCommittedVersion(uint64_t prepared_version,
                            uint64_t committed_version, uint32_t loop_cnt = 0);
 
-  void AddUnCommittedVersion(uint64_t version, bool locked);
+  void AddUnCommittedVersion(uint64_t version, uint32_t count) {
+    uncommitteds_tracker_.AddUnCommitted(version, count);
+  }
 
-  void EraseUnCommittedVersion(uint64_t started, uint32_t count);
+  void EraseUnCommittedVersion(uint64_t started, uint32_t count) {
+    uncommitteds_tracker_.EraseUnCommitted(started, count);
+  }
 
   bool IsVersionVisibleToSnapshot(uint64_t version, uint64_t snapshot,
-                                  uint64_t min_uncommitted = kMinUnCommittedSeq,
+                                  uint64_t min_uncommitted,
                                   bool* snap_exists) const;
 
-  uint64_t MiniUnCommittedVersion() const;
-
-  void SetSnapshotsRetrieveFunc(const GetSnapshotsFunc& get_snapshots_func) {
-    history_committeds_.SetSnapshotsRetrieveFunc(get_snapshots_func);
+  void SetSnapshotsRetrieveCallback(
+      const GetSnapshotsCallback* get_snapshots_cb) {
+    history_committeds_.SetSnapshotsRetrieveCallback(get_snapshots_cb);
   }
-  CreateSnapshotFunc GetSnapshotCreationFunc() const;
 
+  void TakeSnapshot(uint64_t* snapshot_seq, uint64_t* min_uncommitted);
+
+  void SetAdvanceMaxCommittedByOneCallback(
+      AdvanceMaxCommittedByOneCallback* callback) {
+    advance_max_committed_by_one_cb.reset(callback);
+  }
+
+  TakeSnapshotCallback* GetSnapshotCreationCallback();
+
+  uint64_t MaxCommittedVersion() const {
+    return max_committed_version_.load(std::memory_order_seq_cst);
+  }
+
+  uint64_t MaxReadableVersion() const {
+    return max_readable_version_.load(std::memory_order_acquire);
+  }
  private:
+  uint64_t MiniUnCommittedVersion() const;
   uint64_t CalculateNewHistoryBoundry(uint64_t based) const;
   void AdvanceHistoryBoundary(const SequenceNumber& prev_boundary,
                               const SequenceNumber& new_boundary);
@@ -726,8 +769,24 @@ class InfiniteCommitTable {
   HistoryCommitteds history_committeds_;
   UncommittedsTracker uncommitteds_tracker_;
 
-  const std::atomic<uint64_t>* last_allocated_version_;
-  const std::atomic<uint64_t>* latest_visible_version_;
+  const std::atomic<uint64_t>& max_readable_version_;
+  const std::atomic<uint64_t>& max_committed_version_;
+  std::unique_ptr<AdvanceMaxCommittedByOneCallback>
+      advance_max_committed_by_one_cb;
+};
+
+class TakeSnapshotCallbackImpl : public TakeSnapshotCallback {
+ public:
+  TakeSnapshotCallbackImpl(InfiniteCommitTable* commit_table)
+      :commit_table_(commit_table) {}
+  ~TakeSnapshotCallbackImpl() {}
+  void TakeSnapshot(uint64_t* snapshot_seq,
+                    uint64_t* min_uncommitted) override {
+    commit_table_->TakeSnapshot(snapshot_seq, min_uncommitted);
+  }
+
+ private:
+  InfiniteCommitTable* commit_table_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

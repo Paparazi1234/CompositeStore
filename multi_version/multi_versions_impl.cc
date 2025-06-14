@@ -1,5 +1,4 @@
 #include "sequence_based/seq_based_multi_versions.h"
-#include "sequence_based/write_prepared_multi_versions.h"
 #include "sequence_based/seq_based_snapshot.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -7,7 +6,7 @@ namespace MULTI_VERSIONS_NAMESPACE {
 // write committed
 MultiVersionsManager* WriteCommittedMultiVersionsManagerFactory::
     CreateMultiVersionsManager() const {
-  return new WriteCommittedMultiVersionsManager();
+  return new WriteCommittedMultiVersionsManager(enable_two_write_queues_);
 }
 
 SnapshotManager* WriteCommittedMultiVersionsManagerFactory::
@@ -18,9 +17,11 @@ SnapshotManager* WriteCommittedMultiVersionsManagerFactory::
 }
 
 // write prepared
-MultiVersionsManager*  WritePreparedMultiVersionsManagerFactory::
+MultiVersionsManager* WritePreparedMultiVersionsManagerFactory::
     CreateMultiVersionsManager() const {
-  return new WritePreparedMultiVersionsManager();
+  CommitTableOptions options;
+  return new WritePreparedMultiVersionsManager(options,
+                                               enable_two_write_queues_);
 }
 
 SnapshotManager* WritePreparedMultiVersionsManagerFactory::
@@ -28,6 +29,19 @@ SnapshotManager* WritePreparedMultiVersionsManagerFactory::
   SeqBasedMultiVersionsManager* sbmvm =
       reinterpret_cast<SeqBasedMultiVersionsManager*>(multi_versions_manager);
   return new WritePreparedSnapshotManager(sbmvm);
+}
+
+// empty
+MultiVersionsManager* EmptyMultiVersionsManagerFactory::
+    CreateMultiVersionsManager() const {
+  return new EmptyMultiVersionsManager();
+}
+
+SnapshotManager* EmptyMultiVersionsManagerFactory::
+    CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) const {
+  EmptyMultiVersionsManager* empty_mvm =
+      reinterpret_cast<EmptyMultiVersionsManager*>(multi_versions_manager);
+  return new EmptySnapshotManager(empty_mvm);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

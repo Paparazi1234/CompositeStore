@@ -34,16 +34,26 @@ class MultiVersionsManager {
   virtual void Initialize(const Version& orig) = 0;
   // factory func
   virtual Version* CreateVersion() const = 0;
-  virtual void PrepareVersion(const Version& version) = 0;
-  virtual void PrepareVersion(const Version& base, uint32_t count) = 0;
-  virtual void CommitVersion(const Version& version) = 0;
-  virtual void CommitVersion(const Version& base, uint32_t count) = 0;
-  virtual void RollbackVersion(const Version& version) = 0;
-  virtual void RollbackVersion(const Version& base, uint32_t count) = 0;
-  virtual Version* MiniUncommittedVersion(Version* reused = nullptr) const = 0;
+  virtual Version* AllocateVersion(uint32_t count,
+                                   Version* reused = nullptr) = 0;
+  virtual void BeginPrepareVersions(const Version& started_uncommitted,
+                                    uint32_t num_uncommitteds = 1) = 0;
+  virtual void EndPrepareVersions(const Version& end_uncommitted) = 0;
+
+  virtual void BeginCommitVersions(const Version& started_uncommitted,
+                                   const Version& committed,
+                                   uint32_t num_uncommitteds = 1) = 0;
+  virtual void EndCommitVersions(const Version& started_uncommitted,
+                                 const Version& committed,
+                                 uint32_t num_uncommitteds = 1) = 0;        // Todo: 加一个BeginCommitWhihoutPrepareVersions怎么样
   virtual Version* LatestVisibleVersion(Version* reused = nullptr) const = 0;
-  virtual bool IsVersionVisibleToSnapshot(
-      const Version& version, const Snapshot& snapshot) const = 0;
+  virtual bool IsVersionVisibleToSnapshot(const Version& version,
+                                          const Snapshot& snapshot,
+                                          bool* snap_exists) const = 0;
+  virtual const Version& VersionLimitsMax() const = 0;
+  virtual const Version& VersionLimitsMin() const = 0;
+
+  virtual void MaybeCleanupVersionsWhenFails() {}       // Todo: 实现之
 };
 
 class Snapshot {
@@ -92,21 +102,30 @@ class MultiVersionsManagerFactory {
 class WriteCommittedMultiVersionsManagerFactory :
     public MultiVersionsManagerFactory {
  public:
+  WriteCommittedMultiVersionsManagerFactory(
+      bool enable_two_write_queues = false)
+      : enable_two_write_queues_(enable_two_write_queues) {}
   ~WriteCommittedMultiVersionsManagerFactory() {}
 
   virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
       MultiVersionsManager* multi_versions_manager) const override;
+ private:
+  bool enable_two_write_queues_;
 };
 
 class WritePreparedMultiVersionsManagerFactory :
     public MultiVersionsManagerFactory {
  public:
+  WritePreparedMultiVersionsManagerFactory(bool enable_two_write_queues = false)
+      : enable_two_write_queues_(enable_two_write_queues) {}
   ~WritePreparedMultiVersionsManagerFactory() {}
 
   virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
       MultiVersionsManager* multi_versions_manager) const override;
+ private:
+  bool enable_two_write_queues_;
 };
 
 // Wrapper of WriteCommittedMultiVersionsManagerFactory
@@ -114,17 +133,9 @@ class EmptyMultiVersionsManagerFactory : public MultiVersionsManagerFactory {
  public:
   ~EmptyMultiVersionsManagerFactory() {}
 
-  virtual MultiVersionsManager* CreateMultiVersionsManager() const override {
-    return factory_.CreateMultiVersionsManager();
-  }
-
+  virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
-      MultiVersionsManager* multi_versions_manager) const  {
-    return factory_.CreateSnapshotManager(multi_versions_manager);
-  }
-
- private:
-  WriteCommittedMultiVersionsManagerFactory factory_;
+      MultiVersionsManager* multi_versions_manager) const override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

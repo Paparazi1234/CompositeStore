@@ -1,8 +1,7 @@
 set(SEQ_BASED_MULTI_VERSIONS_SOURCES
         infinite_commit_table.cc
         seq_based_multi_versions.cc
-        seq_based_snapshot.cc
-        write_prepared_multi_versions.cc)
+        seq_based_snapshot.cc)
 
 add_library(${SEQ_BASED_MULTI_VERSIONS_STATIC_LIB} STATIC ${SEQ_BASED_MULTI_VERSIONS_SOURCES})
 

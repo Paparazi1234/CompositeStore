@@ -16,13 +16,13 @@ TEST_F(WriteBatchTest, WriteToWriteBatch) {
   wb.Put("foo", "bar");
   wb.Put("foo1", "bar");
   wb.Delete("foo2");
-  ASSERT_EQ(wb.Count(), size_t(3));
+  ASSERT_EQ(wb.Count(), 3ull);
 
   // overwritten in write batch
   wb.Put("foo", "bar1");
   wb.Put("foo1", "bar1");
   wb.Delete("foo2");
-  ASSERT_EQ(wb.Count(), size_t(3));
+  ASSERT_EQ(wb.Count(), 3ull);
 
   // clear write batch
   wb.Clear();
@@ -32,7 +32,7 @@ TEST_F(WriteBatchTest, WriteToWriteBatch) {
   wb.Put("fo3", "bar1");
   wb.Put("foo4", "bar1");
   wb.Delete("foo5");
-  ASSERT_EQ(wb.Count(), size_t(3));
+  ASSERT_EQ(wb.Count(), 3ull);
 }
 
 TEST_F(WriteBatchTest, ReadFromWriteBatch) {

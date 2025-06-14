@@ -8,8 +8,13 @@ SkipListBackedInMemoryTxnStore::SkipListBackedInMemoryTxnStore(
     const StoreOptions& store_options,
     const TransactionStoreOptions& txn_store_options,
     const MultiVersionsManagerFactory& multi_versions_mgr_factory,
+    WriteLock& prepare_queue,
+    WriteLock& commit_queue,
     const TxnLockManagerFactory& txn_lock_mgr_factory)
     : SkipListBackedInMemoryStore(store_options, multi_versions_mgr_factory),
+      enable_two_write_queues_(store_options.enable_two_write_queues),
+      prepare_queue_(prepare_queue),
+      commit_queue_(commit_queue),
       txn_lock_manager_(txn_lock_mgr_factory.CreateTxnLockManager()) {
   (void)txn_store_options;
 }
@@ -61,10 +66,11 @@ void SkipListBackedInMemoryTxnStore::UnLock(const std::string& key) {
   txn_lock_manager_->UnLock(key);
 }
 
-void SkipListBackedInMemoryTxnStore::ReinitializeTransaction(Transaction* txn,
-    const TransactionOptions& txn_options, const WriteOptions& write_options) {
+void SkipListBackedInMemoryTxnStore::ReinitializeTransaction(
+    Transaction* txn, const WriteOptions& write_options,
+    const TransactionOptions& txn_options) {
   MVCCBasedTxn* mvcc_txn = reinterpret_cast<MVCCBasedTxn*>(txn);
-  mvcc_txn->Reinitialize(this, txn_options, write_options);
+  mvcc_txn->Reinitialize(this, write_options, txn_options);
 }
 
 Transaction* SkipListBackedInMemoryTxnStore::BeginInternalTransaction(
@@ -78,17 +84,24 @@ Transaction* WriteCommittedTxnStore::BeginTransaction(
     const WriteOptions& write_options, const TransactionOptions& txn_options,
     Transaction* old_txn) {
   if (old_txn) {
-    ReinitializeTransaction(old_txn, txn_options, write_options);
+    ReinitializeTransaction(old_txn, write_options, txn_options);
     return old_txn;
   } else {
-    return new WriteCommittedTxn(this, txn_options, write_options);
+    return new WriteCommittedTxn(this, write_options, txn_options);
   }
 }
 
 Transaction* WritePreparedTxnStore::BeginTransaction(
     const WriteOptions& write_options, const TransactionOptions& txn_options,
     Transaction* old_txn) {
-  return nullptr;
+  if (old_txn) {
+    WritePreparedTxn* txn_impl = reinterpret_cast<WritePreparedTxn*>(old_txn);
+    txn_impl->ResetPreparedSeqs();
+    ReinitializeTransaction(old_txn, write_options, txn_options);
+    return old_txn;
+  } else {
+    return new WritePreparedTxn(this, write_options, txn_options);
+  }
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

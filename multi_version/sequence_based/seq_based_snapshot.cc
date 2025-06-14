@@ -55,11 +55,10 @@ const SeqBasedSnapshot* WriteCommittedSnapshotManager::TakeSnapshotInternal() {
   const WriteCommittedMultiVersionsManager* WC_mvm =
       reinterpret_cast<const WriteCommittedMultiVersionsManager*>
       (multi_versions_manager_);
-  SeqBasedVersion* latest_version = reinterpret_cast<SeqBasedVersion*>(
-      WC_mvm->LatestVisibleVersion(nullptr));
-  SeqBasedSnapshot* snapshot = new SeqBasedSnapshot(latest_version->Seq());
-  delete latest_version;
-  return snapshot;
+  SeqBasedVersion tmp;
+  SeqBasedVersion* latest_visible = reinterpret_cast<SeqBasedVersion*>(
+      WC_mvm->LatestVisibleVersion(&tmp));
+  return new SeqBasedSnapshot(latest_visible->Seq());
 }
 
 void WritePreparedSnapshotManager::GetSnapshots(
@@ -73,11 +72,14 @@ void WritePreparedSnapshotManager::GetSnapshots(
     }
     snapshots.push_back(snapshot_seq);
   }
-
 }
 
 const SeqBasedSnapshot* WritePreparedSnapshotManager::TakeSnapshotInternal() {
-  return new SeqBasedSnapshot(0);
+  assert(take_snapshot_callback_.get() != nullptr);
+  uint64_t snapshot_seq;
+  uint64_t min_uncommitted;
+  take_snapshot_callback_->TakeSnapshot(&snapshot_seq, &min_uncommitted);
+  return new WPSeqBasedSnapshot(snapshot_seq, min_uncommitted);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE
