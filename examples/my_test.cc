@@ -103,7 +103,7 @@ class MyTest {
     std::cout<<tips<<"\t";
     std::cout<<"  {max_readable_seq_: "<<multi_versions_manager_impl_->MaxReadableVersion()
         <<", max_visible_seq_: "<<multi_versions_manager_impl_->MaxVisibleVersion()
-        <<", so_far_allocated_: "<<multi_versions_manager_impl_->seq_allocator_.SoFarAllocatd()
+        <<", so_far_allocated_: "<<multi_versions_manager_impl_->seq_allocator_.SoFarAllocated()
         <<"}"<<std::endl;
   }
 
@@ -134,7 +134,6 @@ int main() {
   MyTest my_test5(MULTI_VERSIONS_NAMESPACE::WRITE_COMMITTED, true, false);
   MyTest my_test6(MULTI_VERSIONS_NAMESPACE::WRITE_COMMITTED, false, true);
   MyTest my_test7(MULTI_VERSIONS_NAMESPACE::WRITE_COMMITTED, false, false);
-
   my_test4.Run();
   my_test5.Run();
   my_test6.Run();

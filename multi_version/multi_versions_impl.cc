@@ -19,8 +19,7 @@ SnapshotManager* WriteCommittedMultiVersionsManagerFactory::
 // write prepared
 MultiVersionsManager* WritePreparedMultiVersionsManagerFactory::
     CreateMultiVersionsManager() const {
-  CommitTableOptions options;
-  return new WritePreparedMultiVersionsManager(options,
+  return new WritePreparedMultiVersionsManager(commit_table_options_,
                                                enable_two_write_queues_);
 }
 

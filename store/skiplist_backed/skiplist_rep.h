@@ -84,7 +84,8 @@ class SkipListBackedRep {
 				version_for_get_(nullptr),
 				skiplist_rep_(comparator_, &allocator_),
 				num_entries_(0),
-				num_deletes_(0) {}
+				num_deletes_(0),
+				raw_data_size_(0) {}
 	~SkipListBackedRep() {}
 
 	Status Insert(const std::string& key, const std::string& value,
@@ -95,6 +96,9 @@ class SkipListBackedRep {
 
 	void Dump(std::stringstream* oss, const size_t dump_count = -1);
 
+	uint64_t RawDataSize() const {
+		return raw_data_size_;
+	}
  private:
 	bool ValidateVisibility(const Version& version, const Snapshot& snapshot,
 													Status* status) {
@@ -122,6 +126,18 @@ class SkipListBackedRep {
 		return found;
 	}
 
+	void RecordRawDataSize(const std::string& key, const std::string& value) {
+		raw_data_size_ += key.size();
+		raw_data_size_ += value.size();
+	}
+
+	Version* VersionForLookupKey() {
+		if (version_for_lookup_key_.get() == nullptr) {
+			version_for_lookup_key_.reset(multi_versions_manager_->CreateVersion());
+		}
+		return version_for_lookup_key_.get();
+	}
+
 	Version* VersionForGet() {
 		if (version_for_get_.get() == nullptr) {
 			version_for_get_.reset(multi_versions_manager_->CreateVersion());
@@ -132,6 +148,9 @@ class SkipListBackedRep {
 	SkipListKeyComparator comparator_;
 	MemoryAllocator allocator_;
 	
+	// used to construct SkipListLookupKey for looking up skiplist in Get path,
+	// lazy initialize
+	std::unique_ptr<Version> version_for_lookup_key_ = nullptr;
 	// used to decode version out of underlying store in Get path, lazy initialize
 	std::unique_ptr<Version> version_for_get_ = nullptr;
 	using SkipListRep =
@@ -140,6 +159,7 @@ class SkipListBackedRep {
 
 	uint64_t num_entries_;
 	uint64_t num_deletes_;
+	uint64_t raw_data_size_;	// the successfully inserted raw KV pairs size
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

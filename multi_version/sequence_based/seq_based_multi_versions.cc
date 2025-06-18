@@ -66,6 +66,23 @@ void WriteCommittedMultiVersionsManager::EndCommitVersions(
   AdvanceMaxVisibleVersion(committed);
 }
 
+void WriteCommittedMultiVersionsManager::BeginRollbackVersions(
+    const Version& /*rollback_uncommitted*/,
+    uint32_t /*num_rollback_uncommitteds*/) {
+  // since write committed txn doesn't insert data to underlying store before
+  // Commit(), so there is nothing to rollback
+}
+
+void WriteCommittedMultiVersionsManager::EndRollbackVersions(
+    const Version& /*started_uncommitted*/,
+    const Version& /*rollback_uncommitted*/,
+    const Version& /*committed*/,
+    uint32_t /*num_uncommitteds*/,
+    uint32_t /*num_rollback_uncommitteds*/) {
+  // since write committed txn doesn't insert data to underlying store before
+  // Commit(), so there is nothing to rollback
+}
+
 bool WriteCommittedMultiVersionsManager::IsVersionVisibleToSnapshot(
     const Version& version, const Snapshot& snapshot, bool* snap_exists) const {
   *snap_exists = true;
@@ -121,6 +138,21 @@ void WritePreparedMultiVersionsManager::EndCommitVersions(
                                           num_uncommitteds); 
   } // num_uncommitteds == 0: means commit without prepare, and we have no thing
     // to do with commit_table_
+}
+
+void WritePreparedMultiVersionsManager::BeginRollbackVersions(
+    const Version& rollback_uncommitted,
+    uint32_t num_rollback_uncommitteds) {
+  
+}
+
+void WritePreparedMultiVersionsManager::EndRollbackVersions(
+    const Version& started_uncommitted,
+    const Version& rollback_uncommitted,
+    const Version& committed,
+    uint32_t num_uncommitteds,
+    uint32_t num_rollback_uncommitteds) {
+        
 }
 
 bool WritePreparedMultiVersionsManager::IsVersionVisibleToSnapshot(

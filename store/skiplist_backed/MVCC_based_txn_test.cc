@@ -1,446 +1,199 @@
-#include "MVCC_based_txn.h"
-#include "include/txn_lock_manager.h"
-#include "third-party/gtest/gtest.h"
+#include "MVCC_based_txn_test.h"
+
+#include <iostream>
+
+#include "test_util/test_util.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class MVCCTxnTest : public testing::Test {
+class CommonMVCCTxnTest : public testing::Test {
  public:
-  MVCCTxnTest() {
-    StoreOptions store_options;
-    TransactionStoreOptions txn_store_options;
-    EmptyTxnLockManagerFactory txn_lock_mgr_factory;
-    txn_store_ = new WriteCommittedTxnStore(store_options,
-                                            txn_store_options,
-                                            txn_lock_mgr_factory);
-  }
-
-  ~MVCCTxnTest() {
-    delete txn_store_;
-  }
- protected:
-  TransactionStore* txn_store_;
+  CommonMVCCTxnTest() {}
+  ~CommonMVCCTxnTest() {}
 };
 
-TEST_F(MVCCTxnTest, SimpleTxnReadWrite) {
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-
-  // begin transaction
-  Transaction* txn = txn_store_->BeginTransaction(write_options);
-
-  s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-
-  // read txn's own writes
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // non-transactional read
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
-
-  // commit with prepare
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
-
-  // transactional read
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // non-transactional read
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  delete txn;
+TEST_F(CommonMVCCTxnTest, SimpleTransactionalReadWrite) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->SimpleTransactionalReadWrite();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, NonTransactionalReadWrite) {
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-
-  // read non-existence
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
-
-  // read existence
-  s = txn_store_->Put(write_options, "foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // read after overwritten
-  s = txn_store_->Put(write_options, "foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-
-  // read after deletion
-  s = txn_store_->Delete(write_options, "foo");
-  ASSERT_TRUE(s.IsOK());
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
-
-  // delete non-existence
-  s = txn_store_->Delete(write_options, "foo");
-  ASSERT_TRUE(s.IsOK());
+TEST_F(CommonMVCCTxnTest, SimpleNonTransactionalReadWrite) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->SimpleNonTransactionalReadWrite();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, ReadTxnOwnWrites) {
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-
-  Transaction* txn = txn_store_->BeginTransaction(write_options);
-  s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-
-  // read txn's own writes
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-  s = txn->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // read txn's own write during write stage
-  s = txn->Delete("foo");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
-
-  s = txn->Put("foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar2");
-
-  // non-transactional read can't see the txn's own writes
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
-  s = txn_store_->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsNotFound());
-
-  delete txn;
+TEST_F(CommonMVCCTxnTest, ReadTxnOwnWrites) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->ReadTxnOwnWrites();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, ReadAfterPrepare) {
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-
-  Transaction* txn = txn_store_->BeginTransaction(write_options);
-  s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-
-  // read after prepare
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-
-  // transactional read can see the prepared writes
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-  s = txn->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // non-transactional read can't see the prepared writes
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
-  s = txn_store_->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsNotFound());
-
-  delete txn;
+TEST_F(CommonMVCCTxnTest, ReadAfterPrepare) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->ReadAfterPrepare();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, ReadAfterCommit) {
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-
-  Transaction* txn = txn_store_->BeginTransaction(write_options);
-  s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-
-  // read after commit(2pc)
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
-
-  // transactional read can see the committed writes
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-  s = txn->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // non-transactional read can see the committed writes
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-  s = txn_store_->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  delete txn;
+TEST_F(CommonMVCCTxnTest, ReadAfterCommit) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->ReadAfterCommit();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, ReadUnderSnapshot) {
-  TransactionOptions txn_options;
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-  const Snapshot* snapshot1;
-  const Snapshot* snapshot2;
-
-  Transaction* txn = txn_store_->BeginTransaction(write_options);
-  s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Commit();  // commit without prepare
-  ASSERT_TRUE(s.IsOK());
-  snapshot1 = txn_store_->TakeSnapshot();   // take a snapshot
-
-  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
-  s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Commit();  // commit without prepare
-  ASSERT_TRUE(s.IsOK());
-  snapshot2 = txn_store_->TakeSnapshot();   // take another snapshot
-
-  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
-  s = txn->Put("foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
-  read_options.snapshot = snapshot1;
-  s = txn->Get(read_options, "foo", &value);
-  // txn's own write preceding even though a snapshot provided
-  ASSERT_TRUE(s.IsOK() && value == "bar2");
-
-  s = txn->Commit();  // commit without prepare
-  ASSERT_TRUE(s.IsOK());
-
-  // transactional read
-  read_options.snapshot = snapshot1;
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  read_options.snapshot = snapshot2;
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-
-  read_options.snapshot = nullptr;    // read latest value
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar2");
-
-  // non-transactional read
-  read_options.snapshot = snapshot1;
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  read_options.snapshot = snapshot2;
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-
-  read_options.snapshot = nullptr;    // read latest value
-  s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar2");
-
-  txn_store_->ReleaseSnapshot(snapshot1);
-  txn_store_->ReleaseSnapshot(snapshot2);
-  delete txn;
+TEST_F(CommonMVCCTxnTest, RollbackDuringWriteStage) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->RollbackDuringWriteStage();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, ReuseTransaction) {
-  TransactionOptions txn_options;
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-
-  Transaction* txn = txn_store_->BeginTransaction(write_options);
-  s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Delete("foo1");
-  ASSERT_TRUE(s.IsOK());
-
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
-
-  // reuse transaction
-  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
-  s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo1", "bar1");
-  ASSERT_TRUE(s.IsOK());
-
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
-
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-
-  s = txn->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar1");
-
-  delete txn;
+TEST_F(CommonMVCCTxnTest, RollbackAfterPrepare) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->RollbackAfterPrepare();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, SingleTxnExcutionFlowTest) {
-  TransactionOptions txn_options;
-  WriteOptions write_options;
-  ReadOptions read_options;
-  std::string value;
-  Status s;
-
-  Transaction* txn = txn_store_->BeginTransaction(write_options);
-  // write stage
-  s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
-  
-  // can't write after prepared
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  // can't prepare after prepared
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  // can't write after committed(2PC here)
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Delete("foo");
-  ASSERT_TRUE(s.IsInvalidArgument());
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // can't prepare after commited
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  // can't commit after committed
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  // can't rollback after committed
-  s = txn->Rollback();
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
-  // write stage
-  s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-
-  // rollback during write stage(equivalent to rollback to savepoint, txn will
-  // be in initial state after rollback so act as a newly created txn)
-  s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar");
-
-  // can write、prepare and commit
-  s = txn->Put("foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar2");
-
-  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
-  // write stage
-  s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
-
-  // rollback after prepared
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
-  s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
-
-  // can't write after rollback with prepare executed
-  s = txn->Delete("foo1");
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  // can't prepare after rollback with prepare executed
-  s = txn->Prepare();
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  // can't commit after rollback with prepare executed
-  s = txn->Commit();
-  ASSERT_TRUE(s.IsInvalidArgument());
-
-  // can't rollback after rollback with prepare executed
-  s = txn->Rollback();
-  ASSERT_TRUE(s.IsInvalidArgument());
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsOK() && value == "bar2");
-
-  delete txn;
+TEST_F(CommonMVCCTxnTest, ReadUnderSnapshot) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->ReadUnderSnapshot();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, MultiThreadsTxnsExcution) {
-
+TEST_F(CommonMVCCTxnTest, ReuseTransaction) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->ReuseTransaction();
+    delete test;
+  }
 }
 
-TEST_F(MVCCTxnTest, TestWritePreparedTxn) {
-  // StoreOptions store_options;
-  // TransactionStoreOptions txn_store_options;
-  // EmptyTxnLockManagerFactory txn_lock_mgr_factory;
-  // TransactionStore* WP_txn_store = new WritePreparedTxnStore(store_options,
-  //     txn_store_options, txn_lock_mgr_factory);
+TEST_F(CommonMVCCTxnTest, DISABLED_SingleTxnExcutionFlowTest) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->SingleTxnExcutionFlowTest();
+    delete test;
+  }
+}
 
-  // TransactionOptions txn_options;
-  // WriteOptions write_options;
-  // ReadOptions read_options;
-  // std::string value;
-  // Status s;
-  // const Snapshot* snapshot1;
-  // const Snapshot* snapshot2;
+TEST_F(CommonMVCCTxnTest, MultiThreadsTxnsExcution) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->MultiThreadsTxnsExcution();
+    delete test;
+  }
+}
 
-  // Transaction* txn = WP_txn_store->BeginTransaction(write_options);
-  // s = txn->Put("foo", "bar");
-  // ASSERT_TRUE(s.IsOK());
-  // s = txn->Commit();  // commit without prepare
-  // ASSERT_TRUE(s.IsOK());
-  // snapshot1 = WP_txn_store->TakeSnapshot();   // take a snapshot
+class InspectMVCCTxnTest : public testing::Test {
+ public:
+  InspectMVCCTxnTest() {}
+  ~InspectMVCCTxnTest() {}
+};
 
-  // txn = WP_txn_store->BeginTransaction(write_options, txn_options, txn);
-  // s = txn->Put("foo", "bar1");
-  // ASSERT_TRUE(s.IsOK());
-  // s = txn->Commit();  // commit without prepare
-  // ASSERT_TRUE(s.IsOK());
-  // snapshot2 = WP_txn_store->TakeSnapshot();   // take another snapshot
+TEST_F(InspectMVCCTxnTest, TestSeqInc) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    InspectTxnTest* test = new InspectTxnTest(write_policy,
+                                              enable_two_write_queues, true);
+    test->TestSeqInc();
+    delete test;
+  }
 
-  // // transactional read
-  // read_options.snapshot = snapshot1;
-  // s = txn->Get(read_options, "foo", &value);
-  // ASSERT_TRUE(s.IsOK() && value == "bar");
+  generator.Reset();
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    InspectTxnTest* test = new InspectTxnTest(write_policy,
+                                              enable_two_write_queues, false);
+    test->TestSeqInc();
+    delete test;
+  }
+}
 
-  // read_options.snapshot = snapshot2;
-  // s = txn->Get(read_options, "foo", &value);
-  // ASSERT_TRUE(s.IsOK() && value == "bar1");
+TEST_F(InspectMVCCTxnTest, TestMemoryIncAfterPrepare) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    InspectTxnTest* test = new InspectTxnTest(write_policy,
+                                              enable_two_write_queues, false);
+    test->TestMemoryIncAfterPrepare();
+    delete test;
+  }
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

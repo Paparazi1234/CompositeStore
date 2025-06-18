@@ -454,8 +454,4 @@ void InfiniteCommitTable::TakeSnapshot(uint64_t* snapshot_seq,
   *snapshot_seq = max_committed;
 }
 
-TakeSnapshotCallback* InfiniteCommitTable::GetSnapshotCreationCallback() {
-  return new TakeSnapshotCallbackImpl(this);
-}
-
 }   // namespace MULTI_VERSIONS_NAMESPACE

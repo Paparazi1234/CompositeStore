@@ -96,7 +96,7 @@ Transaction* WritePreparedTxnStore::BeginTransaction(
     Transaction* old_txn) {
   if (old_txn) {
     WritePreparedTxn* txn_impl = reinterpret_cast<WritePreparedTxn*>(old_txn);
-    txn_impl->ResetPreparedSeqs();
+    txn_impl->ResetSeqs();
     ReinitializeTransaction(old_txn, write_options, txn_options);
     return old_txn;
   } else {

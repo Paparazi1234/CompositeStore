@@ -23,6 +23,7 @@ class Store {
                         const std::string& key) = 0;
   virtual Status Get(const ReadOptions& read_options,
                      const std::string& key, std::string* value) = 0;
+  virtual void TEST_Crash() {}
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

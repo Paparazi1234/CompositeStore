@@ -134,10 +134,12 @@ class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
   WritePreparedTxnStore(
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
+      const CommitTableOptions& commit_table_options,
       const TxnLockManagerFactory& txn_lock_mgr_factory)
       : SkipListBackedInMemoryTxnStore(
           store_options, txn_store_options,
           WritePreparedMultiVersionsManagerFactory(
+              commit_table_options,
               store_options.enable_two_write_queues),
           CalcuPrepareQueue(store_options.enable_two_write_queues),
           CalcuCommitQueue(store_options.enable_two_write_queues),

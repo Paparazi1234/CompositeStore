@@ -1,8 +1,190 @@
 #include "seq_based_multi_versions.h"
 #include "seq_based_snapshot.h"
+#include "test_util/test_util.h"
 #include "third-party/gtest/gtest.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
+
+class CommonSeqBasedMultiVersionsTests {
+ public:
+  CommonSeqBasedMultiVersionsTests(TxnStoreWritePolicy write_policy,
+      bool enable_two_write_queues)
+      : write_policy_(write_policy),
+        enable_two_write_queues_(enable_two_write_queues) {
+    if (write_policy_ == WRITE_COMMITTED) {
+      multi_versions_manager_ =
+          new WriteCommittedMultiVersionsManager(enable_two_write_queues_);
+      snapshot_manager_ =
+          new WriteCommittedSnapshotManager(multi_versions_manager_);
+    } else if (write_policy_ == WRITE_PREPARED) {
+      CommitTableOptions options;
+      multi_versions_manager_ =
+          new WritePreparedMultiVersionsManager(
+              options, enable_two_write_queues_);
+      snapshot_manager_ =
+          new WritePreparedSnapshotManager(multi_versions_manager_);
+    } else {
+      assert(false);
+    }
+    assert(multi_versions_manager_);
+    assert(snapshot_manager_);
+  }
+
+  ~CommonSeqBasedMultiVersionsTests() {
+    delete multi_versions_manager_;
+    delete snapshot_manager_;
+  }
+
+  void InitializeMultiVersionManager(const std::string& orig_vresion_seq) {
+    Version* orig = multi_versions_manager_->CreateVersion();
+    orig->DecodeFrom(orig_vresion_seq);
+    multi_versions_manager_->Initialize(*orig);
+    delete orig;
+  }
+
+  // Common test functions
+  void SnapshotManagerReadView();
+  void SnapshotManagerTakeSnapshot();
+ private:
+  TxnStoreWritePolicy write_policy_;
+  bool enable_two_write_queues_;
+  SeqBasedMultiVersionsManager* multi_versions_manager_;
+  SeqBasedSnapshotManager* snapshot_manager_;
+};
+
+void CommonSeqBasedMultiVersionsTests::SnapshotManagerReadView() {
+  Version* latest_visible = nullptr;
+  Version* latest_visible1 = nullptr;
+  const Snapshot* read_view1 = nullptr;
+  const Snapshot* read_view2 = nullptr;
+  const Snapshot* read_view3 = nullptr;
+  const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
+  bool snap_exists;
+
+  latest_visible = multi_versions_manager_->LatestVisibleVersion(nullptr);
+  latest_visible1 = multi_versions_manager_->LatestVisibleVersion(nullptr);
+
+  latest_visible->IncreaseBy(1);
+  multi_versions_manager_->BeginCommitVersions(dummy_version,
+                                               *latest_visible, 1);
+  multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
+  read_view1 = snapshot_manager_->LatestReadView();
+
+  latest_visible->IncreaseBy(10);
+  multi_versions_manager_->BeginCommitVersions(dummy_version,
+                                               *latest_visible, 1);
+  multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
+  read_view2 = snapshot_manager_->LatestReadView();
+
+  latest_visible->IncreaseBy(10);
+  multi_versions_manager_->BeginCommitVersions(dummy_version,
+                                               *latest_visible, 1);
+  multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
+  read_view3 = snapshot_manager_->LatestReadView();
+
+  ASSERT_TRUE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
+  ASSERT_TRUE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
+  ASSERT_TRUE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
+
+  latest_visible1->IncreaseBy(5);
+  ASSERT_FALSE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
+  ASSERT_TRUE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
+  ASSERT_TRUE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
+
+  latest_visible1->IncreaseBy(10);
+  ASSERT_FALSE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
+  ASSERT_FALSE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
+  ASSERT_TRUE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
+
+  latest_visible1->IncreaseBy(10);
+  ASSERT_FALSE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
+  ASSERT_FALSE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
+  ASSERT_FALSE(multi_versions_manager_->IsVersionVisibleToSnapshot(
+      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
+  
+  delete latest_visible;
+  delete latest_visible1;
+  delete read_view1;
+  delete read_view2;
+  delete read_view3;
+}
+
+void CommonSeqBasedMultiVersionsTests::SnapshotManagerTakeSnapshot() {
+    uint32_t latest_visible_seq;
+  Version* latest_visible = nullptr;
+  const Snapshot* snapshot1 = nullptr;
+  const Snapshot* snapshot2 = nullptr;
+  const Snapshot* snapshot3 = nullptr;
+  const Snapshot* snapshot4 = nullptr;
+  const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
+
+  ASSERT_TRUE(snapshot_manager_->IsEmpty());
+
+  latest_visible = multi_versions_manager_->LatestVisibleVersion(nullptr);
+  latest_visible_seq =
+      reinterpret_cast<SeqBasedVersion*>(latest_visible)->Seq();
+  snapshot1 = snapshot_manager_->TakeSnapshot();
+  ASSERT_FALSE(snapshot_manager_->IsEmpty());
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(1));
+
+  latest_visible->IncreaseBy(5);
+  multi_versions_manager_->BeginCommitVersions(dummy_version,
+                                               *latest_visible, 1);
+  multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
+  snapshot2 = snapshot_manager_->TakeSnapshot();
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(2));
+  // no new version committed, so the same snapshot is returned
+  snapshot3 = snapshot_manager_->TakeSnapshot();
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(2));
+  ASSERT_EQ(snapshot2, snapshot3);
+
+  latest_visible->IncreaseBy(5);
+  multi_versions_manager_->BeginCommitVersions(dummy_version,
+                                               *latest_visible, 1);
+  multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
+  snapshot4 = snapshot_manager_->TakeSnapshot();
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(3));
+
+  std::vector<const Snapshot*> snapshots;
+  snapshot_manager_->GetAllLivingSnapshots(snapshots);
+  ASSERT_EQ(snapshots.size(), 3ull);
+  uint32_t expected_step[3] = {0, 5, 10};
+  for (size_t i = 0; i < snapshots.size(); ++i) {
+    const SeqBasedSnapshot* snapshot_impl =
+        reinterpret_cast<const SeqBasedSnapshot*>(snapshots[i]);
+    ASSERT_EQ(snapshot_impl->Seq(), latest_visible_seq + expected_step[i]);
+  }
+
+  snapshot_manager_->ReleaseSnapshot(snapshot1);
+  snapshot1 = nullptr;
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(2));
+
+  snapshot_manager_->ReleaseSnapshot(snapshot2);
+  snapshot2 = nullptr;
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(2));
+
+  snapshot_manager_->ReleaseSnapshot(snapshot3);
+  snapshot3 = nullptr;
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(1));
+
+  snapshot_manager_->ReleaseSnapshot(snapshot4);
+  snapshot4 = nullptr;
+  ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(0));
+  ASSERT_TRUE(snapshot_manager_->IsEmpty());
+
+  delete latest_visible;
+}
 
 class SeqBasedMultiVersionsTest : public testing::Test {
  public:
@@ -46,188 +228,60 @@ TEST_F(SeqBasedMultiVersionsTest, SeqBasedVersionTest) {
   delete version2;
 }
 
-namespace {
-void TestWCSnapshotManagerReadView(
-    WriteCommittedMultiVersionsManager& versions_manager,
-    WriteCommittedSnapshotManager& snapshot_manager) {
-  Version* latest_visible = nullptr;
-  Version* latest_visible1 = nullptr;
-  const Snapshot* read_view1 = nullptr;
-  const Snapshot* read_view2 = nullptr;
-  const Snapshot* read_view3 = nullptr;
-  const Version& dummy_version = versions_manager.VersionLimitsMax();
-  bool snap_exists;
-
-  latest_visible = versions_manager.LatestVisibleVersion(nullptr);
-  latest_visible1 = versions_manager.LatestVisibleVersion(nullptr);
-
-  latest_visible->IncreaseBy(1);
-  versions_manager.BeginCommitVersions(dummy_version, *latest_visible, 1);
-  versions_manager.EndCommitVersions(dummy_version, *latest_visible, 1);
-  read_view1 = snapshot_manager.LatestReadView();
-
-  latest_visible->IncreaseBy(10);
-  versions_manager.BeginCommitVersions(dummy_version, *latest_visible, 1);
-  versions_manager.EndCommitVersions(dummy_version, *latest_visible, 1);
-  read_view2 = snapshot_manager.LatestReadView();
-
-  latest_visible->IncreaseBy(10);
-  versions_manager.BeginCommitVersions(dummy_version, *latest_visible, 1);
-  versions_manager.EndCommitVersions(dummy_version, *latest_visible, 1);
-  read_view3 = snapshot_manager.LatestReadView();
-
-  ASSERT_TRUE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
-  ASSERT_TRUE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
-  ASSERT_TRUE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
-
-  latest_visible1->IncreaseBy(5);
-  ASSERT_FALSE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
-  ASSERT_TRUE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
-  ASSERT_TRUE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
-
-  latest_visible1->IncreaseBy(10);
-  ASSERT_FALSE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
-  ASSERT_FALSE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
-  ASSERT_TRUE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
-
-  latest_visible1->IncreaseBy(10);
-  ASSERT_FALSE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);
-  ASSERT_FALSE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view2, &snap_exists) && snap_exists == true);
-  ASSERT_FALSE(versions_manager.IsVersionVisibleToSnapshot(
-      *latest_visible1, *read_view3, &snap_exists) && snap_exists == true);
-  
-  delete latest_visible;
-  delete latest_visible1;
-  delete read_view1;
-  delete read_view2;
-  delete read_view3;
-}
-}  // anonymous namespace
-
-TEST_F(SeqBasedMultiVersionsTest, WCSnapshotManagerReadView) {
+TEST_F(SeqBasedMultiVersionsTest, TestSnapshotManagerReadView) {
   // brand new version manager
-  WriteCommittedMultiVersionsManager versions_manager;
-  WriteCommittedSnapshotManager snapshot_manager(&versions_manager);
-  TestWCSnapshotManagerReadView(versions_manager, snapshot_manager);
-
-  // version manager initializes from an existed version
-  std::string encoded = "1314";
-  WriteCommittedMultiVersionsManager versions_manager1;
-  Version* orig = versions_manager1.CreateVersion();
-  orig->DecodeFrom(encoded);
-  versions_manager1.Initialize(*orig);
-  WriteCommittedSnapshotManager snapshot_manager1(&versions_manager1);
-  TestWCSnapshotManagerReadView(versions_manager1, snapshot_manager1);
-  delete orig;
-}
-
-namespace {
-void TestWCSnapshotManagerTakeSnapshot(
-    WriteCommittedMultiVersionsManager& versions_manager,
-    WriteCommittedSnapshotManager& snapshot_manager) {
-  uint32_t latest_visible_seq;
-  Version* latest_visible = nullptr;
-  const Snapshot* snapshot1 = nullptr;
-  const Snapshot* snapshot2 = nullptr;
-  const Snapshot* snapshot3 = nullptr;
-  const Snapshot* snapshot4 = nullptr;
-  const Version& dummy_version = versions_manager.VersionLimitsMax();
-
-  ASSERT_TRUE(snapshot_manager.IsEmpty());
-
-  latest_visible = versions_manager.LatestVisibleVersion(nullptr);
-  latest_visible_seq =
-      reinterpret_cast<SeqBasedVersion*>(latest_visible)->Seq();
-  snapshot1 = snapshot_manager.TakeSnapshot();
-  ASSERT_FALSE(snapshot_manager.IsEmpty());
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(1));
-
-  latest_visible->IncreaseBy(5);
-  versions_manager.BeginCommitVersions(dummy_version, *latest_visible, 1);
-  versions_manager.EndCommitVersions(dummy_version, *latest_visible, 1);
-  snapshot2 = snapshot_manager.TakeSnapshot();
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
-  // no new version committed, so the same snapshot is returned
-  snapshot3 = snapshot_manager.TakeSnapshot();
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
-  ASSERT_EQ(snapshot2, snapshot3);
-
-  latest_visible->IncreaseBy(5);
-  versions_manager.BeginCommitVersions(dummy_version, *latest_visible, 1);
-  versions_manager.EndCommitVersions(dummy_version, *latest_visible, 1);
-  snapshot4 = snapshot_manager.TakeSnapshot();
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(3));
-
-  std::vector<const Snapshot*> snapshots;
-  snapshot_manager.GetAllLivingSnapshots(snapshots);
-  ASSERT_EQ(snapshots.size(), 3ull);
-  uint32_t expected_step[3] = {0, 5, 10};
-  for (size_t i = 0; i < snapshots.size(); ++i) {
-    const SeqBasedSnapshot* snapshot_impl =
-        reinterpret_cast<const SeqBasedSnapshot*>(snapshots[i]);
-    ASSERT_EQ(snapshot_impl->Seq(), latest_visible_seq + expected_step[i]);
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonSeqBasedMultiVersionsTests* test =
+        new CommonSeqBasedMultiVersionsTests(write_policy,
+                                             enable_two_write_queues);
+    test->SnapshotManagerReadView();
+    delete test;
   }
 
-  snapshot_manager.ReleaseSnapshot(snapshot1);
-  snapshot1 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
-
-  snapshot_manager.ReleaseSnapshot(snapshot2);
-  snapshot2 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(2));
-
-  snapshot_manager.ReleaseSnapshot(snapshot3);
-  snapshot3 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(1));
-
-  snapshot_manager.ReleaseSnapshot(snapshot4);
-  snapshot4 = nullptr;
-  ASSERT_EQ(snapshot_manager.NumLivingSnapshot(), uint32_t(0));
-  ASSERT_TRUE(snapshot_manager.IsEmpty());
-
-  delete latest_visible;
+  // version manager initializes from an existed version
+  generator.Reset();
+  std::string encoded_version = "1314";
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonSeqBasedMultiVersionsTests* test =
+        new CommonSeqBasedMultiVersionsTests(write_policy,
+                                             enable_two_write_queues);
+    test->InitializeMultiVersionManager(encoded_version);
+    test->SnapshotManagerReadView();
+    delete test;
+  }
 }
-}  // anonymous namespace
 
-TEST_F(SeqBasedMultiVersionsTest, WCSnapshotManagerTakeSnapshot) {
+TEST_F(SeqBasedMultiVersionsTest, TestSnapshotManagerTakeSnapshot) {
   // brand new version manager
-  WriteCommittedMultiVersionsManager versions_manager;
-  WriteCommittedSnapshotManager snapshot_manager(&versions_manager);
-  TestWCSnapshotManagerTakeSnapshot(versions_manager, snapshot_manager);
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonSeqBasedMultiVersionsTests* test =
+        new CommonSeqBasedMultiVersionsTests(write_policy,
+                                             enable_two_write_queues);
+    test->SnapshotManagerTakeSnapshot();
+    delete test;
+  }
 
   // version manager initializes from an existed version
-  std::string encoded = "1314";
-  WriteCommittedMultiVersionsManager versions_manager1;
-  Version* orig = versions_manager1.CreateVersion();
-  orig->DecodeFrom(encoded);
-  versions_manager1.Initialize(*orig);
-  WriteCommittedSnapshotManager snapshot_manager1(&versions_manager1);
-  TestWCSnapshotManagerTakeSnapshot(versions_manager1, snapshot_manager1);
-  delete orig;
-}
-
-TEST_F(SeqBasedMultiVersionsTest, WPMultiVersionsManager) {
-  CommitTableOptions options;
-  WritePreparedMultiVersionsManager wpmvm(options);
-
-}
-
-TEST_F(SeqBasedMultiVersionsTest, WPSnapshotManager) {
-  CommitTableOptions options;
-  WritePreparedMultiVersionsManager wpmvm(options);
-  WritePreparedSnapshotManager wpsm(&wpmvm);
-  
+  generator.Reset();
+  std::string encoded_version = "1314";
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonSeqBasedMultiVersionsTests* test =
+        new CommonSeqBasedMultiVersionsTests(write_policy,
+                                             enable_two_write_queues);
+    test->InitializeMultiVersionManager(encoded_version);
+    test->SnapshotManagerTakeSnapshot();
+    delete test;
+  }
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

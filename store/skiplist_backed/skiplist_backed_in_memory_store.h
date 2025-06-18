@@ -61,6 +61,10 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 		skiplist_backed_rep_.Dump(oss, dump_count);
 	}
 
+	uint64_t RawDataSize() const {
+		return skiplist_backed_rep_.RawDataSize();
+	}
+
 	virtual Transaction* BeginTransaction(
 			const WriteOptions& /*write_options*/,
 			const TransactionOptions& /*txn_options*/,
@@ -71,6 +75,7 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 	MultiVersionsManager* GetMultiVersionsManager() const {
 		return multi_versions_manager_.get();
 	}
+
  protected:
 	friend class WriteCommittedTxn;
 	friend class WritePreparedTxn;
@@ -101,11 +106,18 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 		return write_batch->Count();
 	}
 
+	void TEST_Crash() override {
+    multi_versions_manager_->TEST_Crash();
+  }
+
 	// first write queue: used to deal with write buffer relative operation
 	WriteLock write_lock_;
 	// second write queue: used to deal with non write buffer relative operation,
 	// like WAL persisting, etc
 	WriteLock second_write_lock_;
+
+	// used to allocate memory for stuff that have the same lift time as the store
+	MemoryAllocator permanent_stuff_allocator_;
  private:
 	std::unique_ptr<MultiVersionsManager> multi_versions_manager_;
 	std::unique_ptr<SnapshotManager> snapshot_manager_;

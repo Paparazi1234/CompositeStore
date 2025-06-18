@@ -120,9 +120,22 @@ class WritePreparedTxn : public MVCCBasedTxn {
     *count = num_prepared_seq_;
   }
 
-  void ResetPreparedSeqs() {
+  void SetRollbackedSeqs(uint64_t started, uint32_t count) {
+    assert(started > 0 && count > 0);
+    started_rollbacked_seq_ = started;
+    num_rollbacked_seq_ = count;
+  }
+
+  void GetRollackedSeqs(uint64_t* started, uint32_t* count) const {
+    *started = started_rollbacked_seq_;
+    *count = num_rollbacked_seq_;
+  }
+
+  void ResetSeqs() {
     started_prepared_seq_ = 0;
     num_prepared_seq_ = 0;
+    started_rollbacked_seq_ = 0;
+    num_rollbacked_seq_ = 0;
   }
   class RollbackWriteBatchBuilder;
  private:
@@ -133,6 +146,8 @@ class WritePreparedTxn : public MVCCBasedTxn {
 
   uint64_t started_prepared_seq_ = 0;
   uint64_t num_prepared_seq_ = 0;
+  uint64_t started_rollbacked_seq_ = 0;
+  uint64_t num_rollbacked_seq_ = 0;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

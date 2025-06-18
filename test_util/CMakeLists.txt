@@ -1,0 +1,8 @@
+set(TEST_UTIL_SOURCES
+        test_util.cc)
+
+add_library(${TEST_UTIL_STATIC_LIB} STATIC ${TEST_UTIL_SOURCES})
+
+if(BUILD_SHARED)
+  add_library(${TEST_UTIL_SHARED_LIB} SHARED ${TEST_UTIL_SOURCES})
+endif()

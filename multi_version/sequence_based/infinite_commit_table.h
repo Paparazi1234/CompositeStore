@@ -15,6 +15,7 @@
 #include <functional>
 
 #include "seq_limits.h"
+#include "include/store_traits.h"
 #include "third-party/rocksdb/likely.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -55,11 +56,13 @@ class UnCommittedsHeap {
                                                                                   // 的堆顶比main heap的堆顶大为止（if any），由此也可以知道，每次对PreparedHeap执行完pop操作之后，如果main heap中还有entry，那么堆顶
                                                                                   // 就是当前除开delayed_prepared_之外的最早执行prepare阶段且还没有commit的事务。
   std::atomic<uint64_t> heap_top_ = {kSeqNumberLimitsMax};   // 记录PreparedHeap当前的堆顶，如果heap_top_=kMaxSequenceNumber，表示PreparedHeap当前为空；每次对PreparedHeap执行pop时都需要维护heap_top_
-
+  bool TEST_CRASH_ = false;
   public:
   ~UnCommittedsHeap() {
-    assert(heap_.empty());
-    assert(erased_heap_.empty());
+    if (!TEST_CRASH_) {
+      assert(heap_.empty());
+      assert(erased_heap_.empty());
+    }
   }
   std::mutex* push_pop_mutex() { return &push_pop_mutex_; }
 
@@ -143,6 +146,10 @@ class UnCommittedsHeap {
       }
     }
   }
+
+  void TEST_Crash() {
+    TEST_CRASH_ = true;
+  }
 };
 
 class RecentUnCommitteds {
@@ -189,6 +196,10 @@ class RecentUnCommitteds {
 
   void ExitExclusive() {
     uncommitteds_.push_pop_mutex()->unlock();
+  }
+
+  void TEST_Crash() {
+    uncommitteds_.TEST_Crash();
   }
 
  private:
@@ -351,6 +362,10 @@ class UncommittedsTracker {
 
   bool IsLongLiveUnCommittedsEmpty() const {
     return longlive_uncommitteds_.IsEmpty();
+  }
+
+  void TEST_Crash() {
+    recent_uncommitteds_.TEST_Crash();
   }
 
  private:
@@ -686,13 +701,6 @@ class HistoryCommitteds {
   SnapshotInvisibleVersionsLowerBounds snap_invisible_versions_lower_bounds_;
 };
 
-struct CommitTableOptions {
-  uint32_t max_CAS_retries = 100;
-  uint32_t commit_cache_size_bits = 23;
-  uint32_t snapshot_cache_size_bits = 100;
-  uint64_t history_boundary_inc_step = 100;
-};
-
 // a class that pretend to have infinite capacity to keep track of all committed
 // versions, it's main purpose is used to determine whether a version 
 // encountered during store reading is visible to a specific snapshot
@@ -735,23 +743,34 @@ class InfiniteCommitTable {
     history_committeds_.SetSnapshotsRetrieveCallback(get_snapshots_cb);
   }
 
-  void TakeSnapshot(uint64_t* snapshot_seq, uint64_t* min_uncommitted);
-
   void SetAdvanceMaxCommittedByOneCallback(
       AdvanceMaxCommittedByOneCallback* callback) {
     advance_max_committed_by_one_cb.reset(callback);
   }
 
-  TakeSnapshotCallback* GetSnapshotCreationCallback();
+  class TakeSnapshotCallbackImpl : public TakeSnapshotCallback {
+   public:
+    TakeSnapshotCallbackImpl(InfiniteCommitTable* commit_table)
+        :commit_table_(commit_table) {}
+    ~TakeSnapshotCallbackImpl() {}
+    void TakeSnapshot(uint64_t* snapshot_seq,
+                      uint64_t* min_uncommitted) override {
+      commit_table_->TakeSnapshot(snapshot_seq, min_uncommitted);
+    }
 
-  uint64_t MaxCommittedVersion() const {
-    return max_committed_version_.load(std::memory_order_seq_cst);
+   private:
+    InfiniteCommitTable* commit_table_;
+  };
+  TakeSnapshotCallback* GetSnapshotCreationCallback() {
+    return new TakeSnapshotCallbackImpl(this);
   }
 
-  uint64_t MaxReadableVersion() const {
-    return max_readable_version_.load(std::memory_order_acquire);
+  void TEST_Crash() {
+    uncommitteds_tracker_.TEST_Crash();
   }
+
  private:
+  void TakeSnapshot(uint64_t* snapshot_seq, uint64_t* min_uncommitted);
   uint64_t MiniUnCommittedVersion() const;
   uint64_t CalculateNewHistoryBoundry(uint64_t based) const;
   void AdvanceHistoryBoundary(const SequenceNumber& prev_boundary,
@@ -759,6 +778,14 @@ class InfiniteCommitTable {
 
   inline uint64_t GetHistoryBoundry() const {
     return history_boundary_.load(std::memory_order_acquire);
+  }
+
+  uint64_t MaxCommittedVersion() const {
+    return max_committed_version_.load(std::memory_order_seq_cst);
+  }
+
+  uint64_t MaxReadableVersion() const {
+    return max_readable_version_.load(std::memory_order_acquire);
   }
 
   const uint32_t MAX_CAS_RETRIES;                                 
@@ -773,20 +800,6 @@ class InfiniteCommitTable {
   const std::atomic<uint64_t>& max_committed_version_;
   std::unique_ptr<AdvanceMaxCommittedByOneCallback>
       advance_max_committed_by_one_cb;
-};
-
-class TakeSnapshotCallbackImpl : public TakeSnapshotCallback {
- public:
-  TakeSnapshotCallbackImpl(InfiniteCommitTable* commit_table)
-      :commit_table_(commit_table) {}
-  ~TakeSnapshotCallbackImpl() {}
-  void TakeSnapshot(uint64_t* snapshot_seq,
-                    uint64_t* min_uncommitted) override {
-    commit_table_->TakeSnapshot(snapshot_seq, min_uncommitted);
-  }
-
- private:
-  InfiniteCommitTable* commit_table_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

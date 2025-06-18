@@ -31,6 +31,7 @@ class SkipListBackedInMemoryTxnStoreFactory : public TxnStoreFactory {
       case WRITE_PREPARED:
         txn_store = new WritePreparedTxnStore(store_options,
                                               txn_store_options,
+                                              store_traits.commit_table_options,
                                               txn_lock_mgr_factory);
         break;
       default:

@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "status.h"
+#include "store_traits.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -45,7 +46,16 @@ class MultiVersionsManager {
                                    uint32_t num_uncommitteds = 1) = 0;
   virtual void EndCommitVersions(const Version& started_uncommitted,
                                  const Version& committed,
-                                 uint32_t num_uncommitteds = 1) = 0;        // Todo: 加一个BeginCommitWhihoutPrepareVersions怎么样
+                                 uint32_t num_uncommitteds = 1) = 0;
+  virtual void BeginRollbackVersions(
+      const Version& rollback_uncommitted,
+      uint32_t num_rollback_uncommitteds = 1) = 0;
+  virtual void EndRollbackVersions(const Version& started_uncommitted,
+                                   const Version& rollback_uncommitted,
+                                   const Version& committed,
+                                   uint32_t num_uncommitteds = 1,
+                                   uint32_t num_rollback_uncommitteds = 1) = 0;
+
   virtual Version* LatestVisibleVersion(Version* reused = nullptr) const = 0;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,
@@ -54,6 +64,8 @@ class MultiVersionsManager {
   virtual const Version& VersionLimitsMin() const = 0;
 
   virtual void MaybeCleanupVersionsWhenFails() {}       // Todo: 实现之
+
+  virtual void TEST_Crash() {}
 };
 
 class Snapshot {
@@ -66,7 +78,8 @@ class Snapshot {
   virtual ~Snapshot() {}
 
   // caller own the returned version
-  virtual const Version* MaxVersionInSnapshot() const = 0;
+  virtual const Version* MaxVersionInSnapshot(
+      Version* old_version = nullptr) const = 0;
 };
 
 class SnapshotManager {
@@ -117,14 +130,18 @@ class WriteCommittedMultiVersionsManagerFactory :
 class WritePreparedMultiVersionsManagerFactory :
     public MultiVersionsManagerFactory {
  public:
-  WritePreparedMultiVersionsManagerFactory(bool enable_two_write_queues = false)
-      : enable_two_write_queues_(enable_two_write_queues) {}
+  WritePreparedMultiVersionsManagerFactory(
+      const CommitTableOptions& options = CommitTableOptions(),
+      bool enable_two_write_queues = false)
+      : commit_table_options_(options),
+        enable_two_write_queues_(enable_two_write_queues) {}
   ~WritePreparedMultiVersionsManagerFactory() {}
 
   virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
   virtual SnapshotManager* CreateSnapshotManager(
       MultiVersionsManager* multi_versions_manager) const override;
  private:
+  CommitTableOptions commit_table_options_;
   bool enable_two_write_queues_;
 };
 

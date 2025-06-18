@@ -88,6 +88,7 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
 
  protected:
   friend class MyTest;
+  friend class InspectTxnTest;
   void AdvanceMaxReadableVersion(const Version& version) {
     const SeqBasedVersion* version_impl =
         reinterpret_cast<const SeqBasedVersion*>(&version);
@@ -132,7 +133,7 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
       so_far_allocated_.store(orig, std::memory_order_seq_cst);
     }
 
-    uint64_t SoFarAllocatd() const {
+    uint64_t SoFarAllocated() const {
       return so_far_allocated_.load(std::memory_order_seq_cst);
     }
    private:
@@ -187,6 +188,15 @@ class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {
   virtual void EndCommitVersions(const Version& /*started_uncommitted*/,
                                  const Version& committed,
                                  uint32_t /*num_uncommitteds*/) override;
+  virtual void BeginRollbackVersions(
+      const Version& /*rollback_uncommitted*/,
+      uint32_t /*num_rollback_uncommitteds*/) override;
+  virtual void EndRollbackVersions(
+      const Version& /*started_uncommitted*/,
+      const Version& /*rollback_uncommitted*/,
+      const Version& /*committed*/,
+      uint32_t /*num_uncommitteds*/,
+      uint32_t /*num_rollback_uncommitteds*/) override;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,
                                           bool* snap_exists) const override;
@@ -243,9 +253,22 @@ class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
   virtual void EndCommitVersions(const Version& started_uncommitted,
                                  const Version& committed,
                                  uint32_t num_uncommitteds) override;
+  virtual void BeginRollbackVersions(
+      const Version& rollback_uncommitted,
+      uint32_t num_rollback_uncommitteds) override;
+  virtual void EndRollbackVersions(
+      const Version& started_uncommitted,
+      const Version& rollback_uncommitted,
+      const Version& committed,
+      uint32_t num_uncommitteds,
+      uint32_t num_rollback_uncommitteds) override;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,
                                           bool* snap_exists) const override;
+  
+  void TEST_Crash() override {
+    commit_table_.TEST_Crash();
+  }
 
   void SetSnapshotsRetrieveCallback(
       const GetSnapshotsCallback* get_snapshots_cb) {

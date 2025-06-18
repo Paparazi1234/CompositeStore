@@ -74,6 +74,7 @@ Status SkipListBackedRep::Insert(const std::string& key,
     if (type == kTypeDeletion) {
       num_deletes_++;
     }
+    RecordRawDataSize(key, value);
   }
   return inserted ? Status::OK() : Status::TryAgain(); 
 }
@@ -82,8 +83,8 @@ Status SkipListBackedRep::Get(const std::string& key,
                               const Snapshot& read_snapshot,
                               std::string* value) {
   value->clear();
-  std::unique_ptr<const Version>
-      max_version(read_snapshot.MaxVersionInSnapshot());
+  const Version* max_version =
+      read_snapshot.MaxVersionInSnapshot(VersionForLookupKey());
   SkipListLookupKey lookup_key(key, *max_version);
   ROCKSDB_NAMESPACE::Slice target_key = ROCKSDB_NAMESPACE::Slice(key);
   SkipListRep::Iterator iter(&skiplist_rep_);

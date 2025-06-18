@@ -17,8 +17,15 @@ class SeqBasedSnapshot : public Snapshot {
     return rep_;
   }
 
-  virtual const Version* MaxVersionInSnapshot() const override {
-    return new SeqBasedVersion(Seq());
+  const Version* MaxVersionInSnapshot(Version* old_version) const override {
+    if (old_version) {
+      SeqBasedVersion* version_impl =
+          reinterpret_cast<SeqBasedVersion*>(old_version);
+      version_impl->SetSeq(Seq());
+      return version_impl;
+    } else {
+      return new SeqBasedVersion(Seq());
+    }
   }
  protected:
   friend class SeqBasedSnapshotManager;

@@ -86,6 +86,8 @@ Status MVCCBasedTxn::Commit() {
   if (txn_state_ == STAGE_WRITING) {
     txn_state_.store(STAGE_COMMITTING, std::memory_order_relaxed);
     s = CommitWithoutPrepareImpl();
+    // when commit without prepare, Clear() not mater commit successfully or not
+    Clear();
     if (s.IsOK()) {
       txn_state_.store(STAGE_COMMITTED, std::memory_order_relaxed);
     }
@@ -93,6 +95,8 @@ Status MVCCBasedTxn::Commit() {
     txn_state_.store(STAGE_COMMITTING, std::memory_order_relaxed);
     s = CommitWithPrepareImpl();
     if (s.IsOK()) {
+      // when commit with prepare, Clear() only when commit successfully
+      Clear();
       txn_state_.store(STAGE_COMMITTED, std::memory_order_relaxed);
     }
   } else if (txn_state_ == STAGE_COMMITTED) {
@@ -110,11 +114,14 @@ Status MVCCBasedTxn::Rollback() {
   // if rollback during write stage, then txn remains in STAGE_WRITING state and
   // can be used to do future writes(equivalent to rollback to savepoint)
   if (txn_state_ == STAGE_WRITING) {
-    s = RollbackImpl();
+    // when rollback during write stage, just Clear()
+    Clear();
   } else if (txn_state_ == STAGE_PREPARED) {
     txn_state_.store(STAGE_ROLLBACKING, std::memory_order_relaxed);
     s = RollbackImpl();
     if (s.IsOK()) {
+      // when rollback after prepare, Clear() only when rollback successfully
+      Clear();
       // if rollback after prepare executed, the txn can't be used to do future 
       // writes any more
       txn_state_.store(STAGE_ROLLBACKED, std::memory_order_relaxed);
@@ -202,26 +209,23 @@ Status WriteCommittedTxn::CommitWithPrepareImpl() {
   WCTxnAfterInsertWBCB after_insert_wb_cb(txn_store_);
   MaintainVersionsCallbacks commit_callbacks;
   commit_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
-  Status s = txn_store_->WriteInternal(write_options_, &write_batch_,
-                                       commit_callbacks,
-                                       txn_store_->GetCommitQueue());
-  Clear();
-  return s;
+  return txn_store_->WriteInternal(write_options_, &write_batch_,
+                                   commit_callbacks,
+                                   txn_store_->GetCommitQueue());
 }
 
 Status WriteCommittedTxn::CommitWithoutPrepareImpl() {
   WCTxnAfterInsertWBCB after_insert_wb_cb(txn_store_);
   MaintainVersionsCallbacks commit_callbacks;
   commit_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
-  Status s = txn_store_->WriteInternal(write_options_, &write_batch_,
-                                       commit_callbacks,
-                                       txn_store_->GetCommitQueue());
-  Clear();
-  return s;
+  return txn_store_->WriteInternal(write_options_, &write_batch_,
+                                   commit_callbacks,
+                                   txn_store_->GetCommitQueue());
 }
 
 Status WriteCommittedTxn::RollbackImpl() {
-  Clear();
+  // since write committed txn doesn't insert data to underlying store before
+  // Commit(), so there is nothing to rollback
   return Status::OK();
 }
 
@@ -280,10 +284,9 @@ Status WritePreparedTxn::PrepareImpl() {
   MaintainVersionsCallbacks prepare_callbacks;
   prepare_callbacks.before_insert_write_buffer_ = &before_insert_wb_cb;
   prepare_callbacks.after_insert_write_buffer_ = &after_insert_wb_cb;
-  Status s = txn_store_->WriteInternal(write_options_, &write_batch_,
-                                       prepare_callbacks,
-                                       txn_store_->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
-  return s;
+  return txn_store_->WriteInternal(write_options_, &write_batch_,
+                                   prepare_callbacks,
+                                   txn_store_->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 namespace {
@@ -487,6 +490,10 @@ class WritePreparedTxn::RollbackWriteBatchBuilder : public WriteBatch::Handler {
   WriteBatch* rollback_write_batch_;
 };
 
+namespace {
+
+}   // anonymous namespace
+
 Status WritePreparedTxn::RollbackImpl() {
   WriteBatch rollback_write_batch;
   RollbackWriteBatchBuilder rollback_builder(
@@ -503,7 +510,7 @@ Status WritePreparedTxn::RollbackImpl() {
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
   // will switch commit without prepare to commit with prepare internally
   if (!enable_two_write_queues) {
-    WPTxnCommitWithoutPrepareBeforeInsertWBCB before_insert_wb_cb;
+    WPTxnCommitWithoutPrepareBeforeInsertWBCB before_insert_wb_cb;              // 将每种场景的WriteInte燃料相关参数固化为类成员变量
     WPTxnCommitWithoutPrepareAfterInsertWBCB after_insert_wb_cb(this);
     MaintainVersionsCallbacks commit_callbacks;
     commit_callbacks.before_insert_write_buffer_ = &before_insert_wb_cb;
