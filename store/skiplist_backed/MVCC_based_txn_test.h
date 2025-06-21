@@ -41,7 +41,7 @@ class CommonTxnTests {
   void ReadAfterCommit();
   void RollbackDuringWriteStage();
   void RollbackAfterPrepare();
-  void WriteEmpty();
+  void CommitEmptyWriteBatch();
   void ReadUnderSnapshot();
   void ReuseTransaction();
   void SingleTxnExcutionFlowTest();
@@ -297,8 +297,40 @@ void CommonTxnTests::RollbackAfterPrepare() {
   delete txn;
 }
 
-void CommonTxnTests::WriteEmpty() {
+void CommonTxnTests::CommitEmptyWriteBatch() {
+  TransactionOptions txn_options;
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
 
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  // nothing in txn's own write and store
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  // commit(with prepare) of an empty write batch
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
+  // nothing in txn's own write and store
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  // commit(without prepare) of an empty write batch
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  delete txn;
 }
 
 void CommonTxnTests::ReadUnderSnapshot() {
@@ -540,8 +572,9 @@ class InspectTxnTest {
     delete txn_store_;
   }
 
-  void TestSeqInc();
-  void TestMemoryIncAfterPrepare();
+  void VersionIncrement();
+  void VersionIncrementForCommitmentOfEmptyWriteBatch();
+  void WriteBufferInsertTimingBetweenDifferentWritePolicy();
  private:
   struct SeqInfos {
     uint64_t max_readable_seq;
@@ -583,7 +616,7 @@ class InspectTxnTest {
   SeqBasedMultiVersionsManager* mvm_impl_;
 };
 
-void InspectTxnTest::TestSeqInc() {
+void InspectTxnTest::VersionIncrement() {
   std::vector<std::vector<SeqInfos>> expected_of_write_prepared =
   //  before-txn after-write after-prepare after-commit
       {{{0, 0, 0}, {0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
@@ -605,7 +638,6 @@ void InspectTxnTest::TestSeqInc() {
   }
 
   WriteOptions write_options;
-  ReadOptions read_options;
 
   // Before txn
   CheckSeqInfos((*expected)[0]);
@@ -648,7 +680,61 @@ void InspectTxnTest::TestSeqInc() {
   delete txn;
 }
 
-void InspectTxnTest::TestMemoryIncAfterPrepare() {
+void InspectTxnTest::VersionIncrementForCommitmentOfEmptyWriteBatch() {
+  std::vector<std::vector<SeqInfos>> expected_of_write_prepared =
+  //  before-txn  after-prepare after-commit
+      {{{0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
+       {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}},  // prepare() and not 2-WQ
+       {{0, 0, 0}, {1, 2, 2}},   // not prepare() and 2-WQ
+       {{0, 0, 0}, {1, 1, 1}}};  // not prepare() and not 2-WQ
+
+  std::vector<std::vector<SeqInfos>> expected_of_write_committed =
+      {{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}},  // prepare() and 2-WQ
+       {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}},  // prepare() and not 2-WQ
+       {{0, 0, 0}, {1, 1, 1}},   // not prepare() and 2-WQ
+       {{0, 0, 0}, {1, 1, 1}}};  // not prepare() and not 2-WQ
+
+  std::vector<SeqInfos>* expected;
+  if (write_policy_ == WRITE_PREPARED) {
+    GetExpectedSeqInfos(&expected, expected_of_write_prepared);
+  } else {
+    GetExpectedSeqInfos(&expected, expected_of_write_committed);
+  }
+
+  WriteOptions write_options;
+  Status s;
+
+  // Before txn
+  CheckSeqInfos((*expected)[0]);
+  // Start a transaction
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  ASSERT_TRUE(txn != nullptr);
+
+  // commit an empty write batch
+  if (commit_with_prepare_) {
+    // Prepare transaction
+    s = txn->Prepare();
+    ASSERT_TRUE(s.IsOK());
+    // After prepare
+    CheckSeqInfos((*expected)[1]);
+
+    // Commit transaction after preapre
+    s = txn->Commit();
+    ASSERT_TRUE(s.IsOK());
+    // After commit with prepare
+    CheckSeqInfos((*expected)[2]);
+  } else {
+    // Commit transaction
+    s = txn->Commit();
+    ASSERT_TRUE(s.IsOK());
+    // After commit without prepare
+    CheckSeqInfos((*expected)[1]);
+  }
+
+  delete txn;
+}
+
+void InspectTxnTest::WriteBufferInsertTimingBetweenDifferentWritePolicy() {
   std::string key("f", 100);
   std::string value("b", 100);
   uint64_t expected_raw_data_size = key.size() + value.size();

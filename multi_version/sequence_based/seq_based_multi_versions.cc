@@ -127,7 +127,8 @@ void WritePreparedMultiVersionsManager::EndCommitVersions(
     const Version& started_uncommitted,
     const Version& committed,
     uint32_t num_uncommitteds) {
-  // advance max_visible_seq_ after add committeds to commit_table_
+  // advance max_visible_seq_ after add committeds to commit_table_ and insert
+  // write buffer
   AdvanceMaxVisibleVersion(committed);
   // Cleanup uncommitteds after update max_visible_seq_
   if (num_uncommitteds > 0) { // num_uncommitteds > 0: means commit with prepare

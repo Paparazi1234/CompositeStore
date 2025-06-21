@@ -103,6 +103,19 @@ TEST_F(CommonMVCCTxnTest, RollbackAfterPrepare) {
   }
 }
 
+TEST_F(CommonMVCCTxnTest, CommitEmptyWriteBatch) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    CommonTxnTests* test = new CommonTxnTests(write_policy,
+                                              enable_two_write_queues);
+    test->CommitEmptyWriteBatch();
+    delete test;
+  }
+}
+
 TEST_F(CommonMVCCTxnTest, ReadUnderSnapshot) {
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;
@@ -161,7 +174,7 @@ class InspectMVCCTxnTest : public testing::Test {
   ~InspectMVCCTxnTest() {}
 };
 
-TEST_F(InspectMVCCTxnTest, TestSeqInc) {
+TEST_F(InspectMVCCTxnTest, VersionIncrement) {
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
@@ -169,7 +182,7 @@ TEST_F(InspectMVCCTxnTest, TestSeqInc) {
                                       &enable_two_write_queues)) {
     InspectTxnTest* test = new InspectTxnTest(write_policy,
                                               enable_two_write_queues, true);
-    test->TestSeqInc();
+    test->VersionIncrement();
     delete test;
   }
 
@@ -178,12 +191,34 @@ TEST_F(InspectMVCCTxnTest, TestSeqInc) {
                                       &enable_two_write_queues)) {
     InspectTxnTest* test = new InspectTxnTest(write_policy,
                                               enable_two_write_queues, false);
-    test->TestSeqInc();
+    test->VersionIncrement();
     delete test;
   }
 }
 
-TEST_F(InspectMVCCTxnTest, TestMemoryIncAfterPrepare) {
+TEST_F(InspectMVCCTxnTest, VersionIncrementForCommitmentOfEmptyWriteBatch) {
+  TestSetupsGenerator generator;
+  TxnStoreWritePolicy write_policy;
+  bool enable_two_write_queues;
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    InspectTxnTest* test = new InspectTxnTest(write_policy,
+                                              enable_two_write_queues, true);
+    test->VersionIncrementForCommitmentOfEmptyWriteBatch();
+    delete test;
+  }
+
+  generator.Reset();
+  while (generator.GenerateTestSetups(&write_policy,
+                                      &enable_two_write_queues)) {
+    InspectTxnTest* test = new InspectTxnTest(write_policy,
+                                              enable_two_write_queues, false);
+    test->VersionIncrementForCommitmentOfEmptyWriteBatch();
+    delete test;
+  }
+}
+
+TEST_F(InspectMVCCTxnTest, WriteBufferInsertTimingBetweenDifferentWritePolicy) {
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
@@ -191,7 +226,7 @@ TEST_F(InspectMVCCTxnTest, TestMemoryIncAfterPrepare) {
                                       &enable_two_write_queues)) {
     InspectTxnTest* test = new InspectTxnTest(write_policy,
                                               enable_two_write_queues, false);
-    test->TestMemoryIncAfterPrepare();
+    test->WriteBufferInsertTimingBetweenDifferentWritePolicy();
     delete test;
   }
 }

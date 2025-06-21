@@ -45,15 +45,15 @@ class MyTest {
     AssertTrue(txn0);
 
     // Write keys in this transaction
-    s = txn0->Put("abc", "def");
-    AssertTrue(s.IsOK());
-    s = txn0->Put("abc1", "def");
-    AssertTrue(s.IsOK());
-    s = txn0->Put("abc2", "def");
-    AssertTrue(s.IsOK());
-    s = txn0->Put("abc3", "def");
-    AssertTrue(s.IsOK());
-    EchoSeq("After txn write:");
+    // s = txn0->Put("abc", "def");
+    // AssertTrue(s.IsOK());
+    // s = txn0->Put("abc1", "def");
+    // AssertTrue(s.IsOK());
+    // s = txn0->Put("abc2", "def");
+    // AssertTrue(s.IsOK());
+    // s = txn0->Put("abc3", "def");
+    // AssertTrue(s.IsOK());
+    // EchoSeq("After txn write:");
 
     if (commit_with_prepare_) {
       // Prepare transaction

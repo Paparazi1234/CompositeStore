@@ -99,10 +99,10 @@ class SkipListBackedInMemoryStore : public TransactionStore {
     return version_for_insert_.get();
   }
 
-	virtual uint64_t CalculateSeqIncForWriteBatch(
+	virtual uint64_t CalculateNumVersionsForWriteBatch(
 			const WriteBatch* write_batch) const {
-		// default: seq per key and WriteCommitted txn also employ seq per key, when 
-		// WriteCommitted policy txn commits, it won't consume an extra seq
+		assert(write_batch->Count() > 0);
+		// default: version per key
 		return write_batch->Count();
 	}
 

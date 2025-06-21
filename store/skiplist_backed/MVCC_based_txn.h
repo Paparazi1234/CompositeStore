@@ -108,16 +108,15 @@ class WritePreparedTxn : public MVCCBasedTxn {
                    : MVCCBasedTxn(txn_store, write_options, txn_options) {}
   ~WritePreparedTxn() {}
 
-  void SetPreparedSeqs(uint64_t started, uint32_t count) {
+  void SetUnCommittedSeqs(uint64_t started, uint32_t count) {
     assert(started > 0 && count > 0);
-    assert(txn_store_->CalculateSeqIncForWriteBatch(&write_batch_) == count);
-    started_prepared_seq_ = started;
-    num_prepared_seq_ = count;
+    started_uncommitted_seq_ = started;
+    num_uncommitted_seq_ = count;
   }
 
-  void GetPreparedSeqs(uint64_t* started, uint32_t* count) const {
-    *started = started_prepared_seq_;
-    *count = num_prepared_seq_;
+  void GetUnCommittedSeqs(uint64_t* started, uint32_t* count) const {
+    *started = started_uncommitted_seq_;
+    *count = num_uncommitted_seq_;
   }
 
   void SetRollbackedSeqs(uint64_t started, uint32_t count) {
@@ -132,8 +131,8 @@ class WritePreparedTxn : public MVCCBasedTxn {
   }
 
   void ResetSeqs() {
-    started_prepared_seq_ = 0;
-    num_prepared_seq_ = 0;
+    started_uncommitted_seq_ = 0;
+    num_uncommitted_seq_ = 0;
     started_rollbacked_seq_ = 0;
     num_rollbacked_seq_ = 0;
   }
@@ -144,8 +143,8 @@ class WritePreparedTxn : public MVCCBasedTxn {
   virtual Status CommitWithoutPrepareImpl() override;
   virtual Status RollbackImpl() override;
 
-  uint64_t started_prepared_seq_ = 0;
-  uint64_t num_prepared_seq_ = 0;
+  uint64_t started_uncommitted_seq_ = 0;
+  uint64_t num_uncommitted_seq_ = 0;
   uint64_t started_rollbacked_seq_ = 0;
   uint64_t num_rollbacked_seq_ = 0;
 };

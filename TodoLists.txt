@@ -2,7 +2,6 @@
 7 WAL支持
 8 乐观事务支持
 9 writecommited 和 write prepared事务的测试用例
-11 统一prepare阶段写入empty write batch，writecommitted和writeprepared事务的seq增长语义（应该是不会增长），目前writeprepared事务会消耗一个seq
 12 测试用例：
   1 事务写入空数据时的行为；
   2 Commit cache满发生evict

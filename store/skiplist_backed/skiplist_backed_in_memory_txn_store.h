@@ -106,6 +106,18 @@ class WriteCommittedTxnStore : public SkipListBackedInMemoryTxnStore {
       const TransactionOptions& txn_options, Transaction* old_txn) override;
 
  protected:
+  virtual uint64_t CalculateNumVersionsForWriteBatch(
+			const WriteBatch* write_batch) const override {
+    uint64_t count = write_batch->Count();
+    // we employ version per key in WriteCommitted policy
+    if (count == 0) {
+      // the commitment of an empty txn write will consume a version in
+      // WriteCommitted policy
+      return 1;
+    }
+    return count; // otherwise each key will consume a version
+	}
+
   WriteLock& CalcuPrepareQueue(bool enable_two_write_queues) override {
     if (enable_two_write_queues) {
       // for WriteCommitted txn, we use the second write queue to prepare when
@@ -173,9 +185,9 @@ class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
       TransactionOptions txn_options;
       Transaction* txn = txn_store_->BeginTransaction(write_options,
                                                       txn_options, nullptr);
-      Status s = txn->Prepare();
-      assert(s.IsOK());
-      s = txn->Commit();    // commit an empty write batch will consume a seq
+      // commit(without prepare) an empty write batch will consume a seq
+      // commit(with prepare) an empty write batch will consume two seq
+      Status s = txn->Commit();
       assert(s.IsOK());
       delete txn;
     }
@@ -203,10 +215,10 @@ class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
         multi_version_manager_impl->GetSnapshotCreationCallback());
   }
 
-  virtual uint64_t CalculateSeqIncForWriteBatch(
+  virtual uint64_t CalculateNumVersionsForWriteBatch(
 			const WriteBatch* write_batch) const override {
-    // we employ seq per batch in WritePrepared policy, when we use an empty
-    // write batch for commit purpose, it also consume a seq
+    // 1 we employ seq per batch in WritePrepared policy
+    // 2 when we commit an empty txn write, it will also consume a version
 		return 1;
 	}
 

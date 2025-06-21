@@ -75,18 +75,18 @@ Status SkipListBackedInMemoryStore::WriteInternal(
     }
   }
   Version* version_for_insert = VersionForInsert();
-  uint64_t seq_inc = CalculateSeqIncForWriteBatch(write_batch);
+  uint64_t version_inc = CalculateNumVersionsForWriteBatch(write_batch);
   Version* allocated_started =
-      multi_versions_manager_->AllocateVersion(seq_inc, version_for_insert);
+      multi_versions_manager_->AllocateVersion(version_inc, version_for_insert);
   if (maintain_versions_callbacks.before_insert_write_buffer_) {
     s = maintain_versions_callbacks.before_insert_write_buffer_->DoCallback(
-        allocated_started, seq_inc);
+        allocated_started, version_inc);
     if (!s.IsOK()) {
       return s;
     }
   }
   SkipListInsertHandler handler(&skiplist_backed_rep_, allocated_started,
-                                seq_inc);
+                                version_inc);
   s = write_batch->Iterate(&handler);
   if (s.IsOK() && maintain_versions_callbacks.after_insert_write_buffer_) {
     s = maintain_versions_callbacks.after_insert_write_buffer_->DoCallback(

@@ -244,7 +244,7 @@ class WPTxnPrepareBeforeInsertWBCB :
     const SeqBasedVersion* version_impl =
         reinterpret_cast<const SeqBasedVersion*>(version);
     // record prepared versions info
-    txn_->SetPreparedSeqs(version_impl->Seq(), count);
+    txn_->SetUnCommittedSeqs(version_impl->Seq(), count);
     multi_versions_manager_->BeginPrepareVersions(*version, count);
     return Status::OK();
   }
@@ -304,7 +304,7 @@ class WPTxnCommitWithPrepareBeforeInsertWBCB :
                             uint32_t /*count*/) override {
     uint64_t started_uncommitted_seq;
     uint32_t num_uncommitted_seq;
-    txn_->GetPreparedSeqs(&started_uncommitted_seq, &num_uncommitted_seq);
+    txn_->GetUnCommittedSeqs(&started_uncommitted_seq, &num_uncommitted_seq);
     assert(started_uncommitted_seq > 0 && num_uncommitted_seq > 0);
     SeqBasedVersion started_uncommitted(started_uncommitted_seq);
     const Version& committed = *version;
@@ -333,7 +333,7 @@ class WPTxnCommitWithPrepareAfterInsertWBCB :
   virtual Status DoCallback(const Version* version) override {
     uint64_t started_uncommitted_seq;
     uint32_t num_uncommitted_seq;
-    txn_->GetPreparedSeqs(&started_uncommitted_seq, &num_uncommitted_seq);
+    txn_->GetUnCommittedSeqs(&started_uncommitted_seq, &num_uncommitted_seq);
     assert(started_uncommitted_seq > 0 && num_uncommitted_seq > 0);
     SeqBasedVersion started_uncommitted(started_uncommitted_seq);
     const Version& committed = *version;
