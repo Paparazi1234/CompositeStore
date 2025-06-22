@@ -35,7 +35,7 @@ class SeqBasedVersion : public Version {
 
   virtual void DuplicateFrom(const Version& src) override {
     const SeqBasedVersion* src_impl =
-        reinterpret_cast<const SeqBasedVersion*>(&src_impl);
+        reinterpret_cast<const SeqBasedVersion*>(&src);
     rep_ = src_impl->Seq();
   }
 
@@ -184,27 +184,31 @@ class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {
   }
   ~WriteCommittedMultiVersionsManager() {}
 
-  virtual void BeginPrepareVersions(const Version& /*started_uncommitted*/,
-                                    uint32_t /*num_uncommitteds*/) override;
+  virtual void BeginPrepareVersions(
+      const Version& /*prepared_uncommitted_started*/,
+      uint32_t /*num_prepared_uncommitteds*/) override;
   virtual void EndPrepareVersions(const Version& /*end_uncommitted*/) override;
 
-  virtual void BeginCommitVersions(const Version& /*started_uncommitted*/,
-                                   const Version& /*committed*/,
-                                   uint32_t /*num_uncommitteds*/) override;
-  virtual void EndCommitVersions(const Version& /*started_uncommitted*/,
-                                 const Version& committed,
-                                 uint32_t /*num_uncommitteds*/) override;
-  virtual void BeginRollbackVersions(
-      const Version& /*started_uncommitted*/,
-      const Version& /*rollbacked_uncommitted*/,
+  virtual void BeginCommitVersions(
+      const Version& /*prepared_uncommitted_started*/,
       const Version& /*committed*/,
-      uint32_t /*num_uncommitteds*/,
+      uint32_t /*num_prepared_uncommitteds*/) override;
+  virtual void EndCommitVersions(
+      const Version& /*prepared_uncommitted_started*/,
+      const Version& committed,
+      uint32_t /*num_prepared_uncommitteds*/) override;
+
+  virtual void BeginRollbackVersions(
+      const Version& /*prepared_uncommitted_started*/,
+      const Version& /*rollbacked_uncommitted_started*/,
+      const Version& /*committed*/,
+      uint32_t /*num_prepared_uncommitteds*/,
       uint32_t /*num_rollbacked_uncommitteds*/) override;
   virtual void EndRollbackVersions(
-      const Version& /*started_uncommitted*/,
-      const Version& /*rollbacked_uncommitted*/,
+      const Version& /*prepared_uncommitted_started*/,
+      const Version& /*rollbacked_uncommitted_started*/,
       const Version& /*committed*/,
-      uint32_t /*num_uncommitteds*/,
+      uint32_t /*num_prepared_uncommitteds*/,
       uint32_t /*num_rollbacked_uncommitteds*/) override;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,
@@ -252,27 +256,31 @@ class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
   }
   ~WritePreparedMultiVersionsManager() {}
 
-  virtual void BeginPrepareVersions(const Version& started_uncommitted,
-                                    uint32_t num_uncommitteds) override;
+  virtual void BeginPrepareVersions(
+    const Version& prepared_uncommitted_started,
+    uint32_t num_prepared_uncommitteds) override;
   virtual void EndPrepareVersions(const Version& end_uncommitted) override;
 
-  virtual void BeginCommitVersions(const Version& started_uncommitted,
-                                   const Version& committed,
-                                   uint32_t num_uncommitteds) override;
-  virtual void EndCommitVersions(const Version& started_uncommitted,
-                                 const Version& committed,
-                                 uint32_t num_uncommitteds) override;
-  virtual void BeginRollbackVersions(
-      const Version& started_uncommitted,
-      const Version& rollbacked_uncommitted,
+  virtual void BeginCommitVersions(
+      const Version& prepared_uncommitted_started,
       const Version& committed,
-      uint32_t num_uncommitteds,
+      uint32_t num_prepared_uncommitteds) override;
+  virtual void EndCommitVersions(
+      const Version& prepared_uncommitted_started,
+      const Version& committed,
+      uint32_t num_prepared_uncommitteds) override;
+
+  virtual void BeginRollbackVersions(
+      const Version& prepared_uncommitted_started,
+      const Version& rollbacked_uncommitted_started,
+      const Version& committed,
+      uint32_t num_prepared_uncommitteds,
       uint32_t num_rollbacked_uncommitteds) override;
   virtual void EndRollbackVersions(
-      const Version& started_uncommitted,
-      const Version& rollbacked_uncommitted,
+      const Version& prepared_uncommitted_started,
+      const Version& rollbacked_uncommitted_started,
       const Version& committed,
-      uint32_t num_uncommitteds,
+      uint32_t num_prepared_uncommitteds,
       uint32_t num_rollbacked_uncommitteds) override;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,

@@ -108,33 +108,33 @@ class WritePreparedTxn : public MVCCBasedTxn {
                    : MVCCBasedTxn(txn_store, write_options, txn_options) {}
   ~WritePreparedTxn() {}
 
-  void SetUnCommittedSeqs(uint64_t started, uint32_t count) {
+  void RecordPreparedUnCommittedSeqs(uint64_t started, uint32_t count) {
     assert(started > 0 && count > 0);
-    started_uncommitted_seq_ = started;
-    num_uncommitted_seq_ = count;
+    prepared_uncommitted_started_seq_ = started;
+    num_prepared_uncommitted_seq_ = count;
   }
 
-  void GetUnCommittedSeqs(uint64_t* started, uint32_t* count) const {
-    *started = started_uncommitted_seq_;
-    *count = num_uncommitted_seq_;
+  void GetPreparedUnCommittedSeqs(uint64_t* started, uint32_t* count) const {
+    *started = prepared_uncommitted_started_seq_;
+    *count = num_prepared_uncommitted_seq_;
   }
 
-  void SetRollbackedSeqs(uint64_t started, uint32_t count) {
+  void RecordRollbackedUnCommittedSeqs(uint64_t started, uint32_t count) {
     assert(started > 0 && count > 0);
-    started_rollbacked_seq_ = started;
-    num_rollbacked_seq_ = count;
+    rollbacked_uncommitted_started_seq_ = started;
+    num_rollbacked_uncommitted_seq_ = count;
   }
 
-  void GetRollackedSeqs(uint64_t* started, uint32_t* count) const {
-    *started = started_rollbacked_seq_;
-    *count = num_rollbacked_seq_;
+  void GetRollackedUnCommittedSeqs(uint64_t* started, uint32_t* count) const {
+    *started = rollbacked_uncommitted_started_seq_;
+    *count = num_rollbacked_uncommitted_seq_;
   }
 
-  void ResetSeqs() {
-    started_uncommitted_seq_ = 0;
-    num_uncommitted_seq_ = 0;
-    started_rollbacked_seq_ = 0;
-    num_rollbacked_seq_ = 0;
+  void ResetUnCommittedSeqs() {   // Todo: 在clear txn时需要调用
+    prepared_uncommitted_started_seq_ = 0;
+    num_prepared_uncommitted_seq_ = 0;
+    rollbacked_uncommitted_started_seq_ = 0;
+    num_rollbacked_uncommitted_seq_ = 0;
   }
   class RollbackWriteBatchBuilder;
  private:
@@ -143,10 +143,10 @@ class WritePreparedTxn : public MVCCBasedTxn {
   virtual Status CommitWithoutPrepareImpl() override;
   virtual Status RollbackImpl() override;
 
-  uint64_t started_uncommitted_seq_ = 0;
-  uint64_t num_uncommitted_seq_ = 0;
-  uint64_t started_rollbacked_seq_ = 0;   // Todo: 更改命名
-  uint64_t num_rollbacked_seq_ = 0;
+  uint64_t prepared_uncommitted_started_seq_ = 0;
+  uint64_t num_prepared_uncommitted_seq_ = 0;
+  uint64_t rollbacked_uncommitted_started_seq_ = 0;
+  uint64_t num_rollbacked_uncommitted_seq_ = 0;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

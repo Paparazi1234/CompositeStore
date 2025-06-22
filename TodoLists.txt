@@ -7,7 +7,6 @@
   3 commit table多线程交互
   4 commit table内部各组件的单独测试（包含每个组件的多线程并发测试）
   5 two write queue测试（测试各种write policy以及是否commit with prepare）
-  6 事务rollback接口测试
   7 DB恢复测试
   8 对empty write batch的rollback
 15 内存泄漏检测：ASAN

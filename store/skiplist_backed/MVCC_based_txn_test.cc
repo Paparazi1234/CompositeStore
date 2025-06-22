@@ -77,7 +77,7 @@ TEST_F(CommonMVCCTxnTest, ReadAfterCommit) {
   }
 }
 
-TEST_F(CommonMVCCTxnTest, RollbackDuringWriteStage) {
+TEST_F(CommonMVCCTxnTest, RollbackWithoutPrepare) {
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
@@ -85,12 +85,12 @@ TEST_F(CommonMVCCTxnTest, RollbackDuringWriteStage) {
                                       &enable_two_write_queues)) {
     CommonTxnTests* test = new CommonTxnTests(write_policy,
                                               enable_two_write_queues);
-    test->RollbackDuringWriteStage();
+    test->RollbackWithoutPrepare();
     delete test;
   }
 }
 
-TEST_F(CommonMVCCTxnTest, RollbackAfterPrepare) {
+TEST_F(CommonMVCCTxnTest, RollbackWithPrepare) {
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
@@ -98,7 +98,7 @@ TEST_F(CommonMVCCTxnTest, RollbackAfterPrepare) {
                                       &enable_two_write_queues)) {
     CommonTxnTests* test = new CommonTxnTests(write_policy,
                                               enable_two_write_queues);
-    test->RollbackAfterPrepare();
+    test->RollbackWithPrepare();
     delete test;
   }
 }

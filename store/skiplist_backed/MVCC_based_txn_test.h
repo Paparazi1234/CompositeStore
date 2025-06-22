@@ -39,9 +39,12 @@ class CommonTxnTests {
   void ReadTxnOwnWrites();
   void ReadAfterPrepare();
   void ReadAfterCommit();
-  void RollbackDuringWriteStage();
-  void RollbackAfterPrepare();
+  void ReadAfterRollback();
+  void RollbackWithoutPrepare();
+  void RollbackWithPrepare();
+  void PrepareEmptyWriteBatch();
   void CommitEmptyWriteBatch();
+  void RollbackEmptyWriteBatch();
   void ReadUnderSnapshot();
   void ReuseTransaction();
   void SingleTxnExcutionFlowTest();
@@ -232,7 +235,11 @@ void CommonTxnTests::ReadAfterCommit() {
   delete txn;
 }
 
-void CommonTxnTests::RollbackDuringWriteStage() {
+void CommonTxnTests::ReadAfterRollback() {
+  
+}
+
+void CommonTxnTests::RollbackWithoutPrepare() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -265,7 +272,7 @@ void CommonTxnTests::RollbackDuringWriteStage() {
   delete txn;
 }
 
-void CommonTxnTests::RollbackAfterPrepare() {
+void CommonTxnTests::RollbackWithPrepare() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;

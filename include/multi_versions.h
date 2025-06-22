@@ -38,28 +38,32 @@ class MultiVersionsManager {
   virtual Version* CreateVersion() const = 0;
   virtual Version* AllocateVersion(uint32_t count,
                                    Version* reused = nullptr) = 0;
-  virtual void BeginPrepareVersions(const Version& started_uncommitted,
-                                    uint32_t num_uncommitteds = 1) = 0;
+  virtual void BeginPrepareVersions(
+      const Version& prepared_uncommitted_started,
+      uint32_t num_prepared_uncommitteds) = 0;
   virtual void EndPrepareVersions(const Version& end_uncommitted) = 0;
 
-  virtual void BeginCommitVersions(const Version& started_uncommitted,
-                                   const Version& committed,
-                                   uint32_t num_uncommitteds = 1) = 0;  // Todo: 删除默认参数
-  virtual void EndCommitVersions(const Version& started_uncommitted,
-                                 const Version& committed,
-                                 uint32_t num_uncommitteds = 1) = 0;
+  virtual void BeginCommitVersions(
+      const Version& prepared_uncommitted_started,
+      const Version& committed,
+      uint32_t num_prepared_uncommitteds) = 0;
+  virtual void EndCommitVersions(
+      const Version& prepared_uncommitted_started,
+      const Version& committed,
+      uint32_t num_prepared_uncommitteds) = 0;
+
   virtual void BeginRollbackVersions(
-      const Version& started_uncommitted,       // Todo: started_uncommitted改为prepared uncommitted
-      const Version& rollbacked_uncommitted,
+      const Version& prepared_uncommitted_started,
+      const Version& rollbacked_uncommitted_started,
       const Version& committed,
-      uint32_t num_uncommitteds = 1,
-      uint32_t num_rollbacked_uncommitteds = 1) = 0;
+      uint32_t num_prepared_uncommitteds,
+      uint32_t num_rollbacked_uncommitteds) = 0;
   virtual void EndRollbackVersions(
-      const Version& started_uncommitted,
-      const Version& rollbacked_uncommitted,
+      const Version& prepared_uncommitted_started,
+      const Version& rollbacked_uncommitted_started,
       const Version& committed,
-      uint32_t num_uncommitteds = 1,
-      uint32_t num_rollbacked_uncommitteds = 1) = 0;
+      uint32_t num_prepared_uncommitteds,
+      uint32_t num_rollbacked_uncommitteds) = 0;
 
   virtual Version* LatestVisibleVersion(Version* reused = nullptr) const = 0;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
