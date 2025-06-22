@@ -17,6 +17,7 @@ class Version {
   
   virtual void IncreaseBy(uint32_t count) = 0;
   virtual void IncreaseByOne() = 0;
+  virtual void DuplicateFrom(const Version& src) = 0;
   virtual int CompareWith(const Version& rhs) const = 0;
 
   virtual void EncodeTo(std::string* dest) const = 0;
@@ -43,18 +44,22 @@ class MultiVersionsManager {
 
   virtual void BeginCommitVersions(const Version& started_uncommitted,
                                    const Version& committed,
-                                   uint32_t num_uncommitteds = 1) = 0;
+                                   uint32_t num_uncommitteds = 1) = 0;  // Todo: 删除默认参数
   virtual void EndCommitVersions(const Version& started_uncommitted,
                                  const Version& committed,
                                  uint32_t num_uncommitteds = 1) = 0;
   virtual void BeginRollbackVersions(
-      const Version& rollback_uncommitted,
-      uint32_t num_rollback_uncommitteds = 1) = 0;
-  virtual void EndRollbackVersions(const Version& started_uncommitted,
-                                   const Version& rollback_uncommitted,
-                                   const Version& committed,
-                                   uint32_t num_uncommitteds = 1,
-                                   uint32_t num_rollback_uncommitteds = 1) = 0;
+      const Version& started_uncommitted,       // Todo: started_uncommitted改为prepared uncommitted
+      const Version& rollbacked_uncommitted,
+      const Version& committed,
+      uint32_t num_uncommitteds = 1,
+      uint32_t num_rollbacked_uncommitteds = 1) = 0;
+  virtual void EndRollbackVersions(
+      const Version& started_uncommitted,
+      const Version& rollbacked_uncommitted,
+      const Version& committed,
+      uint32_t num_uncommitteds = 1,
+      uint32_t num_rollbacked_uncommitteds = 1) = 0;
 
   virtual Version* LatestVisibleVersion(Version* reused = nullptr) const = 0;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,

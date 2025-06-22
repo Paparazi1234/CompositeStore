@@ -145,7 +145,7 @@ class WritePreparedTxn : public MVCCBasedTxn {
 
   uint64_t started_uncommitted_seq_ = 0;
   uint64_t num_uncommitted_seq_ = 0;
-  uint64_t started_rollbacked_seq_ = 0;
+  uint64_t started_rollbacked_seq_ = 0;   // Todo: 更改命名
   uint64_t num_rollbacked_seq_ = 0;
 };
 

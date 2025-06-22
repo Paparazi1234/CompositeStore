@@ -142,7 +142,7 @@ TEST_F(CommonMVCCTxnTest, ReuseTransaction) {
   }
 }
 
-TEST_F(CommonMVCCTxnTest, DISABLED_SingleTxnExcutionFlowTest) {
+TEST_F(CommonMVCCTxnTest, SingleTxnExcutionFlowTest) {
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;

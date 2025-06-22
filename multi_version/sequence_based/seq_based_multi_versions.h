@@ -33,12 +33,18 @@ class SeqBasedVersion : public Version {
     rep_++;
   }
 
+  virtual void DuplicateFrom(const Version& src) override {
+    const SeqBasedVersion* src_impl =
+        reinterpret_cast<const SeqBasedVersion*>(&src_impl);
+    rep_ = src_impl->Seq();
+  }
+
   // descending ordered by version
   virtual int CompareWith(const Version& rhs) const override {
-    const SeqBasedVersion* version_rhs =
-      reinterpret_cast<const SeqBasedVersion*>(&rhs);
-    if (rep_ != version_rhs->Seq()) {
-      if (rep_ < version_rhs->Seq()) {
+    const SeqBasedVersion* rhs_impl =
+        reinterpret_cast<const SeqBasedVersion*>(&rhs);
+    if (rep_ != rhs_impl->Seq()) {
+      if (rep_ < rhs_impl->Seq()) {
         return +1;
       }
       return -1;
@@ -189,14 +195,17 @@ class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {
                                  const Version& committed,
                                  uint32_t /*num_uncommitteds*/) override;
   virtual void BeginRollbackVersions(
-      const Version& /*rollback_uncommitted*/,
-      uint32_t /*num_rollback_uncommitteds*/) override;
-  virtual void EndRollbackVersions(
       const Version& /*started_uncommitted*/,
-      const Version& /*rollback_uncommitted*/,
+      const Version& /*rollbacked_uncommitted*/,
       const Version& /*committed*/,
       uint32_t /*num_uncommitteds*/,
-      uint32_t /*num_rollback_uncommitteds*/) override;
+      uint32_t /*num_rollbacked_uncommitteds*/) override;
+  virtual void EndRollbackVersions(
+      const Version& /*started_uncommitted*/,
+      const Version& /*rollbacked_uncommitted*/,
+      const Version& /*committed*/,
+      uint32_t /*num_uncommitteds*/,
+      uint32_t /*num_rollbacked_uncommitteds*/) override;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,
                                           bool* snap_exists) const override;
@@ -254,14 +263,17 @@ class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
                                  const Version& committed,
                                  uint32_t num_uncommitteds) override;
   virtual void BeginRollbackVersions(
-      const Version& rollback_uncommitted,
-      uint32_t num_rollback_uncommitteds) override;
-  virtual void EndRollbackVersions(
       const Version& started_uncommitted,
-      const Version& rollback_uncommitted,
+      const Version& rollbacked_uncommitted,
       const Version& committed,
       uint32_t num_uncommitteds,
-      uint32_t num_rollback_uncommitteds) override;
+      uint32_t num_rollbacked_uncommitteds) override;
+  virtual void EndRollbackVersions(
+      const Version& started_uncommitted,
+      const Version& rollbacked_uncommitted,
+      const Version& committed,
+      uint32_t num_uncommitteds,
+      uint32_t num_rollbacked_uncommitteds) override;
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,
                                           bool* snap_exists) const override;

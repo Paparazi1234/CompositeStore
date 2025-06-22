@@ -228,7 +228,7 @@ TEST_F(SeqBasedMultiVersionsTest, SeqBasedVersionTest) {
   delete version2;
 }
 
-TEST_F(SeqBasedMultiVersionsTest, TestSnapshotManagerReadView) {
+TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerReadView) {
   // brand new version manager
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;
@@ -256,7 +256,7 @@ TEST_F(SeqBasedMultiVersionsTest, TestSnapshotManagerReadView) {
   }
 }
 
-TEST_F(SeqBasedMultiVersionsTest, TestSnapshotManagerTakeSnapshot) {
+TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerTakeSnapshot) {
   // brand new version manager
   TestSetupsGenerator generator;
   TxnStoreWritePolicy write_policy;

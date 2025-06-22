@@ -3,13 +3,12 @@
 8 乐观事务支持
 9 writecommited 和 write prepared事务的测试用例
 12 测试用例：
-  1 事务写入空数据时的行为；
   2 Commit cache满发生evict
   3 commit table多线程交互
   4 commit table内部各组件的单独测试（包含每个组件的多线程并发测试）
   5 two write queue测试（测试各种write policy以及是否commit with prepare）
   6 事务rollback接口测试
   7 DB恢复测试
-  8 insight测试
-14 rollback时，遗漏对prepare阶段写入插入到prepare heap中的seq的清理
+  8 对empty write batch的rollback
 15 内存泄漏检测：ASAN
+16 当前好像遗漏为empty write batch在commit write batch中写入一个commit empty（只在commit 或者rollback内部使用的empty write batch进行两阶段提交时的场景，待验证）

@@ -25,7 +25,12 @@ class EmptyAfterInsertWBCB :
 
   virtual Status DoCallback(const Version* version) override {
     const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
-    multi_versions_manager_->EndCommitVersions(dummy_version, *version);
+    const Version& started_uncommitted = dummy_version;
+    const Version& committed = *version;
+    uint32_t num_uncommitteds = 0;
+    multi_versions_manager_->EndCommitVersions(started_uncommitted,
+                                               committed,
+                                               num_uncommitteds);
     return Status::OK();
   }
 
