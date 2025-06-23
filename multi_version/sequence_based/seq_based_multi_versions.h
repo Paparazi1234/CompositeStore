@@ -225,7 +225,7 @@ class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {
     return max_committed_rep_;
   }
 
-  std::atomic<uint64_t> max_committed_rep_ = 0;
+  std::atomic<uint64_t> max_committed_rep_ = {0};
 };
 
 class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
@@ -321,10 +321,10 @@ class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
     }
   }
 
-  std::atomic<uint64_t> max_readable_rep_ = 0;
+  std::atomic<uint64_t> max_readable_rep_ = {0};
   // max_visible_rep_ only takes effect when enable_two_write_queues == true,
   // when enable_two_write_queues == false, max_visible is same as max_readable
-  std::atomic<uint64_t> max_visible_rep_ = 0;
+  std::atomic<uint64_t> max_visible_rep_ = {0};
   InfiniteCommitTable commit_table_;
 };
 

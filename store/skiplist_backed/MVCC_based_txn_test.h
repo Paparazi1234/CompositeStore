@@ -40,8 +40,10 @@ class CommonTxnTests {
   void ReadAfterPrepare();
   void ReadAfterCommit();
   void ReadAfterRollback();
-  void RollbackWithoutPrepare();
+  void CommitWithPrepare();
+  void CommitWithoutPrepare();
   void RollbackWithPrepare();
+  void RollbackWithoutPrepare();
   void PrepareEmptyWriteBatch();
   void CommitEmptyWriteBatch();
   void RollbackEmptyWriteBatch();
@@ -184,7 +186,8 @@ void CommonTxnTests::ReadAfterPrepare() {
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
 
-  // transactional read can see the prepared writes
+  // transactional read can see the prepared writes equivalent to read txn's
+  // own write
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar1");
   s = txn->Get(read_options, "foo1", &value);
@@ -201,6 +204,7 @@ void CommonTxnTests::ReadAfterPrepare() {
 }
 
 void CommonTxnTests::ReadAfterCommit() {
+  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -214,7 +218,107 @@ void CommonTxnTests::ReadAfterCommit() {
   s = txn->Put("foo", "bar1");
   ASSERT_TRUE(s.IsOK());
 
-  // read after commit(2pc)
+  // commit with prepare
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  // read after commit
+  // transactional read can see the committed writes
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+  s = txn->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  // non-transactional read can see the committed writes
+  s = txn_store_->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+  s = txn_store_->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
+  s = txn->Put("foo", "bar2");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo1", "bar1");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo", "bar3");
+  ASSERT_TRUE(s.IsOK());
+
+  // commit without prepare
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  // read after commit
+  // transactional read can see the committed writes
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar3");
+  s = txn->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+
+  // non-transactional read can see the committed writes
+  s = txn_store_->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar3");
+  s = txn_store_->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+  delete txn;
+}
+
+void CommonTxnTests::ReadAfterRollback() {
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  s = txn->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+
+  // rollback without prepare
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
+
+  // read after rollback
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+  s = txn_store_->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  // can reuse txn after rollback without prepare
+  s = txn->Put("foo1", "bar");
+  ASSERT_TRUE(s.IsOK());
+
+  // rollback with prepare
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
+
+  // read after rollback
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+  s = txn_store_->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  delete txn;
+}
+
+void CommonTxnTests::CommitWithPrepare() {
+  TransactionOptions txn_options;
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  s = txn->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo1", "bar");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo", "bar1");
+  ASSERT_TRUE(s.IsOK());
+
+  // commit with prepare
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
   s = txn->Commit();
@@ -235,11 +339,8 @@ void CommonTxnTests::ReadAfterCommit() {
   delete txn;
 }
 
-void CommonTxnTests::ReadAfterRollback() {
-  
-}
-
-void CommonTxnTests::RollbackWithoutPrepare() {
+void CommonTxnTests::CommitWithoutPrepare() {
+  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -250,24 +351,24 @@ void CommonTxnTests::RollbackWithoutPrepare() {
   ASSERT_TRUE(s.IsOK());
   s = txn->Put("foo1", "bar");
   ASSERT_TRUE(s.IsOK());
-
-  // rollback during write stage
-  s = txn->Rollback();
+  s = txn->Put("foo", "bar1");
   ASSERT_TRUE(s.IsOK());
 
-  // can read nothing from txn's own write after rollback
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
-  s = txn->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsNotFound());
-
-  // can reuse txn after rollback
-  s = txn->Put("foo2", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  // commit without prepare
   s = txn->Commit();
   ASSERT_TRUE(s.IsOK());
-  s = txn->Get(read_options, "foo2", &value);
+
+  // transactional read can see the committed writes
+  s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar1");
+  s = txn->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  // non-transactional read can see the committed writes
+  s = txn_store_->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+  s = txn_store_->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
 
   delete txn;
 }
@@ -304,6 +405,62 @@ void CommonTxnTests::RollbackWithPrepare() {
   delete txn;
 }
 
+void CommonTxnTests::RollbackWithoutPrepare() {
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  s = txn->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo1", "bar");
+  ASSERT_TRUE(s.IsOK());
+
+  // rollback during write stage
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
+
+  // can read nothing from txn's own write after rollback
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+  s = txn->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  // can reuse txn after rollback
+  s = txn->Put("foo2", "bar1");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Get(read_options, "foo2", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+
+  delete txn;
+}
+
+void CommonTxnTests::PrepareEmptyWriteBatch() {
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  // nothing in txn's own write and store
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  // prepare an empty write batch
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+
+  // nothing in txn's own write and store still
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  txn_store_->TEST_Crash();
+  delete txn;
+}
+
 void CommonTxnTests::CommitEmptyWriteBatch() {
   TransactionOptions txn_options;
   WriteOptions write_options;
@@ -316,12 +473,13 @@ void CommonTxnTests::CommitEmptyWriteBatch() {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  // commit(with prepare) of an empty write batch
+  // commit(with prepare) an empty write batch
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
   s = txn->Commit();
   ASSERT_TRUE(s.IsOK());
 
+  // nothing in txn's own write and store still
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
@@ -330,10 +488,49 @@ void CommonTxnTests::CommitEmptyWriteBatch() {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  // commit(without prepare) of an empty write batch
+  // commit(without prepare) an empty write batch
   s = txn->Commit();
   ASSERT_TRUE(s.IsOK());
 
+  // nothing in txn's own write and store still
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  delete txn;
+}
+
+void CommonTxnTests::RollbackEmptyWriteBatch() {
+  TransactionOptions txn_options;
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  // nothing in txn's own write and store
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  // rollback(without prepare) an empty write batch
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
+
+  // nothing in txn's own write and store still
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
+  // nothing in txn's own write and store
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  // rollback(with prepare) an empty write batch
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
+
+  // nothing in txn's own write and store still
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
@@ -580,7 +777,9 @@ class InspectTxnTest {
   }
 
   void VersionIncrement();
-  void VersionIncrementForCommitmentOfEmptyWriteBatch();
+  void VersionIncrementForPreparingOfEmptyWriteBatch();
+  void VersionIncrementForCommittingOfEmptyWriteBatch();
+  void VersionIncrementForRollbackingOfEmptyWriteBatch();
   void WriteBufferInsertTimingBetweenDifferentWritePolicy();
  private:
   struct SeqInfos {
@@ -687,7 +886,11 @@ void InspectTxnTest::VersionIncrement() {
   delete txn;
 }
 
-void InspectTxnTest::VersionIncrementForCommitmentOfEmptyWriteBatch() {
+void InspectTxnTest::VersionIncrementForPreparingOfEmptyWriteBatch() {
+
+}
+
+void InspectTxnTest::VersionIncrementForCommittingOfEmptyWriteBatch() {
   std::vector<std::vector<SeqInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare after-commit
       {{{0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
@@ -739,6 +942,10 @@ void InspectTxnTest::VersionIncrementForCommitmentOfEmptyWriteBatch() {
   }
 
   delete txn;
+}
+
+void InspectTxnTest::VersionIncrementForRollbackingOfEmptyWriteBatch() {
+
 }
 
 void InspectTxnTest::WriteBufferInsertTimingBetweenDifferentWritePolicy() {

@@ -109,7 +109,7 @@ Status SkipListBackedInMemoryStore::GetInternal(const ReadOptions& read_options,
   if (read_options.snapshot) {
     read_snapshot = read_options.snapshot;
   } else {
-    read_snapshot_tmp.reset(snapshot_manager_->LatestReadView());
+    read_snapshot_tmp.reset(snapshot_manager_->LatestReadView());   // Todo: 创建一个常驻的Snapshot以避免重复创建
     read_snapshot = read_snapshot_tmp.get();
   }
   return skiplist_backed_rep_.Get(key, *read_snapshot, value);
