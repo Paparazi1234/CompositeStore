@@ -14,16 +14,19 @@ SkipListBackedInMemoryStore::SkipListBackedInMemoryStore(
 }
 
 namespace {
-class EmptyAfterInsertWBCB :
-		public MaintainVersionsCallbacks::AfterInsertWriteBufferCallback {
- public:
-  EmptyAfterInsertWBCB(TransactionStore* store) {
+class EmptyMaintainVersionsCallbacks : public MaintainVersionsCallbacks {
+  public:
+  EmptyMaintainVersionsCallbacks(TransactionStore* store) {
     store_impl_ = reinterpret_cast<SkipListBackedInMemoryStore*>(store);
     multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
   }
-  ~EmptyAfterInsertWBCB() {}
+	~EmptyMaintainVersionsCallbacks() {}
 
-  virtual Status DoCallback(const Version* version) override {
+  bool NeedMaintainBeforePersistWAL() const override { return false; }
+	bool NeedMaintainBeforeInsertWriteBuffer() const override { return false; }
+	bool NeedMaintainAfterInsertWriteBuffer() const override { return true; }
+
+	Status AfterInsertWriteBufferCallback(const Version* version)  override {
     const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
     const Version& started_uncommitted = dummy_version;
     const Version& committed = *version;
@@ -43,24 +46,24 @@ class EmptyAfterInsertWBCB :
 Status SkipListBackedInMemoryStore::Put(const WriteOptions& write_options,
                                         const std::string& key,
                                         const std::string& value) {
-  EmptyAfterInsertWBCB callback(this);
-  MaintainVersionsCallbacks callbacks;
-  callbacks.after_insert_write_buffer_ = &callback;
   WriteBatch write_batch;
   write_batch.Put(key, value);
+  EmptyMaintainVersionsCallbacks empty_maintain_versions_cb(this);
   return WriteInternal(write_options,
-                       &write_batch, callbacks, first_write_queue_);
+                       &write_batch,
+                       empty_maintain_versions_cb,
+                       first_write_queue_);
 }
 
 Status SkipListBackedInMemoryStore::Delete(const WriteOptions& write_options,
                                            const std::string& key) {
-  EmptyAfterInsertWBCB callback(this);
-  MaintainVersionsCallbacks callbacks;
-  callbacks.after_insert_write_buffer_ = &callback;
   WriteBatch write_batch;
   write_batch.Delete(key);
-  return WriteInternal(write_options, &write_batch,
-                       callbacks, first_write_queue_);
+  EmptyMaintainVersionsCallbacks empty_maintain_versions_cb(this);
+  return WriteInternal(write_options,
+                       &write_batch,
+                       empty_maintain_versions_cb,
+                       first_write_queue_);
 }
 
 Status SkipListBackedInMemoryStore::Get(const ReadOptions& read_options,
@@ -71,12 +74,12 @@ Status SkipListBackedInMemoryStore::Get(const ReadOptions& read_options,
 
 Status SkipListBackedInMemoryStore::WriteInternal(
     const WriteOptions& write_options, WriteBatch* write_batch,
-    const MaintainVersionsCallbacks& maintain_versions_callbacks,
+    MaintainVersionsCallbacks& maintain_versions_callbacks,
     WriteQueue& write_queue) {
   ManagedWriteQueue managed_write_lock = ManagedWriteQueue(&write_queue);
   Status s;
-  if (maintain_versions_callbacks.before_persist_wal_) {
-    s = maintain_versions_callbacks.before_persist_wal_->DoCallback(this);
+  if (maintain_versions_callbacks.NeedMaintainBeforePersistWAL()) {
+    s = maintain_versions_callbacks.BeforePersistWALCallback(this);
     if (!s.IsOK()) {
       return s;
     }
@@ -85,8 +88,8 @@ Status SkipListBackedInMemoryStore::WriteInternal(
   uint64_t version_inc = CalculateNumVersionsForWriteBatch(write_batch);
   Version* allocated_started =
       multi_versions_manager_->AllocateVersion(version_inc, version_for_insert);
-  if (maintain_versions_callbacks.before_insert_write_buffer_) {
-    s = maintain_versions_callbacks.before_insert_write_buffer_->DoCallback(
+  if (maintain_versions_callbacks.NeedMaintainBeforeInsertWriteBuffer()) {
+    s = maintain_versions_callbacks.BeforeInsertWriteBufferCallback(
         allocated_started, version_inc);
     if (!s.IsOK()) {
       return s;
@@ -95,8 +98,9 @@ Status SkipListBackedInMemoryStore::WriteInternal(
   SkipListInsertHandler handler(&skiplist_backed_rep_, allocated_started,
                                 version_inc);
   s = write_batch->Iterate(&handler);
-  if (s.IsOK() && maintain_versions_callbacks.after_insert_write_buffer_) {
-    s = maintain_versions_callbacks.after_insert_write_buffer_->DoCallback(
+  if (s.IsOK() &&
+      maintain_versions_callbacks.NeedMaintainAfterInsertWriteBuffer()) {
+    s = maintain_versions_callbacks.AfterInsertWriteBufferCallback(
         allocated_started);
   }
   return s;

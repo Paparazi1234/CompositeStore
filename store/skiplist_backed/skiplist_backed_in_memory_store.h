@@ -12,30 +12,22 @@ namespace MULTI_VERSIONS_NAMESPACE {
 
 class MaintainVersionsCallbacks {
  public:
-	MaintainVersionsCallbacks() {}
-	~MaintainVersionsCallbacks() {}
-	
-	class BeforePersistWALCallback {
-	 public:
-		virtual ~BeforePersistWALCallback() {}
-		virtual Status DoCallback(TransactionStore* store) = 0;
-	};
+	virtual ~MaintainVersionsCallbacks() {}
 
-	class BeforeInsertWriteBufferCallback {
-	 public:
-		virtual ~BeforeInsertWriteBufferCallback() {}
-		virtual Status DoCallback(const Version* version, uint32_t count) = 0;
-	};
+	virtual Status BeforePersistWALCallback(TransactionStore* store) {
+		return Status::OK();
+	}
+	virtual Status BeforeInsertWriteBufferCallback(const Version* version,
+																								 uint32_t count) {
+		return Status::OK();
+	}
+	virtual Status AfterInsertWriteBufferCallback(const Version* version) {
+		return Status::OK();
+	}
 
-	class AfterInsertWriteBufferCallback {
-	 public:
-		virtual ~AfterInsertWriteBufferCallback() {}
-		virtual Status DoCallback(const Version* version) = 0;
-	};
-
-	BeforePersistWALCallback* before_persist_wal_ = nullptr;
-	BeforeInsertWriteBufferCallback* before_insert_write_buffer_ = nullptr;
-	AfterInsertWriteBufferCallback* after_insert_write_buffer_ = nullptr;
+	virtual bool NeedMaintainBeforePersistWAL() const { return false; }
+	virtual bool NeedMaintainBeforeInsertWriteBuffer() const { return false; }
+	virtual bool NeedMaintainAfterInsertWriteBuffer() const { return false; }
 };
 
 class SkipListBackedInMemoryStore : public TransactionStore {
@@ -86,7 +78,7 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 
 	Status WriteInternal(
 			const WriteOptions& write_options, WriteBatch* write_batch,
-			const MaintainVersionsCallbacks& maintain_versions_callbacks,
+			MaintainVersionsCallbacks& maintain_versions_callbacks,
 		  WriteQueue& write_queue);
 
 	Status GetInternal(const ReadOptions& read_options,
@@ -131,7 +123,6 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 
 	// used to assign version for inserting entries in write path, lazy initialize
 	std::unique_ptr<Version> version_for_insert_ = nullptr;
-
 	// used to obtain the latest read view of the underlying store when clients
 	// didn't specify a snapshot in read options of their Get() calls, lazy
 	// initialize
