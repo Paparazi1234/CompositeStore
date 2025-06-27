@@ -95,8 +95,6 @@ Transaction* WritePreparedTxnStore::BeginTransaction(
     const WriteOptions& write_options, const TransactionOptions& txn_options,
     Transaction* old_txn) {
   if (old_txn) {
-    WritePreparedTxn* txn_impl = reinterpret_cast<WritePreparedTxn*>(old_txn);
-    txn_impl->ResetUnCommittedSeqs();
     ReinitializeTransaction(old_txn, write_options, txn_options);
     return old_txn;
   } else {

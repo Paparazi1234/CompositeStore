@@ -1,6 +1,7 @@
 #include "MVCC_based_txn_test.h"
 
 #include <iostream>
+#include <functional>
 
 #include "test_util/test_util.h"
 
@@ -10,331 +11,169 @@ class CommonMVCCTxnTest : public testing::Test {
  public:
   CommonMVCCTxnTest() {}
   ~CommonMVCCTxnTest() {}
+
+  void TestCommonFunc(void (CommonTxnTests::*func)()) {
+    TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                     {true, false}, {true}, {"", "1314"});
+    TxnStoreWritePolicy write_policy;                              
+    bool enable_two_write_queues;                                      
+    bool DONT_CARE;                                              
+    std::string orig_version;                                        
+    while (generator.NextTxnTestSetups(&write_policy,                  
+                                       &enable_two_write_queues,       
+                                       &DONT_CARE,                    
+                                       &orig_version)) {           
+      CommonTxnTests* test = new CommonTxnTests(write_policy,         
+                                                enable_two_write_queues,
+                                                orig_version);        
+      (test->*func)();              
+      delete test;
+    }
+  }
 };
 
 TEST_F(CommonMVCCTxnTest, SimpleTransactionalReadWrite) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->SimpleTransactionalReadWrite();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::SimpleTransactionalReadWrite);
 }
 
 TEST_F(CommonMVCCTxnTest, SimpleNonTransactionalReadWrite) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->SimpleNonTransactionalReadWrite();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::SimpleNonTransactionalReadWrite);
 }
 
 TEST_F(CommonMVCCTxnTest, ReadTxnOwnWrites) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->ReadTxnOwnWrites();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::ReadTxnOwnWrites);
 }
 
 TEST_F(CommonMVCCTxnTest, ReadAfterPrepare) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->ReadAfterPrepare();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::ReadAfterPrepare);
 }
 
 TEST_F(CommonMVCCTxnTest, ReadAfterCommit) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->ReadAfterCommit();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::ReadAfterCommit);
 }
 
 TEST_F(CommonMVCCTxnTest, ReadAfterRollback) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->ReadAfterRollback();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::ReadAfterRollback);
 }
 
 TEST_F(CommonMVCCTxnTest, CommitWithPrepare) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->CommitWithPrepare();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::CommitWithPrepare);
 }
 
 TEST_F(CommonMVCCTxnTest, CommitWithoutPrepare) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->CommitWithoutPrepare();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::CommitWithoutPrepare);
 }
 
 TEST_F(CommonMVCCTxnTest, RollbackWithPrepare) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->RollbackWithPrepare();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::RollbackWithPrepare);
 }
 
 TEST_F(CommonMVCCTxnTest, RollbackWithoutPrepare) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->RollbackWithoutPrepare();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::RollbackWithoutPrepare);
 }
 
 TEST_F(CommonMVCCTxnTest, PrepareEmptyWriteBatch) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->PrepareEmptyWriteBatch();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::PrepareEmptyWriteBatch);
 }
 
 TEST_F(CommonMVCCTxnTest, CommitEmptyWriteBatch) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->CommitEmptyWriteBatch();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::CommitEmptyWriteBatch);
 }
 
 TEST_F(CommonMVCCTxnTest, RollbackEmptyWriteBatch) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->RollbackEmptyWriteBatch();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::RollbackEmptyWriteBatch);
 }
 
 TEST_F(CommonMVCCTxnTest, ReadUnderSnapshot) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->ReadUnderSnapshot();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::ReadUnderSnapshot);
 }
 
 TEST_F(CommonMVCCTxnTest, ReuseTransaction) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->ReuseTransaction();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::ReuseTransaction);
 }
 
 TEST_F(CommonMVCCTxnTest, SingleTxnExcutionFlowTest) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->SingleTxnExcutionFlowTest();
-    delete test;
-  }
+ TestCommonFunc(&CommonTxnTests::SingleTxnExcutionFlowTest);
 }
 
 TEST_F(CommonMVCCTxnTest, MultiThreadsTxnsExcution) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonTxnTests* test = new CommonTxnTests(write_policy,
-                                              enable_two_write_queues);
-    test->MultiThreadsTxnsExcution();
-    delete test;
-  }
+  TestCommonFunc(&CommonTxnTests::MultiThreadsTxnsExcution);
 }
 
 class InspectMVCCTxnTest : public testing::Test {
  public:
   InspectMVCCTxnTest() {}
   ~InspectMVCCTxnTest() {}
+
+  void TestInspectFunc(void (InspectTxnTests::*func)()) {
+    TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                   {true, false}, {true, false}, {"", "1314"});
+    TxnStoreWritePolicy write_policy;
+    bool enable_two_write_queues;
+    bool with_prepare;
+    std::string orig_version;
+    while (generator.NextTxnTestSetups(&write_policy,
+                                       &enable_two_write_queues,
+                                       &with_prepare,
+                                       &orig_version)) {
+      InspectTxnTests* test = new InspectTxnTests(write_policy,
+                                                  enable_two_write_queues,
+                                                  with_prepare, orig_version);
+      (test->*func)();
+      delete test;
+    }
+  }
 };
 
 TEST_F(InspectMVCCTxnTest, VersionIncrement) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, true);
-    test->VersionIncrement();
-    delete test;
-  }
-
-  generator.Reset();
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, false);
-    test->VersionIncrement();
-    delete test;
-  }
+  TestInspectFunc(&InspectTxnTests::VersionIncrement);
 }
 
 TEST_F(InspectMVCCTxnTest, VersionIncrementForPreparingOfEmptyWriteBatch) {
-  TestSetupsGenerator generator;
+  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                   {true, false}, {true}, {"", "1314"});
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, true);
-    test->VersionIncrementForPreparingOfEmptyWriteBatch();
-    delete test;
-  }
-
-  generator.Reset();
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, false);
+  bool DONT_CARE;
+  std::string orig_version;
+  while (generator.NextTxnTestSetups(&write_policy,
+                                     &enable_two_write_queues,
+                                     &DONT_CARE,
+                                     &orig_version)) {
+    InspectTxnTests* test = new InspectTxnTests(write_policy,
+                                                enable_two_write_queues,
+                                                DONT_CARE,
+                                                orig_version);
     test->VersionIncrementForPreparingOfEmptyWriteBatch();
     delete test;
   }
 }
 
 TEST_F(InspectMVCCTxnTest, VersionIncrementForCommittingOfEmptyWriteBatch) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, true);
-    test->VersionIncrementForCommittingOfEmptyWriteBatch();
-    delete test;
-  }
-
-  generator.Reset();
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, false);
-    test->VersionIncrementForCommittingOfEmptyWriteBatch();
-    delete test;
-  }
+  TestInspectFunc(
+      &InspectTxnTests::VersionIncrementForCommittingOfEmptyWriteBatch);
 }
 
 TEST_F(InspectMVCCTxnTest, VersionIncrementForRollbackingOfEmptyWriteBatch) {
-  TestSetupsGenerator generator;
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, true);
-    test->VersionIncrementForRollbackingOfEmptyWriteBatch();
-    delete test;
-  }
-
-  generator.Reset();
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, false);
-    test->VersionIncrementForRollbackingOfEmptyWriteBatch();
-    delete test;
-  }
+  TestInspectFunc(
+      &InspectTxnTests::VersionIncrementForRollbackingOfEmptyWriteBatch);
 }
 
 TEST_F(InspectMVCCTxnTest, WriteBufferInsertTimingBetweenDifferentWritePolicy) {
-  TestSetupsGenerator generator;
+  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                   {true, false}, {true}, {"", "1314"});
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    InspectTxnTest* test = new InspectTxnTest(write_policy,
-                                              enable_two_write_queues, false);
+  bool DONT_CARE;
+  std::string orig_version;
+  while (generator.NextTxnTestSetups(&write_policy,
+                                     &enable_two_write_queues,
+                                     &DONT_CARE,
+                                     &orig_version)) {
+    InspectTxnTests* test = new InspectTxnTests(write_policy,
+                                                enable_two_write_queues,
+                                                DONT_CARE,
+                                                orig_version);
     test->WriteBufferInsertTimingBetweenDifferentWritePolicy();
     delete test;
   }

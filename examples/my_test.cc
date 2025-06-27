@@ -63,9 +63,9 @@ class MyTest {
     }
 
     // Commit transaction
-    s = txn0->Commit();
+    s = txn0->Rollback();
     AssertTrue(s.IsOK());
-    EchoSeq("After txn commit:");
+    EchoSeq("After txn rollback:");
     delete txn0;
   }
 

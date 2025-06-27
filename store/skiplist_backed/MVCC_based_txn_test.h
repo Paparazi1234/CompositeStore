@@ -8,7 +8,9 @@ namespace MULTI_VERSIONS_NAMESPACE {
 
 class CommonTxnTests {
  public:
-  CommonTxnTests(TxnStoreWritePolicy write_policy, bool enable_two_write_queues)
+  CommonTxnTests(TxnStoreWritePolicy write_policy,
+                 bool enable_two_write_queues,
+                 const std::string& encoded_version = std::string(""))
       : write_policy_(write_policy),
         enable_two_write_queues_(enable_two_write_queues) {
     StoreOptions store_options;
@@ -16,19 +18,34 @@ class CommonTxnTests {
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     store_options.enable_two_write_queues = enable_two_write_queues_;
     if (write_policy_ == WRITE_COMMITTED) {
-      txn_store_ = new WriteCommittedTxnStore(store_options,
-                                              txn_store_options,
-                                              txn_lock_mgr_factory);
+      txn_store_impl_ = new WriteCommittedTxnStore(store_options,
+                                                   txn_store_options,
+                                                   txn_lock_mgr_factory);
     } else if (write_policy_ == WRITE_PREPARED) {
       CommitTableOptions commit_table_options;
-      txn_store_ = new WritePreparedTxnStore(store_options,
-                                             txn_store_options,
-                                             commit_table_options,
-                                             txn_lock_mgr_factory);
+      txn_store_impl_ = new WritePreparedTxnStore(store_options,
+                                                  txn_store_options,
+                                                  commit_table_options,
+                                                  txn_lock_mgr_factory);
     } else {
       assert(false);
     }
-    assert(txn_store_);
+    assert(txn_store_impl_);
+    txn_store_ = txn_store_impl_;
+    if (encoded_version == "") {
+      started_version_seq_ = 0;
+    } else {
+      started_version_seq_ = std::stoull(encoded_version);
+      MultiVersionsManager* mvm_manager =
+          txn_store_impl_->GetMultiVersionsManager();
+      Version* orig = mvm_manager->CreateVersion();
+      orig->DecodeFrom(encoded_version);
+      txn_store_impl_->RecoverMultiVersionsManagerFrom(*orig);
+      // RecoverMultiVersionsManagerFrom() use started_version_seq_ + 1 as
+      // recovered started seq
+      started_version_seq_ += 1;
+      delete orig;
+    }
   }
   ~CommonTxnTests() {
     delete txn_store_;
@@ -53,9 +70,11 @@ class CommonTxnTests {
   void MultiThreadsTxnsExcution();
 
  private:
+  uint64_t started_version_seq_;
   TxnStoreWritePolicy write_policy_;
   bool enable_two_write_queues_;
   TransactionStore* txn_store_;
+  SkipListBackedInMemoryTxnStore* txn_store_impl_;
 };
 
 void CommonTxnTests::SimpleTransactionalReadWrite() {
@@ -374,15 +393,30 @@ void CommonTxnTests::CommitWithoutPrepare() {
 }
 
 void CommonTxnTests::RollbackWithPrepare() {
+  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
   Status s;
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
+  // insert something to underlying store initially
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
   s = txn->Put("foo1", "bar");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+  s = txn->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  // start a new round of txn write and rollback it after Prepare()
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
+  s = txn->Put("foo", "bar1");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo1", "bar1");
   ASSERT_TRUE(s.IsOK());
 
   s = txn->Prepare();
@@ -392,13 +426,13 @@ void CommonTxnTests::RollbackWithPrepare() {
   s = txn->Rollback();
   ASSERT_TRUE(s.IsOK());
 
-  // can read nothing from txn's own write after rollback
+  // won't read the rollbacked value
   s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
+  ASSERT_TRUE(s.IsOK() && value == "bar");
   s = txn->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsNotFound());
+  ASSERT_TRUE(s.IsOK() && value == "bar");
 
-  // can't reuse txn after rollback
+  // can't reuse txn directly after rollback(with Prepare)
   s = txn->Put("foo2", "bar1");
   ASSERT_TRUE(s.IsInvalidArgument());
 
@@ -406,28 +440,43 @@ void CommonTxnTests::RollbackWithPrepare() {
 }
 
 void CommonTxnTests::RollbackWithoutPrepare() {
+  TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
   Status s;
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
+  // insert something to underlying store initially
   s = txn->Put("foo", "bar");
   ASSERT_TRUE(s.IsOK());
   s = txn->Put("foo1", "bar");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+  s = txn->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  // start a new round of txn write and rollback it during write stage
+  txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
+  s = txn->Put("foo", "bar1");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Put("foo1", "bar1");
   ASSERT_TRUE(s.IsOK());
 
   // rollback during write stage
   s = txn->Rollback();
   ASSERT_TRUE(s.IsOK());
 
-  // can read nothing from txn's own write after rollback
+  // won't read the rollbacked value
   s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
+  ASSERT_TRUE(s.IsOK() && value == "bar");
   s = txn->Get(read_options, "foo1", &value);
-  ASSERT_TRUE(s.IsNotFound());
+  ASSERT_TRUE(s.IsOK() && value == "bar");
 
-  // can reuse txn after rollback
+  // can reuse txn direct after rollback(without Prepare)
   s = txn->Put("foo2", "bar1");
   ASSERT_TRUE(s.IsOK());
   s = txn->Commit();
@@ -741,38 +790,52 @@ void CommonTxnTests::MultiThreadsTxnsExcution() {
 
 }
 
-class InspectTxnTest {
+class InspectTxnTests {
  public:
-  InspectTxnTest(TxnStoreWritePolicy write_policy, bool enable_two_write_queues,
-                 bool commit_with_prepare)
+  InspectTxnTests(TxnStoreWritePolicy write_policy,
+                  bool enable_two_write_queues,
+                  bool with_prepare,
+                  const std::string& encoded_version = std::string(""))
       : write_policy_(write_policy),
         enable_two_write_queues_(enable_two_write_queues),
-        commit_with_prepare_(commit_with_prepare) {
+        with_prepare_(with_prepare) {
     StoreOptions store_options;
     TransactionStoreOptions txn_store_options;
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     store_options.enable_two_write_queues = enable_two_write_queues_;
     if (write_policy_ == WRITE_COMMITTED) {
-      txn_store_ = new WriteCommittedTxnStore(store_options,
-                                              txn_store_options,
-                                              txn_lock_mgr_factory);
+      txn_store_impl_ = new WriteCommittedTxnStore(store_options,
+                                                   txn_store_options,
+                                                   txn_lock_mgr_factory);
     } else if (write_policy_ == WRITE_PREPARED) {
       CommitTableOptions commit_table_options;
-      txn_store_ = new WritePreparedTxnStore(store_options,
-                                             txn_store_options,
-                                             commit_table_options,
-                                             txn_lock_mgr_factory);
+      txn_store_impl_ = new WritePreparedTxnStore(store_options,
+                                                  txn_store_options,
+                                                  commit_table_options,
+                                                  txn_lock_mgr_factory);
     } else {
       assert(false);
     }
-    assert(txn_store_);
-    txn_store_impl_ =
-        reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store_);
+    assert(txn_store_impl_);
+    txn_store_ = txn_store_impl_;
     mvm_impl_ = reinterpret_cast<SeqBasedMultiVersionsManager*>(
         txn_store_impl_->GetMultiVersionsManager());
     assert(mvm_impl_);
+
+    if (encoded_version == "") {
+      started_version_seq_ = 0;
+    } else {
+      started_version_seq_ = std::stoull(encoded_version);
+      Version* orig = mvm_impl_->CreateVersion();
+      orig->DecodeFrom(encoded_version);
+      txn_store_impl_->RecoverMultiVersionsManagerFrom(*orig);
+      // RecoverMultiVersionsManagerFrom() use started_version_seq_ + 1 as
+      // recovered started seq
+      started_version_seq_ += 1;
+      delete orig;
+    }
   }
-  ~InspectTxnTest() {
+  ~InspectTxnTests() {
     delete txn_store_;
   }
 
@@ -782,24 +845,30 @@ class InspectTxnTest {
   void VersionIncrementForRollbackingOfEmptyWriteBatch();
   void WriteBufferInsertTimingBetweenDifferentWritePolicy();
  private:
-  struct SeqInfos {
-    uint64_t max_readable_seq;
-    uint64_t max_visible_seq;
-    uint64_t so_far_allocated_seq;
+  struct SeqIncInfos {
+    uint64_t max_readable_inc;
+    uint64_t max_visible_inc;
+    uint64_t so_far_allocated_inc;
   };
-  void CheckSeqInfos(const SeqInfos& expected) const {
+  void CheckSeqInfos(const SeqIncInfos& expected) const {
     uint64_t actual_max_readable = mvm_impl_->MaxReadableVersion();
     uint64_t actual_max_visible = mvm_impl_->MaxVisibleVersion();
     uint64_t actual_so_far_allocated =
         mvm_impl_->seq_allocator_.SoFarAllocated();
-    ASSERT_EQ(actual_max_readable, expected.max_readable_seq);
-    ASSERT_EQ(actual_max_visible, expected.max_visible_seq);
-    ASSERT_EQ(actual_so_far_allocated, expected.so_far_allocated_seq);
+    uint64_t expected_max_readable =
+        expected.max_readable_inc + started_version_seq_;
+    uint64_t expected_max_visible =
+        expected.max_visible_inc + started_version_seq_;
+    uint64_t expected_so_far_allocated =
+        expected.so_far_allocated_inc + started_version_seq_;
+    ASSERT_EQ(actual_max_readable, expected_max_readable);
+    ASSERT_EQ(actual_max_visible, expected_max_visible);
+    ASSERT_EQ(actual_so_far_allocated, expected_so_far_allocated);
   }
 
-  void GetExpectedSeqInfos(std::vector<SeqInfos>** expected,
-      std::vector<std::vector<SeqInfos>>& expect_infos) const {
-    if (commit_with_prepare_) {
+  void GetExpectedSeqIncInfos(std::vector<SeqIncInfos>** expected,
+      std::vector<std::vector<SeqIncInfos>>& expect_infos) const {
+    if (with_prepare_) {
       if (enable_two_write_queues_) {
         *expected = &expect_infos[0];
       } else {
@@ -814,33 +883,36 @@ class InspectTxnTest {
     }
   }
 
+  uint64_t started_version_seq_;
   TxnStoreWritePolicy write_policy_;
   bool enable_two_write_queues_;
-  bool commit_with_prepare_;
+  bool with_prepare_;
   TransactionStore* txn_store_;
   SkipListBackedInMemoryTxnStore* txn_store_impl_;
   SeqBasedMultiVersionsManager* mvm_impl_;
 };
 
-void InspectTxnTest::VersionIncrement() {
-  std::vector<std::vector<SeqInfos>> expected_of_write_prepared =
+void InspectTxnTests::VersionIncrement() {
+  std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn after-write after-prepare after-commit
       {{{0, 0, 0}, {0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
        {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}, {2, 2, 2}},  // prepare() and not 2-WQ
-       {{0, 0, 0}, {0, 0, 0}, {1, 2, 2}},   // not prepare() and 2-WQ
-       {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}}};  // not prepare() and not 2-WQ
+       {{0, 0, 0}, {0, 0, 0},            {1, 2, 2}},  // not prepare() and 2-WQ
+       {{0, 0, 0}, {0, 0, 0},            {1, 1, 1}}}; // not prepare() and
+                                                      //   not 2-WQ
 
-  std::vector<std::vector<SeqInfos>> expected_of_write_committed =
+  std::vector<std::vector<SeqIncInfos>> expected_of_write_committed =
       {{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {4, 4, 4}},  // prepare() and 2-WQ
        {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {4, 4, 4}},  // prepare() and not 2-WQ
-       {{0, 0, 0}, {0, 0, 0}, {4, 4, 4}},   // not prepare() and 2-WQ
-       {{0, 0, 0}, {0, 0, 0}, {4, 4, 4}}};  // not prepare() and not 2-WQ
+       {{0, 0, 0}, {0, 0, 0},            {4, 4, 4}},  // not prepare() and 2-WQ
+       {{0, 0, 0}, {0, 0, 0},            {4, 4, 4}}}; // not prepare() and
+                                                      //   not 2-WQ
 
-  std::vector<SeqInfos>* expected;
+  std::vector<SeqIncInfos>* expected;
   if (write_policy_ == WRITE_PREPARED) {
-    GetExpectedSeqInfos(&expected, expected_of_write_prepared);
+    GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
   } else {
-    GetExpectedSeqInfos(&expected, expected_of_write_committed);
+    GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
   }
 
   WriteOptions write_options;
@@ -863,14 +935,14 @@ void InspectTxnTest::VersionIncrement() {
   // After write
   CheckSeqInfos((*expected)[1]);
 
-  if (commit_with_prepare_) {
+  if (with_prepare_) {
     // Prepare transaction
     s = txn->Prepare();
     ASSERT_TRUE(s.IsOK());
     // After prepare
     CheckSeqInfos((*expected)[2]);
 
-    // Commit transaction after preapre
+    // Commit transaction after prepare
     s = txn->Commit();
     ASSERT_TRUE(s.IsOK());
     // After commit with prepare
@@ -886,29 +958,60 @@ void InspectTxnTest::VersionIncrement() {
   delete txn;
 }
 
-void InspectTxnTest::VersionIncrementForPreparingOfEmptyWriteBatch() {
+void InspectTxnTests::VersionIncrementForPreparingOfEmptyWriteBatch() {
+  std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
+  //  before-txn  after-prepare
+      {{{0, 0, 0}, {1, 0, 1}},   // prepare() and 2-WQ
+       {{0, 0, 0}, {1, 1, 1}}};  // prepare() and not 2-WQ
 
+  std::vector<std::vector<SeqIncInfos>> expected_of_write_committed =
+      {{{0, 0, 0}, {0, 0, 0}},   // prepare() and 2-WQ
+       {{0, 0, 0}, {0, 0, 0}}};  // prepare() and not 2-WQ
+  std::vector<SeqIncInfos>* expected;
+  if (write_policy_ == WRITE_PREPARED) {
+    GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
+  } else {
+    GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
+  }
+
+  WriteOptions write_options;
+  Status s;
+
+  // Before txn
+  CheckSeqInfos((*expected)[0]);
+  // Start a transaction
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  ASSERT_TRUE(txn != nullptr);
+
+  // prepare an empty write batch
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  // After prepare
+  CheckSeqInfos((*expected)[1]);
+
+  txn_store_->TEST_Crash();
+  delete txn;
 }
 
-void InspectTxnTest::VersionIncrementForCommittingOfEmptyWriteBatch() {
-  std::vector<std::vector<SeqInfos>> expected_of_write_prepared =
+void InspectTxnTests::VersionIncrementForCommittingOfEmptyWriteBatch() {
+  std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare after-commit
       {{{0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
        {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}},  // prepare() and not 2-WQ
-       {{0, 0, 0}, {1, 2, 2}},   // not prepare() and 2-WQ
-       {{0, 0, 0}, {1, 1, 1}}};  // not prepare() and not 2-WQ
+       {{0, 0, 0},            {1, 2, 2}},  // not prepare() and 2-WQ
+       {{0, 0, 0},            {1, 1, 1}}}; // not prepare() and not 2-WQ
 
-  std::vector<std::vector<SeqInfos>> expected_of_write_committed =
+  std::vector<std::vector<SeqIncInfos>> expected_of_write_committed =
       {{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}},  // prepare() and 2-WQ
        {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}},  // prepare() and not 2-WQ
-       {{0, 0, 0}, {1, 1, 1}},   // not prepare() and 2-WQ
-       {{0, 0, 0}, {1, 1, 1}}};  // not prepare() and not 2-WQ
+       {{0, 0, 0},            {1, 1, 1}},  // not prepare() and 2-WQ
+       {{0, 0, 0},            {1, 1, 1}}}; // not prepare() and not 2-WQ
 
-  std::vector<SeqInfos>* expected;
+  std::vector<SeqIncInfos>* expected;
   if (write_policy_ == WRITE_PREPARED) {
-    GetExpectedSeqInfos(&expected, expected_of_write_prepared);
+    GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
   } else {
-    GetExpectedSeqInfos(&expected, expected_of_write_committed);
+    GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
   }
 
   WriteOptions write_options;
@@ -921,14 +1024,14 @@ void InspectTxnTest::VersionIncrementForCommittingOfEmptyWriteBatch() {
   ASSERT_TRUE(txn != nullptr);
 
   // commit an empty write batch
-  if (commit_with_prepare_) {
+  if (with_prepare_) {
     // Prepare transaction
     s = txn->Prepare();
     ASSERT_TRUE(s.IsOK());
     // After prepare
     CheckSeqInfos((*expected)[1]);
 
-    // Commit transaction after preapre
+    // Commit transaction after prepare
     s = txn->Commit();
     ASSERT_TRUE(s.IsOK());
     // After commit with prepare
@@ -944,11 +1047,61 @@ void InspectTxnTest::VersionIncrementForCommittingOfEmptyWriteBatch() {
   delete txn;
 }
 
-void InspectTxnTest::VersionIncrementForRollbackingOfEmptyWriteBatch() {
+void InspectTxnTests::VersionIncrementForRollbackingOfEmptyWriteBatch() {
+    std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
+  //  before-txn  after-prepare after-commit
+      {{{0, 0, 0}, {1, 0, 1}, {2, 3, 3}},  // prepare() and 2-WQ
+       {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}},  // prepare() and not 2-WQ
+       {{0, 0, 0},            {0, 0, 0}},  // not prepare() and 2-WQ
+       {{0, 0, 0},            {0, 0, 0}}}; // not prepare() and not 2-WQ
 
+  std::vector<std::vector<SeqIncInfos>> expected_of_write_committed =
+      {{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}},  // prepare() and 2-WQ
+       {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}},  // prepare() and not 2-WQ
+       {{0, 0, 0},            {0, 0, 0}},  // not prepare() and 2-WQ
+       {{0, 0, 0},            {0, 0, 0}}}; // not prepare() and not 2-WQ
+
+  std::vector<SeqIncInfos>* expected;
+  if (write_policy_ == WRITE_PREPARED) {
+    GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
+  } else {
+    GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
+  }
+
+  WriteOptions write_options;
+  Status s;
+
+  // Before txn
+  CheckSeqInfos((*expected)[0]);
+  // Start a transaction
+  Transaction* txn = txn_store_->BeginTransaction(write_options);
+  ASSERT_TRUE(txn != nullptr);
+
+  // rollback an empty write batch
+  if (with_prepare_) {
+    // Prepare transaction
+    s = txn->Prepare();
+    ASSERT_TRUE(s.IsOK());
+    // After prepare
+    CheckSeqInfos((*expected)[1]);
+
+    // Rollback transaction after prepare
+    s = txn->Rollback();
+    ASSERT_TRUE(s.IsOK());
+    // After rollback with prepare
+    CheckSeqInfos((*expected)[2]);
+  } else {
+    // Rollback transaction
+    s = txn->Rollback();
+    ASSERT_TRUE(s.IsOK());
+    // After rollback without prepare
+    CheckSeqInfos((*expected)[1]);
+  }
+
+  delete txn;
 }
 
-void InspectTxnTest::WriteBufferInsertTimingBetweenDifferentWritePolicy() {
+void InspectTxnTests::WriteBufferInsertTimingBetweenDifferentWritePolicy() {
   std::string key("f", 100);
   std::string value("b", 100);
   uint64_t expected_raw_data_size = key.size() + value.size();
@@ -971,7 +1124,7 @@ void InspectTxnTest::WriteBufferInsertTimingBetweenDifferentWritePolicy() {
   if (write_policy_ == WRITE_PREPARED) {
     ASSERT_EQ(txn_store_impl_->RawDataSize(), expected_raw_data_size);
   } else {
-    // write prepared txn insert data to store during Commit()
+    // write committed txn insert data to store during Commit()
     ASSERT_EQ(txn_store_impl_->RawDataSize(), 0ull);
   }
 

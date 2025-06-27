@@ -75,5 +75,7 @@ class CondVar {
   Mutex* mu_;
 };
 
+using Thread = std::thread;
+
 }   // namespace port
 }   // namespace MULTI_VERSIONS_NAMESPACE

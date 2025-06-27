@@ -94,7 +94,7 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
 
  protected:
   friend class MyTest;
-  friend class InspectTxnTest;
+  friend class InspectTxnTests;
   void AdvanceMaxReadableVersion(const Version& version) {
     const SeqBasedVersion* version_impl =
         reinterpret_cast<const SeqBasedVersion*>(&version);

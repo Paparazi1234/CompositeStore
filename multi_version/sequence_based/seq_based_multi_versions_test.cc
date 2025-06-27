@@ -7,10 +7,12 @@ namespace MULTI_VERSIONS_NAMESPACE {
 
 class CommonSeqBasedMultiVersionsTests {
  public:
-  CommonSeqBasedMultiVersionsTests(TxnStoreWritePolicy write_policy,
-      bool enable_two_write_queues)
-      : write_policy_(write_policy),
-        enable_two_write_queues_(enable_two_write_queues) {
+  CommonSeqBasedMultiVersionsTests(
+      TxnStoreWritePolicy write_policy,
+      bool enable_two_write_queues,
+      const std::string& encoded_version = std::string(""))
+        : write_policy_(write_policy),
+          enable_two_write_queues_(enable_two_write_queues) {
     if (write_policy_ == WRITE_COMMITTED) {
       multi_versions_manager_ =
           new WriteCommittedMultiVersionsManager(enable_two_write_queues_);
@@ -28,6 +30,12 @@ class CommonSeqBasedMultiVersionsTests {
     }
     assert(multi_versions_manager_);
     assert(snapshot_manager_);
+    if (encoded_version != "") {
+      Version* orig = multi_versions_manager_->CreateVersion();
+      orig->DecodeFrom(encoded_version);
+      multi_versions_manager_->Initialize(*orig);
+      delete orig;
+    }
   }
 
   ~CommonSeqBasedMultiVersionsTests() {
@@ -36,6 +44,9 @@ class CommonSeqBasedMultiVersionsTests {
   }
 
   void InitializeMultiVersionManager(const std::string& orig_vresion_seq) {
+    if (orig_vresion_seq == "") {
+      return;
+    }
     Version* orig = multi_versions_manager_->CreateVersion();
     orig->DecodeFrom(orig_vresion_seq);
     multi_versions_manager_->Initialize(*orig);
@@ -43,6 +54,7 @@ class CommonSeqBasedMultiVersionsTests {
   }
 
   // Common test functions
+  void SeqBasedVersionTest();
   void SnapshotManagerReadView();
   void SnapshotManagerTakeSnapshot();
  private:
@@ -51,6 +63,41 @@ class CommonSeqBasedMultiVersionsTests {
   SeqBasedMultiVersionsManager* multi_versions_manager_;
   SeqBasedSnapshotManager* snapshot_manager_;
 };
+
+void CommonSeqBasedMultiVersionsTests::SeqBasedVersionTest() {
+  SeqBasedVersion* version1 = reinterpret_cast<SeqBasedVersion*>(
+      multi_versions_manager_->CreateVersion());
+  SeqBasedVersion* version2 = reinterpret_cast<SeqBasedVersion*>(
+      multi_versions_manager_->CreateVersion());
+
+  ASSERT_EQ(version1->Seq(), uint64_t(0));
+  ASSERT_EQ(version2->Seq(), uint64_t(0));
+
+  version1->IncreaseByOne();
+  version2->IncreaseByOne();
+  ASSERT_TRUE(version1->CompareWith(*version2) == 0);
+
+  version2->IncreaseBy(2);
+  //  descending ordered by version
+  ASSERT_TRUE(version1->CompareWith(*version2) > 0);
+  ASSERT_TRUE(version2->CompareWith(*version1) < 0);
+
+  ASSERT_EQ(version1->Seq(), uint64_t(1));
+  ASSERT_EQ(version2->Seq(), uint64_t(3));
+
+  // encode to
+  std::string encoded;
+  version1->EncodeTo(&encoded);
+  ASSERT_STREQ(encoded.c_str(), "1");
+
+  // decode from
+  encoded = "10";
+  version1->DecodeFrom(encoded);
+  ASSERT_EQ(version1->Seq(), uint64_t(10));
+
+  delete version1;
+  delete version2;
+}
 
 void CommonSeqBasedMultiVersionsTests::SnapshotManagerReadView() {
   Version* latest_visible = nullptr;
@@ -192,93 +239,61 @@ class SeqBasedMultiVersionsTest : public testing::Test {
   ~SeqBasedMultiVersionsTest() {}
 };
 
-TEST_F(SeqBasedMultiVersionsTest, SeqBasedVersionTest) {
-  WriteCommittedMultiVersionsManager versions_manager;
-  SeqBasedVersion* version1 =
-      reinterpret_cast<SeqBasedVersion*>(versions_manager.CreateVersion());
-  SeqBasedVersion* version2 =
-      reinterpret_cast<SeqBasedVersion*>(versions_manager.CreateVersion());
-
-  ASSERT_EQ(version1->Seq(), uint64_t(0));
-  ASSERT_EQ(version2->Seq(), uint64_t(0));
-
-  version1->IncreaseByOne();
-  version2->IncreaseByOne();
-  ASSERT_TRUE(version1->CompareWith(*version2) == 0);
-
-  version2->IncreaseBy(2);
-  //  descending ordered by version
-  ASSERT_TRUE(version1->CompareWith(*version2) > 0);
-  ASSERT_TRUE(version2->CompareWith(*version1) < 0);
-
-  ASSERT_EQ(version1->Seq(), uint64_t(1));
-  ASSERT_EQ(version2->Seq(), uint64_t(3));
-
-  // encode to
-  std::string encoded;
-  version1->EncodeTo(&encoded);
-  ASSERT_STREQ(encoded.c_str(), "1");
-
-  // decode from
-  encoded = "10";
-  version1->DecodeFrom(encoded);
-  ASSERT_EQ(version1->Seq(), uint64_t(10));
-
-  delete version1;
-  delete version2;
+TEST_F(SeqBasedMultiVersionsTest, DISABLED_SeqBasedVersionTest) {
+  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                   {true});
+  TxnStoreWritePolicy write_policy;
+  bool DONT_CARE0;
+  bool DONT_CARE1;
+  std::string DONT_CARE2;
+  while (generator.NextTxnTestSetups(&write_policy,
+                                     &DONT_CARE0,
+                                     &DONT_CARE1,
+                                     &DONT_CARE2)) {
+    CommonSeqBasedMultiVersionsTests* test =
+        new CommonSeqBasedMultiVersionsTests(write_policy,
+                                             DONT_CARE0,
+                                             DONT_CARE2);
+    test->SeqBasedVersionTest();
+    delete test;
+  }
 }
 
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerReadView) {
-  // brand new version manager
-  TestSetupsGenerator generator;
+  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                   {true, false}, {true}, {"", "1314"});
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
+  bool DONT_CARE;
+  std::string orig_version;
+  while (generator.NextTxnTestSetups(&write_policy,
+                                     &enable_two_write_queues,
+                                     &DONT_CARE,
+                                     &orig_version)) {
     CommonSeqBasedMultiVersionsTests* test =
         new CommonSeqBasedMultiVersionsTests(write_policy,
-                                             enable_two_write_queues);
-    test->SnapshotManagerReadView();
-    delete test;
-  }
-
-  // version manager initializes from an existed version
-  generator.Reset();
-  std::string encoded_version = "1314";
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonSeqBasedMultiVersionsTests* test =
-        new CommonSeqBasedMultiVersionsTests(write_policy,
-                                             enable_two_write_queues);
-    test->InitializeMultiVersionManager(encoded_version);
+                                             enable_two_write_queues,
+                                             orig_version);
     test->SnapshotManagerReadView();
     delete test;
   }
 }
 
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerTakeSnapshot) {
-  // brand new version manager
-  TestSetupsGenerator generator;
+  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                   {true, false}, {true}, {"", "1314"});
   TxnStoreWritePolicy write_policy;
   bool enable_two_write_queues;
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
+  bool DONT_CARE;
+  std::string orig_version;
+  while (generator.NextTxnTestSetups(&write_policy,
+                                     &enable_two_write_queues,
+                                     &DONT_CARE,
+                                     &orig_version)) {
     CommonSeqBasedMultiVersionsTests* test =
         new CommonSeqBasedMultiVersionsTests(write_policy,
-                                             enable_two_write_queues);
-    test->SnapshotManagerTakeSnapshot();
-    delete test;
-  }
-
-  // version manager initializes from an existed version
-  generator.Reset();
-  std::string encoded_version = "1314";
-  while (generator.GenerateTestSetups(&write_policy,
-                                      &enable_two_write_queues)) {
-    CommonSeqBasedMultiVersionsTests* test =
-        new CommonSeqBasedMultiVersionsTests(write_policy,
-                                             enable_two_write_queues);
-    test->InitializeMultiVersionManager(encoded_version);
+                                             enable_two_write_queues,
+                                             orig_version);
     test->SnapshotManagerTakeSnapshot();
     delete test;
   }

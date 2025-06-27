@@ -58,7 +58,7 @@ class MVCCBasedTxn : public Transaction {
   void UnLock(const std::string& key);
 
   void ClearTxnLocks();
-  void Clear() {
+  virtual void Clear() {
     // clear txn locks before clearing write_batch_, because clearing txn locks
     // depends on the write_batch_
     ClearTxnLocks();
@@ -130,14 +130,23 @@ class WritePreparedTxn : public MVCCBasedTxn {
     *count = num_rollbacked_uncommitted_seq_;
   }
 
-  void ResetUnCommittedSeqs() {   // Todo: 在clear txn时需要调用
+  class RollbackWriteBatchBuilder;
+ private:
+  void ResetUnCommittedSeqs() {
     prepared_uncommitted_started_seq_ = 0;
     num_prepared_uncommitted_seq_ = 0;
     rollbacked_uncommitted_started_seq_ = 0;
     num_rollbacked_uncommitted_seq_ = 0;
   }
-  class RollbackWriteBatchBuilder;
- private:
+
+  virtual void Clear() override {
+    // clear txn locks before clearing write_batch_, because clearing txn locks
+    // depends on the write_batch_
+    ClearTxnLocks();
+    write_batch_.Clear();
+    ResetUnCommittedSeqs();
+  }
+
   virtual Status PrepareImpl() override;
   virtual Status CommitWithPrepareImpl() override;
   virtual Status CommitWithoutPrepareImpl() override;

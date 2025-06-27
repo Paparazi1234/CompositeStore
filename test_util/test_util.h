@@ -2,53 +2,72 @@
 
 #include <assert.h>
 
+#include "cartesian_product.h"
 #include "include/options.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class TestSetupsGenerator {
+class TxnTestSetupsGenerator {
  public:
-  TestSetupsGenerator() {
-    write_policies_iter_ = write_policies_.begin();
-    enables_iter_ = enables_.begin();
+  TxnTestSetupsGenerator(
+      const std::vector<TxnStoreWritePolicy>& vec_write_policy,
+      const std::vector<bool>& vec_enable_two_write_queues,
+      const std::vector<bool>& with_prepare = {true},
+      const std::vector<std::string>& orig_version = {""})
+        : generator_(vec_write_policy,
+                     vec_enable_two_write_queues,
+                     with_prepare,
+                     orig_version),
+          iter_(&generator_){
+    iter_.SeekToFirst();
   }
 
-  bool GenerateTestSetups(TxnStoreWritePolicy* write_policy,
-                          bool* enable_two_write_queues) {
-    if (write_policies_iter_ == write_policies_.end()) {
-      assert(enables_iter_ == enables_.end());
+  bool NextTxnTestSetups(TxnStoreWritePolicy* write_policy,
+                         bool* enable_two_write_queues,
+                         bool* with_prepare,
+                         std::string* orig_version) {
+    if (!iter_.Valid()) {
       return false;
     }
-
-    assert(write_policies_iter_ != write_policies_.end() &&
-           enables_iter_ != enables_.end());
-    *write_policy = *write_policies_iter_;
-    *enable_two_write_queues = *enables_iter_;
-    ++enables_iter_;
-    if (enables_iter_ == enables_.end()) {
-      ++write_policies_iter_;
-      if (write_policies_iter_ != write_policies_.end()) {
-        enables_iter_ = enables_.begin();
-      }
-    }
-    assert((write_policies_iter_ != write_policies_.end() &&
-            enables_iter_ != enables_.end()) ||
-           (write_policies_iter_ == write_policies_.end() &&
-            enables_iter_ == enables_.end()));
+    iter_.Value(write_policy, enable_two_write_queues, with_prepare,
+                orig_version);
+    iter_.Next();
     return true;
   }
 
   void Reset() {
-    write_policies_iter_ = write_policies_.begin();
-    enables_iter_ = enables_.begin();
+    iter_.SeekToFirst();
   }
 
  private:
-  std::vector<TxnStoreWritePolicy> write_policies_ =
-      {WRITE_COMMITTED, WRITE_PREPARED};
-  std::vector<bool> enables_ = {false, true};
-  std::vector<TxnStoreWritePolicy>::iterator write_policies_iter_;
-  std::vector<bool>::iterator enables_iter_;
+  using CPGenerator =
+      CartesianProductGenerator4<TxnStoreWritePolicy, bool, bool, std::string>;
+  CPGenerator generator_;
+  CPGenerator::Iterator iter_;
+};
+
+
+class RandomKeyGenerator {
+ public:
+  RandomKeyGenerator() {}
+
+
+ private:
+};
+
+struct TransactionExecutorCfg {
+
+};
+
+
+class TransactionExecutor {
+ public:
+  TransactionExecutor() {}
+
+  
+
+ private:
+  
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

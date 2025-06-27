@@ -13,7 +13,6 @@ namespace MULTI_VERSIONS_NAMESPACE {
 //     MutexLock l(&mu_);       // mu_ is an instance variable
 //     ... some complex code, possibly with multiple return paths ...
 //   }
-
 class MutexLock {
  public:
   explicit MutexLock(port::Mutex *mu) : mu_(mu) { this->mu_->Lock(); }

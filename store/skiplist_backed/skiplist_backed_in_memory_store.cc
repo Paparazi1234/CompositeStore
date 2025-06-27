@@ -78,6 +78,7 @@ Status SkipListBackedInMemoryStore::WriteInternal(
     WriteQueue& write_queue) {
   ManagedWriteQueue managed_write_lock = ManagedWriteQueue(&write_queue);
   Status s;
+  // before persist WAL
   if (maintain_versions_callbacks.NeedMaintainBeforePersistWAL()) {
     s = maintain_versions_callbacks.BeforePersistWALCallback(this);
     if (!s.IsOK()) {
@@ -88,6 +89,7 @@ Status SkipListBackedInMemoryStore::WriteInternal(
   uint64_t version_inc = CalculateNumVersionsForWriteBatch(write_batch);
   Version* allocated_started =
       multi_versions_manager_->AllocateVersion(version_inc, version_for_insert);
+  // before insert write buffer
   if (maintain_versions_callbacks.NeedMaintainBeforeInsertWriteBuffer()) {
     s = maintain_versions_callbacks.BeforeInsertWriteBufferCallback(
         allocated_started, version_inc);
@@ -97,7 +99,9 @@ Status SkipListBackedInMemoryStore::WriteInternal(
   }
   SkipListInsertHandler handler(&skiplist_backed_rep_, allocated_started,
                                 version_inc);
+  // insert write buffer
   s = write_batch->Iterate(&handler);
+  // after insert write buffer
   if (s.IsOK() &&
       maintain_versions_callbacks.NeedMaintainAfterInsertWriteBuffer()) {
     s = maintain_versions_callbacks.AfterInsertWriteBufferCallback(

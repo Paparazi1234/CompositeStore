@@ -12,9 +12,9 @@ const SeqBasedVersion SeqBasedMultiVersionsManager::version_limits_max_ =
     kSeqNumberLimitsMax;
 
 void SeqBasedMultiVersionsManager::Initialize(const Version& orig) {
-  const SeqBasedVersion* version_impl =
+  const SeqBasedVersion* orig_impl =
       reinterpret_cast<const SeqBasedVersion*>(&orig);
-  uint64_t seq = version_impl->Seq() + 1;
+  uint64_t seq = orig_impl->Seq() + 1;
   seq_allocator_.Initialize(seq);
   max_visible_seq_.store(seq, std::memory_order_seq_cst);
   max_readable_seq_.store(seq, std::memory_order_seq_cst);

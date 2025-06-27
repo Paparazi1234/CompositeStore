@@ -68,6 +68,10 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 		return multi_versions_manager_.get();
 	}
 
+	void RecoverMultiVersionsManagerFrom(const Version& orig) {
+		multi_versions_manager_->Initialize(orig);
+	}
+
  protected:
 	friend class WriteCommittedTxn;
 	friend class WritePreparedTxn;
