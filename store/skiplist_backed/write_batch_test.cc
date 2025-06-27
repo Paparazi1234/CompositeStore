@@ -85,7 +85,7 @@ class WriteBatchDumpHandler : public WriteBatch::Handler {
     return Status::OK();
   }
 
-  Status Delete(const std::string& key) {
+  Status Delete(const std::string& key) override {
     oss<<"{key: "<<key<<",\ttype: Delete}\n";
     return Status::OK();
   }

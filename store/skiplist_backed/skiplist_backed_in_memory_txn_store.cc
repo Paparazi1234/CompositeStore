@@ -8,8 +8,8 @@ SkipListBackedInMemoryTxnStore::SkipListBackedInMemoryTxnStore(
     const StoreOptions& store_options,
     const TransactionStoreOptions& txn_store_options,
     const MultiVersionsManagerFactory& multi_versions_mgr_factory,
-    WriteLock& prepare_queue,
-    WriteLock& commit_queue,
+    WriteQueue& prepare_queue,
+    WriteQueue& commit_queue,
     const TxnLockManagerFactory& txn_lock_mgr_factory)
     : SkipListBackedInMemoryStore(store_options, multi_versions_mgr_factory),
       enable_two_write_queues_(store_options.enable_two_write_queues),

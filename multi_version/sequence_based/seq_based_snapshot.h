@@ -17,6 +17,10 @@ class SeqBasedSnapshot : public Snapshot {
     return rep_;
   }
 
+  void SetSeq(uint64_t seq) {
+    rep_ = seq;
+  }
+
   const Version* MaxVersionInSnapshot(Version* old_version) const override {
     if (old_version) {
       SeqBasedVersion* version_impl =
@@ -54,6 +58,10 @@ class WPSeqBasedSnapshot : public SeqBasedSnapshot {
     return min_uncommitted_;
   }
 
+  void SetMiniUnCommitted(uint64_t min_uncommitted) {
+    min_uncommitted_ = min_uncommitted;
+  }
+
  private:
   uint64_t min_uncommitted_;
 };
@@ -69,7 +77,8 @@ class SeqBasedSnapshotManager : public SnapshotManager {
       : multi_versions_manager_(multi_versions_manager) {}
   ~SeqBasedSnapshotManager() {}
  
-  virtual const Snapshot* LatestReadView() override;
+  virtual Snapshot* CreateSnapshot() const override;
+  virtual const Snapshot* LatestReadView(Snapshot* reused) override;
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
   virtual bool IsEmpty() const override;
@@ -78,10 +87,11 @@ class SeqBasedSnapshotManager : public SnapshotManager {
       std::vector<const Snapshot*>& snapshots) const override;
 
  protected:
-  virtual const SeqBasedSnapshot* TakeSnapshotInternal() = 0;
+  virtual const SeqBasedSnapshot* TakeSnapshotInternal(
+      Snapshot* reused = nullptr) = 0;
 
   const SeqBasedMultiVersionsManager* multi_versions_manager_;
-  mutable std::mutex map_mutex_;
+  mutable port::Mutex map_mutex_;
   using SnapshotsMap =
     std::map<uint64_t, std::unique_ptr<const SeqBasedSnapshot>>;
   SnapshotsMap snapshots_map_;
@@ -100,7 +110,8 @@ class  WriteCommittedSnapshotManager : public SeqBasedSnapshotManager {
   ~WriteCommittedSnapshotManager() {}
 
  private:
-  virtual const SeqBasedSnapshot* TakeSnapshotInternal() override;
+  virtual const SeqBasedSnapshot* TakeSnapshotInternal(
+      Snapshot* reused) override;
 };
 
 class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
@@ -114,6 +125,9 @@ class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
       SeqBasedMultiVersionsManager* multi_versions_manager)
       : SeqBasedSnapshotManager(multi_versions_manager) {}
   ~WritePreparedSnapshotManager() {}
+
+  virtual Snapshot* CreateSnapshot() const override;
+
   void GetSnapshots(uint64_t max, std::vector<uint64_t>& snapshots) const;
 
   class WPGetSnapshotsCallback : public GetSnapshotsCallback {
@@ -134,7 +148,8 @@ class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
     take_snapshot_callback_.reset(take_snapshot_cb);
   }
  private:
-  virtual const SeqBasedSnapshot* TakeSnapshotInternal() override;
+  virtual const SeqBasedSnapshot* TakeSnapshotInternal(
+      Snapshot* reused) override;
 
   std::unique_ptr<TakeSnapshotCallback> take_snapshot_callback_;
 };

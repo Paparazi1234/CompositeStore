@@ -16,6 +16,7 @@
 
 #include "seq_limits.h"
 #include "include/store_traits.h"
+#include "util/mutex_lock.h"
 #include "third-party/rocksdb/likely.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -46,7 +47,7 @@ class AdvanceMaxCommittedByOneCallback {
 class UnCommittedsHeap {
   // The mutex is required for push and pop from UnCommittedsHeap. ::erase will
   // use external synchronization via prepared_mutex_.
-  std::mutex push_pop_mutex_;    // 对本PreparedHeap的push和pop操作都需要持有push_pop_mutex_锁
+  port::Mutex push_pop_mutex_;    // 对本PreparedHeap的push和pop操作都需要持有push_pop_mutex_锁
   std::deque<uint64_t> heap_;     // main heap：使用push_pop_mutex_同步读写，用于保存所有已经执行prepare阶段的事务（对应这些事务的prepare seq），其中有的事务已经提交有的还没有提交，所有prepare seq升序排序
   std::priority_queue<uint64_t, std::vector<uint64_t>, std::greater<uint64_t>>    // 小堆，使用prepared_mutex_同步读写，用于保存main heap中那些执行prepare阶段比较晚但是执行commit比较早的
       erased_heap_;                                                               // 事务（即erased_heap_中的事务都已经提交）；为什么需要该变量？这是因为PreparedHeap属于堆，因此具有堆的特性，为了实现
@@ -64,7 +65,7 @@ class UnCommittedsHeap {
       assert(erased_heap_.empty());
     }
   }
-  std::mutex* push_pop_mutex() { return &push_pop_mutex_; }
+  port::Mutex* push_pop_mutex() { return &push_pop_mutex_; }
 
   // 判断PreparedHeap是否为空，无锁操作
   // 1、当本函数返回true时，PreparedHeap肯定为空
@@ -137,7 +138,7 @@ class UnCommittedsHeap {
       } else if (top_seq == seq) {    // 2、如果该事务为PreparedHeap的堆顶，那么直接将其从PreparedHeap中删除
         pop();
 #ifndef NDEBUG
-        std::lock_guard lg(*push_pop_mutex());
+        MutexLock lock(push_pop_mutex());
         assert(heap_.empty() || heap_.front() != seq);
 #endif
       } else {  // 3、如果该事务不为PreparedHeap的堆顶，那么本次执行earse并没有实际将其从main heap中删除，而是将其记录erased_heap_中，对其从main heap的实际删除处理分摊到后续对main heap的pop处理中
@@ -295,7 +296,7 @@ class UncommittedsTracker {
 
   void EraseUnCommitted(uint64_t started, uint32_t count) {
     assert(count > 0);
-    std::unique_lock<std::shared_mutex> write_lock(uncommitteds_mutex_);   // 对prepared_mutex_加写锁，此时只有本线程能够访问prepared_txns_、delayed_prepared_和delayed_prepared_commits_
+    WriteLock write_lock(&uncommitteds_mutex_);   // 对prepared_mutex_加写锁，此时只有本线程能够访问prepared_txns_、delayed_prepared_和delayed_prepared_commits_
     for (uint32_t i = 0; i < count; ++i) {
       recent_uncommitteds_.Earse(started + i);
       longlive_uncommitteds_.Earse(started + i);
@@ -318,7 +319,7 @@ class UncommittedsTracker {
         // Needed to avoid double locking in pop().
         recent_uncommitteds_.ExitExclusive();
       }
-      std::unique_lock<std::shared_mutex> write_lock(uncommitteds_mutex_);
+      WriteLock write_lock(&uncommitteds_mutex_);
       // Need to fetch fresh values of ::top after mutex is acquired
       empty = recent_uncommitteds_.GetMiniUnCommittedIfNotEmpty(
           &mini_recent_uncommitted);
@@ -341,7 +342,7 @@ class UncommittedsTracker {
 
   void CommitLongLiveUnCommitted(uint64_t uncommitted, uint64_t committed) {
     if (UNLIKELY(!longlive_uncommitteds_.IsEmpty())) {
-      std::unique_lock<std::shared_mutex> write_lock(uncommitteds_mutex_);
+      WriteLock write_lock(&uncommitteds_mutex_);
       longlive_uncommitteds_.Commit(uncommitted, committed);
     }
   }
@@ -349,14 +350,14 @@ class UncommittedsTracker {
   uint64_t MiniUnCommitted() const {
     uint64_t min_uncommitted = recent_uncommitteds_.MiniUnCommitted();
     if (!longlive_uncommitteds_.IsEmpty()) {
-      std::shared_lock<std::shared_mutex> read_lock(uncommitteds_mutex_);
+      ReadLock read_lock(&uncommitteds_mutex_);
       min_uncommitted = longlive_uncommitteds_.MiniUnCommitted();
     }
     return min_uncommitted;
   }
 
   bool GetCommittedOfVersion(uint64_t version, uint64_t* committed) const {
-    std::shared_lock<std::shared_mutex> read_lock(uncommitteds_mutex_);
+    ReadLock read_lock(&uncommitteds_mutex_);
     return longlive_uncommitteds_.GetCommittedOfVersion(version, committed);
   }
 
@@ -370,7 +371,7 @@ class UncommittedsTracker {
 
  private:
   const std::atomic<uint64_t>* const future_history_boundary_;
-  mutable std::shared_mutex uncommitteds_mutex_;
+  mutable port::SharedMutex uncommitteds_mutex_;
   RecentUnCommitteds recent_uncommitteds_;
   LongLiveUnCommitteds longlive_uncommitteds_;
 };
@@ -613,7 +614,7 @@ class HistoryCommitteds {
                        const SequenceNumber& committed_version) {
       assert(prepared_version < committed_version);
       assert(prepared_version <= snapshot && snapshot < committed_version);
-      std::unique_lock<std::shared_mutex> write_lock(lower_bound_map_mutex_);
+      WriteLock write_lock(&lower_bound_map_mutex_);
       lower_bound_map_empty_.store(false, std::memory_order_release);
       lower_bound_map_[snapshot].Add(prepared_version);
     }
@@ -621,11 +622,11 @@ class HistoryCommitteds {
     void EarseSnapshot(const SequenceNumber& snapshot) {
       bool need_gc = false;
       {
-        std::shared_lock<std::shared_mutex> read_lock(lower_bound_map_mutex_);
+        ReadLock read_lock(&lower_bound_map_mutex_);
         need_gc = (lower_bound_map_.find(snapshot) != lower_bound_map_.end());
       }
       if (need_gc) {
-        std::unique_lock<std::shared_mutex> write_lock(lower_bound_map_mutex_);
+        WriteLock write_lock(&lower_bound_map_mutex_);
         lower_bound_map_.erase(snapshot);
         lower_bound_map_empty_.store(lower_bound_map_.empty(),
                                     std::memory_order_release);
@@ -637,7 +638,7 @@ class HistoryCommitteds {
     // can reach the newly added snapshots  
     void InitializeNewlyAdded(const std::vector<SequenceNumber>& snapshots) {
       assert(!snapshots.empty());
-      std::unique_lock<std::shared_mutex> write_lock(lower_bound_map_mutex_);
+      WriteLock write_lock(&lower_bound_map_mutex_);
       for (auto snapshot : snapshots) {
         lower_bound_map_[snapshot];
       }
@@ -654,7 +655,7 @@ class HistoryCommitteds {
       if (IsEmpty()) {
         *snap_exists = false;
       } else {
-        std::shared_lock<std::shared_mutex> read_lock(lower_bound_map_mutex_);
+        ReadLock read_lock(&lower_bound_map_mutex_);
         auto iter = lower_bound_map_.find(snapshot);
         if (iter == lower_bound_map_.end()) {
           *snap_exists = false;
@@ -672,7 +673,7 @@ class HistoryCommitteds {
       return lower_bound_map_empty_.load(std::memory_order_acquire);
     }
    private:
-    mutable std::shared_mutex lower_bound_map_mutex_;
+    mutable port::SharedMutex lower_bound_map_mutex_;
     std::map<SequenceNumber, SnapshotInvisibleVersionsLowerBound>
         lower_bound_map_;
     std::atomic<bool> lower_bound_map_empty_ = {true};
@@ -691,7 +692,7 @@ class HistoryCommitteds {
   const uint32_t SNAPSHOT_CACHE_SIZE;
   const std::atomic<uint64_t>* const history_boundary_;
   std::unique_ptr<const GetSnapshotsCallback> get_snapshots_callback_;
-  std::shared_mutex snapshots_mutex_;
+  port::SharedMutex snapshots_mutex_;
   SequenceNumber snapshots_version_ = 0;
   std::unique_ptr<std::atomic<SequenceNumber>[]> long_live_snapshots_;
   std::vector<SequenceNumber> long_live_snapshots_extra_;

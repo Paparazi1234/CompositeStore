@@ -48,7 +48,8 @@ Status SkipListBackedInMemoryStore::Put(const WriteOptions& write_options,
   callbacks.after_insert_write_buffer_ = &callback;
   WriteBatch write_batch;
   write_batch.Put(key, value);
-  return WriteInternal(write_options, &write_batch, callbacks, write_lock_);
+  return WriteInternal(write_options,
+                       &write_batch, callbacks, first_write_queue_);
 }
 
 Status SkipListBackedInMemoryStore::Delete(const WriteOptions& write_options,
@@ -58,7 +59,8 @@ Status SkipListBackedInMemoryStore::Delete(const WriteOptions& write_options,
   callbacks.after_insert_write_buffer_ = &callback;
   WriteBatch write_batch;
   write_batch.Delete(key);
-  return WriteInternal(write_options, &write_batch, callbacks, write_lock_);
+  return WriteInternal(write_options, &write_batch,
+                       callbacks, first_write_queue_);
 }
 
 Status SkipListBackedInMemoryStore::Get(const ReadOptions& read_options,
@@ -70,8 +72,8 @@ Status SkipListBackedInMemoryStore::Get(const ReadOptions& read_options,
 Status SkipListBackedInMemoryStore::WriteInternal(
     const WriteOptions& write_options, WriteBatch* write_batch,
     const MaintainVersionsCallbacks& maintain_versions_callbacks,
-    WriteLock& write_queue) {
-  ManagedWriteLock managed_write_lock = ManagedWriteLock(&write_queue);
+    WriteQueue& write_queue) {
+  ManagedWriteQueue managed_write_lock = ManagedWriteQueue(&write_queue);
   Status s;
   if (maintain_versions_callbacks.before_persist_wal_) {
     s = maintain_versions_callbacks.before_persist_wal_->DoCallback(this);
@@ -104,13 +106,13 @@ Status SkipListBackedInMemoryStore::GetInternal(const ReadOptions& read_options,
              				                            const std::string& key,
                                                 std::string* value) {
   assert(value);
-  std::unique_ptr<const Snapshot> read_snapshot_tmp;
   const Snapshot* read_snapshot;
   if (read_options.snapshot) {
     read_snapshot = read_options.snapshot;
   } else {
-    read_snapshot_tmp.reset(snapshot_manager_->LatestReadView());   // Todo: 创建一个常驻的Snapshot以避免重复创建
-    read_snapshot = read_snapshot_tmp.get();
+    // if client did not specify a read snapshot, then we will read under the
+    // latest read view of the underlying store
+    read_snapshot = snapshot_manager_->LatestReadView(ReadViewForGet());
   }
   return skiplist_backed_rep_.Get(key, *read_snapshot, value);
 }

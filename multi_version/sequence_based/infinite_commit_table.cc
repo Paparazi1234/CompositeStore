@@ -30,10 +30,10 @@ void HistoryCommitteds::AddHistoryCommitted(
     }
   }
 
-  if (UNLIKELY(SNAPSHOT_CACHE_SIZE < cnt && search_extra_list)) {    // 通常情况下snapshot cache已经足够容纳所有的snapshot了，如果snapshot cache不能够容纳所有的snapshot，表示second snapshot list中也存在snapshot
+  if (UNLIKELY(SNAPSHOT_CACHE_SIZE < cnt && search_extra_list)) {     // 通常情况下snapshot cache已经足够容纳所有的snapshot了，如果snapshot cache不能够容纳所有的snapshot，表示second snapshot list中也存在snapshot
     // Then access the less efficient list of snapshots_              // 如果在上面的流程中判定需要检查second snapshot list的话，那么对snapshot cache和second snapshot list重新执行一次正向的按序检测
-    std::shared_lock<std::shared_mutex> read_lock(snapshots_mutex_);       // 由于本次是对snapshot cache和second snapshot list重新执行的一次正向的按序检测，
-                                          // 因此需要对snapshots_mutex_加读锁（即允许并发读，但是不允许并发写，因为本函数会被并发的commit或者rollback事务调用）
+    ReadLock read_lock(&snapshots_mutex_);                            // 由于本次是对snapshot cache和second snapshot list重新执行的一次正向的按序检测，
+                                                                      // 因此需要对snapshots_mutex_加读锁（即允许并发读，但是不允许并发写，因为本函数会被并发的commit或者rollback事务调用）
     // Items could have moved from the snapshots_ to snapshot_cache_ before
     // accquiring the lock. To make sure that we do not miss a valid snapshot,
     // read snapshot_cache_ again while holding the lock.
@@ -109,7 +109,7 @@ void HistoryCommitteds::AdvanceHistoryBoundary(
 
 void HistoryCommitteds::UpdateLongLiveSnapshots(
     const std::vector<uint64_t>& new_snapshots, const uint64_t version) {
-  std::unique_lock<std::shared_mutex> write_lock(snapshots_mutex_);
+  WriteLock write_lock(&snapshots_mutex_);
   snapshots_version_ = version;
   // We update the list concurrently with the readers.
   // Both new and old lists are sorted and the new list is subset of the

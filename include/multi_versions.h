@@ -99,8 +99,10 @@ class SnapshotManager {
 
   SnapshotManager() {}
   virtual ~SnapshotManager() {}
+  // factory func
+  virtual Snapshot* CreateSnapshot() const = 0;
   // caller own the returned snapshot
-  virtual const Snapshot* LatestReadView() = 0;
+  virtual const Snapshot* LatestReadView(Snapshot* reused = nullptr) = 0;
   // the returned snapshot must be released through ReleaseSnapshot()
   virtual const Snapshot* TakeSnapshot() = 0;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;

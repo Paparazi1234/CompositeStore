@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "write_lock.h"
+#include "write_queue.h"
 #include "write_batch.h"
 #include "skiplist_rep.h"
 #include "include/transaction_store.h"
@@ -87,7 +87,7 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 	Status WriteInternal(
 			const WriteOptions& write_options, WriteBatch* write_batch,
 			const MaintainVersionsCallbacks& maintain_versions_callbacks,
-		  WriteLock& write_queue);
+		  WriteQueue& write_queue);
 
 	Status GetInternal(const ReadOptions& read_options,
              				 const std::string& key, std::string* value);
@@ -98,6 +98,13 @@ class SkipListBackedInMemoryStore : public TransactionStore {
     }
     return version_for_insert_.get();
   }
+
+	Snapshot* ReadViewForGet() {
+		if (read_view_for_get_.get() == nullptr) {
+			read_view_for_get_.reset(snapshot_manager_->CreateSnapshot());
+		}
+		return read_view_for_get_.get();
+	}
 
 	virtual uint64_t CalculateNumVersionsForWriteBatch(
 			const WriteBatch* write_batch) const {
@@ -111,10 +118,10 @@ class SkipListBackedInMemoryStore : public TransactionStore {
   }
 
 	// first write queue: used to deal with write buffer relative operation
-	WriteLock write_lock_;
+	WriteQueue first_write_queue_;
 	// second write queue: used to deal with non write buffer relative operation,
 	// like WAL persisting, etc
-	WriteLock second_write_lock_;
+	WriteQueue second_write_queue_;
 
 	// used to allocate memory for stuff that have the same lift time as the store
 	MemoryAllocator permanent_stuff_allocator_;
@@ -124,6 +131,11 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 
 	// used to assign version for inserting entries in write path, lazy initialize
 	std::unique_ptr<Version> version_for_insert_ = nullptr;
+
+	// used to obtain the latest read view of the underlying store when clients
+	// didn't specify a snapshot in read options of their Get() calls, lazy
+	// initialize
+	std::unique_ptr<Snapshot> read_view_for_get_ = nullptr;
 	SkipListBackedRep skiplist_backed_rep_;
 };
 

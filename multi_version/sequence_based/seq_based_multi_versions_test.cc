@@ -68,19 +68,19 @@ void CommonSeqBasedMultiVersionsTests::SnapshotManagerReadView() {
   multi_versions_manager_->BeginCommitVersions(dummy_version,
                                                *latest_visible, 1);
   multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
-  read_view1 = snapshot_manager_->LatestReadView();
+  read_view1 = snapshot_manager_->LatestReadView(nullptr);
 
   latest_visible->IncreaseBy(10);
   multi_versions_manager_->BeginCommitVersions(dummy_version,
                                                *latest_visible, 1);
   multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
-  read_view2 = snapshot_manager_->LatestReadView();
+  read_view2 = snapshot_manager_->LatestReadView(nullptr);
 
   latest_visible->IncreaseBy(10);
   multi_versions_manager_->BeginCommitVersions(dummy_version,
                                                *latest_visible, 1);
   multi_versions_manager_->EndCommitVersions(dummy_version, *latest_visible, 1);
-  read_view3 = snapshot_manager_->LatestReadView();
+  read_view3 = snapshot_manager_->LatestReadView(nullptr);
 
   ASSERT_TRUE(multi_versions_manager_->IsVersionVisibleToSnapshot(
       *latest_visible1, *read_view1, &snap_exists) && snap_exists == true);

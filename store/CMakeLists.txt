@@ -11,4 +11,3 @@ if(BUILD_SHARED)
   add_library(${STORE_SHARED_LIB} SHARED ${STORE_SOURCES})
   target_link_libraries(${STORE_SHARED_LIB} ${STORE_SHARED_LIB_LINKING_IMPLS})
 endif()
-

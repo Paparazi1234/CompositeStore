@@ -20,8 +20,8 @@ class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const MultiVersionsManagerFactory& multi_versions_mgr_factory,
-      WriteLock& prepare_queue,
-      WriteLock& commit_queue,
+      WriteQueue& prepare_queue,
+      WriteQueue& commit_queue,
       const TxnLockManagerFactory& txn_lock_mgr_factory);
   ~SkipListBackedInMemoryTxnStore() {}
 
@@ -41,11 +41,11 @@ class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
 
-  WriteLock& GetPrepareQueue() {
+  WriteQueue& GetPrepareQueue() {
     return prepare_queue_;
   }
 
-  WriteLock& GetCommitQueue() {
+  WriteQueue& GetCommitQueue() {
     return commit_queue_;
   }
 
@@ -54,8 +54,8 @@ class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
   }
  protected:
   friend class MVCCBasedTxn;
-  virtual WriteLock& CalcuPrepareQueue(bool enable_two_write_queues) = 0;
-  virtual WriteLock& CalcuCommitQueue(bool enable_two_write_queues) = 0;
+  virtual WriteQueue& CalcuPrepareQueue(bool enable_two_write_queues) = 0;
+  virtual WriteQueue& CalcuCommitQueue(bool enable_two_write_queues) = 0;
 
   Status TryLock(const std::string& key);
   void UnLock(const std::string& key);
@@ -67,8 +67,8 @@ class SkipListBackedInMemoryTxnStore : public SkipListBackedInMemoryStore {
   Transaction* BeginInternalTransaction(const WriteOptions& write_options);
 
   bool enable_two_write_queues_ = false;
-  WriteLock& prepare_queue_;
-  WriteLock& commit_queue_;
+  WriteQueue& prepare_queue_;
+  WriteQueue& commit_queue_;
 
   std::unique_ptr<TxnLockManager> txn_lock_manager_;
 };
@@ -90,11 +90,11 @@ class WriteCommittedTxnStore : public SkipListBackedInMemoryTxnStore {
           CalcuPrepareQueue(store_options.enable_two_write_queues),
           CalcuCommitQueue(store_options.enable_two_write_queues),
           txn_lock_mgr_factory) {
-    assert(std::addressof(commit_queue_) == &write_lock_);
+    assert(std::addressof(commit_queue_) == &first_write_queue_);
     if (store_options.enable_two_write_queues) {
-      assert(std::addressof(prepare_queue_) == &second_write_lock_);
+      assert(std::addressof(prepare_queue_) == &second_write_queue_);
     } else {
-      assert(std::addressof(prepare_queue_) == &write_lock_);
+      assert(std::addressof(prepare_queue_) == &first_write_queue_);
     }
     if (!store_options.enable_two_write_queues) {
       assert(std::addressof(prepare_queue_) == std::addressof(commit_queue_));
@@ -118,22 +118,22 @@ class WriteCommittedTxnStore : public SkipListBackedInMemoryTxnStore {
     return count; // otherwise each key will consume a version
 	}
 
-  WriteLock& CalcuPrepareQueue(bool enable_two_write_queues) override {
+  WriteQueue& CalcuPrepareQueue(bool enable_two_write_queues) override {
     if (enable_two_write_queues) {
       // for WriteCommitted txn, we use the second write queue to prepare when
       // enable two_write_queues
-      return second_write_lock_;
+      return second_write_queue_;
     } else {
       // for WriteCommitted txn, we use the first write queue to prepare when
       // not enable two_write_queues
-      return write_lock_;
+      return first_write_queue_;
     }
   }
 
-  WriteLock& CalcuCommitQueue(bool /*enable_two_write_queues*/) override {
+  WriteQueue& CalcuCommitQueue(bool /*enable_two_write_queues*/) override {
     // for WriteCommitted txn, we use the first write queue to commit no mater
     // enable two_write_queues or not
-    return write_lock_;
+    return first_write_queue_;
   }
 };
 
@@ -156,11 +156,11 @@ class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
           CalcuPrepareQueue(store_options.enable_two_write_queues),
           CalcuCommitQueue(store_options.enable_two_write_queues),
           txn_lock_mgr_factory) {
-    assert(std::addressof(prepare_queue_) == &write_lock_);
+    assert(std::addressof(prepare_queue_) == &first_write_queue_);
     if (store_options.enable_two_write_queues) {
-      assert(std::addressof(commit_queue_) == &second_write_lock_);
+      assert(std::addressof(commit_queue_) == &second_write_queue_);
     } else {
-      assert(std::addressof(commit_queue_) == &write_lock_);
+      assert(std::addressof(commit_queue_) == &first_write_queue_);
     }
     if (!store_options.enable_two_write_queues) {
       assert(std::addressof(prepare_queue_) == std::addressof(commit_queue_));
@@ -222,21 +222,21 @@ class WritePreparedTxnStore : public SkipListBackedInMemoryTxnStore {
 		return 1;
 	}
 
-  WriteLock& CalcuPrepareQueue(bool /*enable_two_write_queues*/) override {
+  WriteQueue& CalcuPrepareQueue(bool /*enable_two_write_queues*/) override {
     // for WritePrepared txn, we use the first write queue to prepare no mater
     // enable two_write_queues or not
-    return write_lock_;
+    return first_write_queue_;
   }
 
-  WriteLock& CalcuCommitQueue(bool enable_two_write_queues) override {
+  WriteQueue& CalcuCommitQueue(bool enable_two_write_queues) override {
     if (enable_two_write_queues) {
       // for WritePrepared txn, we use the second write queue to commit when
       // enable two_write_queues
-      return second_write_lock_;
+      return second_write_queue_;
     } else {
       // for WritePrepared txn, we use the first write queue to commit when
       // not enable two_write_queues
-      return write_lock_;
+      return first_write_queue_;
     }
   }
 };
