@@ -7,17 +7,15 @@
 #include "random.h"
 
 #include <limits.h>
-#include <stdint.h>
 #include <string.h>
-
 #include <thread>
 #include <utility>
 
-#include "likely.h"
+#include "port/likely.h"
 
 #define STORAGE_DECL static thread_local
 
-namespace ROCKSDB_NAMESPACE {
+namespace MULTI_VERSIONS_NAMESPACE {
 
 Random* Random::GetTLSInstance() {
   STORAGE_DECL Random* tls_instance;
@@ -59,4 +57,4 @@ std::string Random::RandomBinaryString(int len) {
   return ret;
 }
 
-}  // namespace ROCKSDB_NAMESPACE
+}  // namespace MULTI_VERSIONS_NAMESPACE

@@ -14,7 +14,7 @@ if(NOT CMAKE_BUILD_TYPE)
     "Default BUILD_TYPE is ${default_build_type}" FORCE)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wextra -Wall -pthread -std=c++17")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wextra -Wall -pthread -std=c++17 -g")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-compare -Wshadow -Wno-unused-parameter -Wno-unused-variable -Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers -Wno-strict-aliasing -Wno-invalid-offsetof")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
 
@@ -47,18 +47,17 @@ include(third_party_defines)
 include(common_libs_defines)
 include(pluggables_defines)
 
+add_subdirectory(port)
+
+add_subdirectory(util)
 
 # if need to build test, then build gtest first
 if(BUILD_TESTS)
   add_subdirectory(third-party/gtest)
 endif()
 
-add_subdirectory(port)
-
 # build third-party
 add_subdirectory(third-party/rocksdb)
-
-add_subdirectory(util)
 
 if(BUILD_TESTS)
   add_subdirectory(test_util)

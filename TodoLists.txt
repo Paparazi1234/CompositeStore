@@ -10,4 +10,5 @@
 15 内存泄漏检测：ASAN
 18 上github
 19 通用P90测试
-20 测试补充对multi version manager的recover部分（对所有的Common txn test和inspect txn test）-
+21 排查新加类的拷贝构造函数和拷贝赋值函数是否已经删除
+22 静态库的创建有问题

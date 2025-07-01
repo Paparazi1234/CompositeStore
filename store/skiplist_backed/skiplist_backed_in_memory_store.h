@@ -88,20 +88,6 @@ class SkipListBackedInMemoryStore : public TransactionStore {
 	Status GetInternal(const ReadOptions& read_options,
              				 const std::string& key, std::string* value);
 
-  Version* VersionForInsert() {
-    if (version_for_insert_.get() == nullptr) {
-      version_for_insert_.reset(multi_versions_manager_->CreateVersion());
-    }
-    return version_for_insert_.get();
-  }
-
-	Snapshot* ReadViewForGet() {
-		if (read_view_for_get_.get() == nullptr) {
-			read_view_for_get_.reset(snapshot_manager_->CreateSnapshot());
-		}
-		return read_view_for_get_.get();
-	}
-
 	virtual uint64_t CalculateNumVersionsForWriteBatch(
 			const WriteBatch* write_batch) const {
 		assert(write_batch->Count() > 0);
@@ -113,25 +99,20 @@ class SkipListBackedInMemoryStore : public TransactionStore {
     multi_versions_manager_->TEST_Crash();
   }
 
-	// first write queue: used to deal with write buffer relative operation
-	WriteQueue first_write_queue_;
-	// second write queue: used to deal with non write buffer relative operation,
-	// like WAL persisting, etc
-	WriteQueue second_write_queue_;
-
 	// used to allocate memory for stuff that have the same lift time as the store
 	MemoryAllocator permanent_stuff_allocator_;
  private:
 	std::unique_ptr<MultiVersionsManager> multi_versions_manager_;
 	std::unique_ptr<SnapshotManager> snapshot_manager_;
 
-	// used to assign version for inserting entries in write path, lazy initialize
-	std::unique_ptr<Version> version_for_insert_ = nullptr;
-	// used to obtain the latest read view of the underlying store when clients
-	// didn't specify a snapshot in read options of their Get() calls, lazy
-	// initialize
-	std::unique_ptr<Snapshot> read_view_for_get_ = nullptr;
 	SkipListBackedRep skiplist_backed_rep_;
+
+ protected:
+	// first write queue: used to deal with write buffer relative operation
+	WriteQueue first_write_queue_;
+	// second write queue: used to deal with non write buffer relative operation,
+	// like WAL persisting, etc
+	WriteQueue second_write_queue_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

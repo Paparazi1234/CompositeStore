@@ -49,12 +49,11 @@
 #include <type_traits>
 
 #include "allocator.h"
-#include "likely.h"
-#include "port_posix.h"
 #include "slice.h"
 #include "coding.h"
-#include "random.h"
-
+#include "port/likely.h"
+#include "port/prefetch.h"
+#include "util/random.h"
 namespace ROCKSDB_NAMESPACE {
 
 class KeyComparator {
@@ -461,7 +460,7 @@ inline void InlineSkipList<Comparator>::Iterator::SeekToLast() {
 
 template <class Comparator>
 int InlineSkipList<Comparator>::RandomHeight() {
-  auto rnd = Random::GetTLSInstance();
+  auto rnd = MULTI_VERSIONS_NAMESPACE::Random::GetTLSInstance();
 
   // Increase height with probability 1 in kBranching
   int height = 1;
@@ -612,7 +611,8 @@ InlineSkipList<Comparator>::FindRandomEntry() const {
   // level 0 nodes: lvl_nodes={#56,#57,#58,#59}. Randomly pick $57.
   // Return Node #57.
   std::vector<Node*> lvl_nodes;
-  Random* rnd = Random::GetTLSInstance();
+  MULTI_VERSIONS_NAMESPACE::Random* rnd =
+      MULTI_VERSIONS_NAMESPACE::Random::GetTLSInstance();
   int level = GetMaxHeight() - 1;
 
   while (level >= 0) {
@@ -669,7 +669,8 @@ InlineSkipList<Comparator>::InlineSkipList(const Comparator cmp,
                                            int32_t branching_factor)
     : kMaxHeight_(static_cast<uint16_t>(max_height)),
       kBranching_(static_cast<uint16_t>(branching_factor)),
-      kScaledInverseBranching_((Random::kMaxNext + 1) / kBranching_),
+      kScaledInverseBranching_(
+          (MULTI_VERSIONS_NAMESPACE::Random::kMaxNext + 1) / kBranching_),
       allocator_(allocator),
       compare_(cmp),
       head_(AllocateNode(0, max_height)),

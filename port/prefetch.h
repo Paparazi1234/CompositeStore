@@ -6,14 +6,8 @@
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
-//
-// See port_example.h for documentation for the following types/functions.
 
 #pragma once
-
-#include "rocksdb_namespace.h"
-
-namespace ROCKSDB_NAMESPACE {
 
 #if defined(__aarch64__)
 //  __builtin_prefetch(..., 1) turns into a prefetch into prfm pldl3keep. On
@@ -25,5 +19,3 @@ namespace ROCKSDB_NAMESPACE {
 #else
 #define PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
 #endif
-
-}  // namespace ROCKSDB_NAMESPACE

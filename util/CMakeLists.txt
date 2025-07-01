@@ -1,5 +1,6 @@
 set(UTIL_SOURCES
-        mutex_lock.cc)
+        random.cc
+        system_clock.cc)
 
 add_library(${UTIL_STATIC_LIB} STATIC ${UTIL_SOURCES})
 target_link_libraries(${UTIL_STATIC_LIB} ${PORT_STATIC_LIB})

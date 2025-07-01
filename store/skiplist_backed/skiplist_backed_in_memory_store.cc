@@ -9,7 +9,9 @@ SkipListBackedInMemoryStore::SkipListBackedInMemoryStore(
           multi_versions_mgr_factory.CreateMultiVersionsManager()),
 			snapshot_manager_(multi_versions_mgr_factory.CreateSnapshotManager(
           multi_versions_manager_.get())),
-			skiplist_backed_rep_(multi_versions_manager_.get()) {
+			skiplist_backed_rep_(multi_versions_manager_.get()),
+      first_write_queue_(multi_versions_manager_.get()),
+      second_write_queue_(multi_versions_manager_.get()) {
   (void)store_options;
 }
 
@@ -85,7 +87,7 @@ Status SkipListBackedInMemoryStore::WriteInternal(
       return s;
     }
   }
-  Version* version_for_insert = VersionForInsert();
+  Version* version_for_insert = write_queue.VersionForInsert();
   uint64_t version_inc = CalculateNumVersionsForWriteBatch(write_batch);
   Version* allocated_started =
       multi_versions_manager_->AllocateVersion(version_inc, version_for_insert);
@@ -114,14 +116,17 @@ Status SkipListBackedInMemoryStore::GetInternal(const ReadOptions& read_options,
              				                            const std::string& key,
                                                 std::string* value) {
   assert(value);
-  const Snapshot* read_snapshot;
+  std::unique_ptr<const Snapshot> snapshot_tmp = nullptr;
+  const Snapshot* read_snapshot = nullptr;
   if (read_options.snapshot) {
     read_snapshot = read_options.snapshot;
   } else {
     // if client did not specify a read snapshot, then we will read under the
     // latest read view of the underlying store
-    read_snapshot = snapshot_manager_->LatestReadView(ReadViewForGet());
+    snapshot_tmp.reset(snapshot_manager_->LatestReadView());
+    read_snapshot = snapshot_tmp.get();
   }
+  assert(read_snapshot != nullptr);
   return skiplist_backed_rep_.Get(key, *read_snapshot, value);
 }
 

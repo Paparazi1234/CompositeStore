@@ -1,9 +1,6 @@
 #include "MVCC_based_txn_test.h"
 
 #include <iostream>
-#include <functional>
-
-#include "test_util/test_util.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -15,17 +12,9 @@ class CommonMVCCTxnTest : public testing::Test {
   void TestCommonFunc(void (CommonTxnTests::*func)()) {
     TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                      {true, false}, {true}, {"", "1314"});
-    TxnStoreWritePolicy write_policy;                              
-    bool enable_two_write_queues;                                      
-    bool DONT_CARE;                                              
-    std::string orig_version;                                        
-    while (generator.NextTxnTestSetups(&write_policy,                  
-                                       &enable_two_write_queues,       
-                                       &DONT_CARE,                    
-                                       &orig_version)) {           
-      CommonTxnTests* test = new CommonTxnTests(write_policy,         
-                                                enable_two_write_queues,
-                                                orig_version);        
+    TxnTestsSetups setups;                                      
+    while (generator.NextTxnTestSetups(&setups)) {           
+      CommonTxnTests* test = new CommonTxnTests(setups);        
       (test->*func)();              
       delete test;
     }
@@ -100,6 +89,16 @@ TEST_F(CommonMVCCTxnTest, MultiThreadsTxnsExcution) {
   TestCommonFunc(&CommonTxnTests::MultiThreadsTxnsExcution);
 }
 
+class MultiThreadedMVCCTxnTests : public testing::Test {
+ public:
+  MultiThreadedMVCCTxnTests() {}
+  ~MultiThreadedMVCCTxnTests() {}
+};
+
+TEST_F(MultiThreadedMVCCTxnTests, SingleWriterMultiReaders) {
+  
+}
+
 class InspectMVCCTxnTest : public testing::Test {
  public:
   InspectMVCCTxnTest() {}
@@ -108,18 +107,10 @@ class InspectMVCCTxnTest : public testing::Test {
   void TestInspectFunc(void (InspectTxnTests::*func)()) {
     TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                    {true, false}, {true, false}, {"", "1314"});
-    TxnStoreWritePolicy write_policy;
-    bool enable_two_write_queues;
-    bool with_prepare;
-    std::string orig_version;
-    while (generator.NextTxnTestSetups(&write_policy,
-                                       &enable_two_write_queues,
-                                       &with_prepare,
-                                       &orig_version)) {
-      InspectTxnTests* test = new InspectTxnTests(write_policy,
-                                                  enable_two_write_queues,
-                                                  with_prepare, orig_version);
-      (test->*func)();
+    TxnTestsSetups setups;                                      
+    while (generator.NextTxnTestSetups(&setups)) {           
+      InspectTxnTests* test = new InspectTxnTests(setups);        
+      (test->*func)();              
       delete test;
     }
   }
@@ -132,18 +123,9 @@ TEST_F(InspectMVCCTxnTest, VersionIncrement) {
 TEST_F(InspectMVCCTxnTest, VersionIncrementForPreparingOfEmptyWriteBatch) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                    {true, false}, {true}, {"", "1314"});
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  bool DONT_CARE;
-  std::string orig_version;
-  while (generator.NextTxnTestSetups(&write_policy,
-                                     &enable_two_write_queues,
-                                     &DONT_CARE,
-                                     &orig_version)) {
-    InspectTxnTests* test = new InspectTxnTests(write_policy,
-                                                enable_two_write_queues,
-                                                DONT_CARE,
-                                                orig_version);
+  TxnTestsSetups setups;  
+  while (generator.NextTxnTestSetups(&setups)) {
+    InspectTxnTests* test = new InspectTxnTests(setups);
     test->VersionIncrementForPreparingOfEmptyWriteBatch();
     delete test;
   }
@@ -162,18 +144,9 @@ TEST_F(InspectMVCCTxnTest, VersionIncrementForRollbackingOfEmptyWriteBatch) {
 TEST_F(InspectMVCCTxnTest, WriteBufferInsertTimingBetweenDifferentWritePolicy) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                    {true, false}, {true}, {"", "1314"});
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  bool DONT_CARE;
-  std::string orig_version;
-  while (generator.NextTxnTestSetups(&write_policy,
-                                     &enable_two_write_queues,
-                                     &DONT_CARE,
-                                     &orig_version)) {
-    InspectTxnTests* test = new InspectTxnTests(write_policy,
-                                                enable_two_write_queues,
-                                                DONT_CARE,
-                                                orig_version);
+  TxnTestsSetups setups;  
+  while (generator.NextTxnTestSetups(&setups)) {
+    InspectTxnTests* test = new InspectTxnTests(setups);
     test->WriteBufferInsertTimingBetweenDifferentWritePolicy();
     delete test;
   }

@@ -17,7 +17,7 @@
 #include "seq_limits.h"
 #include "include/store_traits.h"
 #include "util/mutex_lock.h"
-#include "third-party/rocksdb/likely.h"
+#include "port/likely.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

@@ -242,18 +242,12 @@ class SeqBasedMultiVersionsTest : public testing::Test {
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_SeqBasedVersionTest) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                    {true});
-  TxnStoreWritePolicy write_policy;
-  bool DONT_CARE0;
-  bool DONT_CARE1;
-  std::string DONT_CARE2;
-  while (generator.NextTxnTestSetups(&write_policy,
-                                     &DONT_CARE0,
-                                     &DONT_CARE1,
-                                     &DONT_CARE2)) {
+  TxnTestsSetups setups;
+  while (generator.NextTxnTestSetups(&setups)) {
     CommonSeqBasedMultiVersionsTests* test =
-        new CommonSeqBasedMultiVersionsTests(write_policy,
-                                             DONT_CARE0,
-                                             DONT_CARE2);
+        new CommonSeqBasedMultiVersionsTests(setups.write_policy,
+                                             setups.enable_two_write_queues,
+                                             setups.encoded_version);
     test->SeqBasedVersionTest();
     delete test;
   }
@@ -262,18 +256,12 @@ TEST_F(SeqBasedMultiVersionsTest, DISABLED_SeqBasedVersionTest) {
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerReadView) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                    {true, false}, {true}, {"", "1314"});
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  bool DONT_CARE;
-  std::string orig_version;
-  while (generator.NextTxnTestSetups(&write_policy,
-                                     &enable_two_write_queues,
-                                     &DONT_CARE,
-                                     &orig_version)) {
+  TxnTestsSetups setups;
+  while (generator.NextTxnTestSetups(&setups)) {
     CommonSeqBasedMultiVersionsTests* test =
-        new CommonSeqBasedMultiVersionsTests(write_policy,
-                                             enable_two_write_queues,
-                                             orig_version);
+        new CommonSeqBasedMultiVersionsTests(setups.write_policy,
+                                             setups.enable_two_write_queues,
+                                             setups.encoded_version);
     test->SnapshotManagerReadView();
     delete test;
   }
@@ -282,18 +270,12 @@ TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerReadView) {
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerTakeSnapshot) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                    {true, false}, {true}, {"", "1314"});
-  TxnStoreWritePolicy write_policy;
-  bool enable_two_write_queues;
-  bool DONT_CARE;
-  std::string orig_version;
-  while (generator.NextTxnTestSetups(&write_policy,
-                                     &enable_two_write_queues,
-                                     &DONT_CARE,
-                                     &orig_version)) {
+  TxnTestsSetups setups;
+  while (generator.NextTxnTestSetups(&setups)) {
     CommonSeqBasedMultiVersionsTests* test =
-        new CommonSeqBasedMultiVersionsTests(write_policy,
-                                             enable_two_write_queues,
-                                             orig_version);
+        new CommonSeqBasedMultiVersionsTests(setups.write_policy,
+                                             setups.enable_two_write_queues,
+                                             setups.encoded_version);
     test->SnapshotManagerTakeSnapshot();
     delete test;
   }

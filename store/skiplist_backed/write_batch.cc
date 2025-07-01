@@ -5,6 +5,10 @@
 namespace MULTI_VERSIONS_NAMESPACE {
 
 Status WriteBatch::Iterate(Handler* handler) {
+  // prepare、commit empty write batch
+  if (buffered_writes_.empty()) {
+    return Status::OK();
+  }
   Status s;
   for (auto& buffered_write : buffered_writes_) {
     switch (buffered_write.second.Type()) {
