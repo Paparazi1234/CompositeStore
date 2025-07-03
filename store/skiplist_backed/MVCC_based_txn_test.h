@@ -55,10 +55,14 @@ class TxnTestsBase {
     delete txn_store_;
   }
 
-  void PrintTextSetups() const {
-    std::cout<<"Write policy: "<<std::to_string(write_policy_)
-             <<", Two write queues: "<<enable_two_write_queues_
-             <<", With prepare: "<<with_prepare_
+  void PrintTestSetups() const {
+    const char* write_policy =
+        write_policy_ == WRITE_COMMITTED ? "WRITE_COMMITTED" : "WRITE_PREPARED";
+    const char* two_write_queues = enable_two_write_queues_ ? "TRUE" : "FALSE";
+    const char* with_prepare = with_prepare_ ? "TRUE" : "FALSE";
+    std::cout<<"Write policy: "<<write_policy
+             <<", Two write queues: "<<two_write_queues
+             <<", With prepare: "<<with_prepare
              <<", Started version: "<<started_version_seq_<<std::endl;
   }
 
@@ -93,18 +97,32 @@ class CommonTxnTests : public TxnTestsBase {
   void ReadUnderSnapshot();
   void ReuseTransaction();
   void SingleTxnExcutionFlowTest();
-  void MultiThreadsTxnsExcution();
 };
 
-class MultiThreadedTxnTests : public TxnTestsBase {
+class MultiThreadingTxnTests : public TxnTestsBase {
  public:
-  MultiThreadedTxnTests(const TxnTestsSetups& setups) : TxnTestsBase(setups) {}
-  virtual ~MultiThreadedTxnTests() {}
+  MultiThreadingTxnTests(const TxnTestsSetups& setups) : TxnTestsBase(setups) {}
+  virtual ~MultiThreadingTxnTests() {}
 
   void MultiThreadsTxnsExcution();
   void SingleWriterMultiReaders();
   void SingleReaderMultiWriters();
   void MultiWritersMultiReaders();
+
+ private:
+  void SetupTxnExecutorCfg(
+      TransactionExecutorCfg& cfg,
+      uint32_t min_with_prepare, uint32_t max_with_prepare, GenType gen0,
+      uint32_t min_to_be_rollbacked, uint32_t max_to_be_rollbacked,
+          GenType gen1,
+      uint32_t min_delay_ms, uint32_t max_delay_ms, GenType gen2,
+      uint32_t min_inc_per_time, uint32_t max_inc_per_time, GenType gen3) {
+    cfg.with_prepare_rate = UIntRange(min_with_prepare, max_with_prepare, gen0);
+    cfg.to_be_rollbacked_rate =
+        UIntRange(min_to_be_rollbacked, max_to_be_rollbacked, gen1);
+    cfg.delay_ms_after_prepare = UIntRange(min_delay_ms, max_delay_ms, gen2);
+    cfg.inc_per_time = UIntRange(min_inc_per_time, max_inc_per_time, gen3);
+  }
 };
 
 class InspectTxnTests : public TxnTestsBase {
@@ -868,73 +886,255 @@ void CommonTxnTests::SingleTxnExcutionFlowTest() {
   delete txn;
 }
 
-// namespace {
-// void SetupTxnExecutorCfg(TransactionExecutorCfg& cfg,
-//     uint16_t key_set_id, uint32_t num_keys_in_set, uint64_t total_increment,
-//     uint32_t min_with_prepare, uint32_t max_with_prepare, GenType gen0,
-//     uint32_t min_to_be_rollbacked, uint32_t max_to_be_rollbacked, GenType gen1,
-//     uint32_t min_delay_ms, uint32_t max_delay_ms, GenType gen2,
-//     uint32_t min_inc_per_time, uint32_t max_inc_per_time, GenType gen3,
-//     SystemClock* system_clock) {
-//   cfg.target_key_set = key_set_id;
-//   cfg.num_keys_in_set = num_keys_in_set;
-//   cfg.total_increment = total_increment;
-//   cfg.with_prepare_rate = UIntRange(min_with_prepare, max_with_prepare, gen0);
-//   cfg.to_be_rollbacked_rate =
-//       UIntRange(min_to_be_rollbacked, max_to_be_rollbacked, gen1);
-//   cfg.delay_ms_after_prepare = UIntRange(min_delay_ms, max_delay_ms, gen2);
-//   cfg.inc_per_time = UIntRange(min_inc_per_time, max_inc_per_time, gen3);
-//   cfg.system_clock = system_clock;
-// }
-// } // anonymous namespace
+namespace {
+void ThreadFuncInsertStoreRdMoWr(
+    TransactionStore* txn_store, TransactionExecutorCfg* cfg,
+    uint16_t target_key_set, uint32_t num_keys_in_set,
+    uint64_t target_increment) {
+  TransactionExecutor executor(txn_store, cfg);
+  executor.InsertStoreRdMoWr(target_key_set, num_keys_in_set, target_increment);
+  uint64_t actual_increment =
+      executor.SumAllKeysOfSet(target_key_set, num_keys_in_set);
+  ASSERT_EQ(actual_increment, target_increment);
+}
+}   // anonymous namespace
 
-void CommonTxnTests::MultiThreadsTxnsExcution() {
-  // PrintTextSetups();
-  // TransactionExecutorCfg cfg0;
-  // TransactionExecutorCfg cfg1;
-  // TransactionExecutorCfg cfg2;
-  // uint32_t num_keys_in_set = 1000;
-  // uint64_t total_increment = 100;
-  // SetupTxnExecutorCfg(cfg0, 0, num_keys_in_set, total_increment,
-  //                     0, 0, kMax, // with_prepare_rate
-  //                     0, 0, kMin,   // to_be_rollbacked_rate
-  //                     0, 0, kMin,   // delay_ms_after_prepare
-  //                     1, 1, kMin,   // inc_per_time
-  //                     nullptr);
-  // SetupTxnExecutorCfg(cfg1, 1, num_keys_in_set, total_increment,
-  //                     70, 90, kRandom, // with_prepare_rate
-  //                     5, 15, kRandom,  // to_be_rollbacked_rate
-  //                     1, 5, kRandom,   // delay_ms_after_prepare
-  //                     1, 10, kRandom,  // inc_per_time
-  //                     nullptr);
-  // SetupTxnExecutorCfg(cfg2, 2, num_keys_in_set, total_increment,
-  //                     100, 100, kMin,   // with_prepare_rate
-  //                     20, 30, kRandom,  // to_be_rollbacked_rate
-  //                     0, 0, kMin,       // delay_ms_after_prepare
-  //                     20, 30, kRandom,  // inc_per_time
-  //                     nullptr);
-  // TransactionExecutor executor0(txn_store_, &cfg0);
-  // TransactionExecutor executor1(txn_store_, &cfg1);
-  // TransactionExecutor executor2(txn_store_, &cfg2);
-  // std::function<void()> func0 = [&]() { executor0.InsertStore(); };
-  // std::function<void()> func1 = [&]() { executor1.InsertStore(); };
-  // std::function<void()> func2 = [&]() { executor2.InsertStore(); };
-  // port::Thread thread0 =  port::Thread(func0);
-  // port::Thread thread1 =  port::Thread(func1);
-  //port::Thread thread2 =  port::Thread(func2);
+void MultiThreadingTxnTests::MultiThreadsTxnsExcution() {
+  const uint32_t num_threads = 4;
+  const uint32_t num_keys_in_set = 1000;
+  const uint64_t total_increment = 1000;
+  std::vector<TransactionExecutorCfg> vec_cfgs(num_threads);
+  std::vector<port::Thread> vec_threads;
+  vec_threads.reserve(num_threads);
+  // cfg0: default cfg
+  // cfg1
+  SetupTxnExecutorCfg(vec_cfgs[1],
+                      0, 0, kMin,         // with_prepare_rate
+                      0, 0, kMin,         // to_be_rollbacked_rate
+                      0, 0, kMin,         // delay_ms_after_prepare
+                      1, 1, kMin);        // inc_per_time
+  // cfg2
+  SetupTxnExecutorCfg(vec_cfgs[2],
+                      70, 90, kRandom,    // with_prepare_rate
+                      5, 15, kRandom,     // to_be_rollbacked_rate
+                      1, 5, kRandom,      // delay_ms_after_prepare
+                      1, 10, kRandom);    // inc_per_time
+  // cfg3
+  SetupTxnExecutorCfg(vec_cfgs[3],
+                      100, 100, kMin,     // with_prepare_rate
+                      20, 30, kRandom,    // to_be_rollbacked_rate
+                      5, 10, kRandom,     // delay_ms_after_prepare
+                      20, 30, kRandom);   // inc_per_time
+  for (uint32_t i = 0; i < num_threads; ++i) {
+    vec_threads.emplace_back(ThreadFuncInsertStoreRdMoWr, txn_store_,
+                             &vec_cfgs[i], i, num_keys_in_set, total_increment);
+  }
+  for (uint32_t j = 0; j < num_threads; ++j) {
+    vec_threads[j].join();
+  }
+}
 
-  // executor0.InsertStore();
-  //thread0.join();
-  // thread1.join();
-  // thread2.join();
+namespace {
+void ThreadFuncInsertStoreWrOnly(
+    TransactionStore* txn_store, TransactionExecutorCfg* cfg,
+    uint16_t target_key_set, uint32_t num_keys_in_set,
+    uint64_t target_increment, std::atomic<bool>* writer_finished) {
+  TransactionExecutor executor(txn_store, cfg);
+  Status s = executor.InsertStoreWrOnly(target_key_set, num_keys_in_set,
+                                        target_increment);
+  ASSERT_TRUE(s.IsOK());
+  writer_finished->store(true);
+}
 
-  // std::cout<<" Get sum of set "<<std::endl;
-  // uint64_t sum0 = executor0.SumAllKeysOfSet();
-  // uint64_t sum1 = executor1.SumAllKeysOfSet();
-  // std::cout<<" sum1: "<<sum1<<std::endl;
-  // uint64_t sum2 = executor2.SumAllKeysOfSet();
-  // std::cout<<" sum0: "<<std::endl;
-  // std::cout<<" sum0: "<<sum0<<" sum1: "<<sum1<<" sum2: "<<sum2<<std::endl;
+void ThreadFuncReadStoreRdOnly(
+    TransactionStore* txn_store, uint16_t target_key_set,
+    uint32_t num_keys_in_set, uint64_t target_increment,
+    std::atomic<bool>* writer_finished) {
+  TransactionExecutorCfg reader_cfg;
+  TransactionExecutor executor(txn_store, &reader_cfg);
+  uint64_t actual_increment = 0;
+  while (!writer_finished->load()) {
+    executor.ReadStoreRdOnly(target_key_set, num_keys_in_set,
+                             &actual_increment);
+  }
+
+  ASSERT_TRUE(writer_finished->load());
+  ASSERT_LE(actual_increment, target_increment);
+
+  // do one more read
+  executor.ReadStoreRdOnly(target_key_set, num_keys_in_set, &actual_increment);
+  ASSERT_EQ(actual_increment, target_increment);
+}
+
+bool IsAllWritersFinished(std::vector<std::atomic<bool>>* vec_writer_finished) {
+  for (auto& wf : *vec_writer_finished) {
+    if (wf.load() == false) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void ThreadFuncReadStoreRdOnly1(
+    TransactionStore* txn_store, uint16_t num_key_set,
+    uint32_t num_keys_in_set, uint64_t target_increment,
+    std::vector<std::atomic<bool>>* vec_writer_finished) {
+  TransactionExecutorCfg reader_cfg;
+  TransactionExecutor executor(txn_store, &reader_cfg);
+  std::vector<uint64_t> vec_actual_increment(num_key_set, 0);
+  while (IsAllWritersFinished(vec_writer_finished) == false) {
+    // not support multi_get currently
+    for (uint16_t i = 0; i < num_key_set; ++i) {
+      executor.ReadStoreRdOnly(i, num_keys_in_set, &vec_actual_increment[i]);
+    }
+  }
+
+  ASSERT_TRUE(IsAllWritersFinished(vec_writer_finished));
+  for (auto& ai : vec_actual_increment) {
+    ASSERT_LE(ai, target_increment);
+  }
+
+  // do one more read
+  for (uint16_t i = 0; i < num_key_set; ++i) {
+    executor.ReadStoreRdOnly(i, num_keys_in_set, &vec_actual_increment[i]);
+  }
+  for (auto& ai : vec_actual_increment) {
+    ASSERT_EQ(ai, target_increment);
+  }
+}
+}   // anonymous namespace
+
+void MultiThreadingTxnTests::SingleWriterMultiReaders() {
+  const uint32_t num_reader_threads = 4;
+  const uint16_t target_key_set = 0;
+  const uint32_t num_keys_in_set = 1000;
+  const uint64_t total_increment = 4000;
+  std::vector<port::Thread> vec_reader_threads;
+  vec_reader_threads.reserve(num_reader_threads);
+  std::atomic<bool> writer_finished = {false};
+  // writer insert cfg
+  TransactionExecutorCfg writer_insert_cfg;
+  SetupTxnExecutorCfg(writer_insert_cfg,
+                      70, 90, kRandom,    // with_prepare_rate
+                      5, 15, kRandom,     // to_be_rollbacked_rate
+                      1, 5, kRandom,      // delay_ms_after_prepare
+                      1, 10, kRandom);    // inc_per_time
+  port::Thread writer_thread(ThreadFuncInsertStoreWrOnly, txn_store_,
+                             &writer_insert_cfg, target_key_set,
+                             num_keys_in_set, total_increment,
+                             &writer_finished);
+  for (uint32_t i = 0; i < num_reader_threads; ++i) {
+    vec_reader_threads.emplace_back(ThreadFuncReadStoreRdOnly, txn_store_,
+                                    target_key_set, num_keys_in_set,
+                                    total_increment, &writer_finished);
+  }
+  writer_thread.join();
+  for (uint32_t j = 0; j < num_reader_threads; ++j) {
+    vec_reader_threads[j].join();
+  }
+}
+
+void MultiThreadingTxnTests::SingleReaderMultiWriters() {
+  const uint32_t num_writer_threads = 4;
+  const uint32_t num_key_set = num_writer_threads;
+  const uint32_t num_keys_in_set = 1000;
+  const uint64_t total_increment = 2000;
+  std::vector<TransactionExecutorCfg>
+      vec_writer_insert_cfgs(num_writer_threads);
+  std::vector<port::Thread> vec_writer_threads;
+  vec_writer_threads.reserve(num_writer_threads);
+  std::vector<std::atomic<bool>> vec_writer_finished(num_writer_threads);
+  for (uint32_t i = 0; i < num_writer_threads; ++i) {
+    vec_writer_finished[i].store(false, std::memory_order_relaxed);
+  }
+  assert(vec_writer_finished.size() == num_writer_threads);
+  // cfg0: default cfg
+  // cfg1
+  SetupTxnExecutorCfg(vec_writer_insert_cfgs[1],
+                      0, 0, kMin,         // with_prepare_rate
+                      0, 0, kMin,         // to_be_rollbacked_rate
+                      0, 0, kMin,         // delay_ms_after_prepare
+                      1, 1, kMin);        // inc_per_time
+  // cfg2
+  SetupTxnExecutorCfg(vec_writer_insert_cfgs[2],
+                      70, 90, kRandom,    // with_prepare_rate
+                      5, 15, kRandom,     // to_be_rollbacked_rate
+                      1, 5, kRandom,      // delay_ms_after_prepare
+                      1, 10, kRandom);    // inc_per_time
+  // cfg3
+  SetupTxnExecutorCfg(vec_writer_insert_cfgs[3],
+                      100, 100, kMin,     // with_prepare_rate
+                      20, 30, kRandom,    // to_be_rollbacked_rate
+                      5, 10, kRandom,     // delay_ms_after_prepare
+                      20, 30, kRandom);   // inc_per_time
+
+  for (uint32_t i = 0; i < num_writer_threads; ++i) {
+    vec_writer_threads.emplace_back(ThreadFuncInsertStoreWrOnly, txn_store_,
+                                    &vec_writer_insert_cfgs[i], i,
+                                    num_keys_in_set, total_increment,
+                                    &vec_writer_finished[i]);
+  }
+  port::Thread reader_thread(ThreadFuncReadStoreRdOnly1, txn_store_,
+                             num_key_set, num_keys_in_set, total_increment,
+                             &vec_writer_finished);
+
+  for (uint32_t j = 0; j < num_writer_threads; ++j) {
+    vec_writer_threads[j].join();
+  }
+  reader_thread.join();
+}
+
+void MultiThreadingTxnTests::MultiWritersMultiReaders() {
+  const uint32_t num_threads = 4;
+  const uint32_t num_key_set = num_threads;
+  const uint32_t num_keys_in_set = 1000;
+  const uint64_t total_increment = 2000;
+  std::vector<TransactionExecutorCfg> vec_writer_insert_cfgs(num_threads);
+  std::vector<port::Thread> vec_writer_threads;
+  vec_writer_threads.reserve(num_threads);
+  std::vector<port::Thread> vec_reader_threads;
+  vec_reader_threads.reserve(num_threads);
+  std::vector<std::atomic<bool>> vec_writer_finished(num_threads);
+  for (uint32_t i = 0; i < num_threads; ++i) {
+    vec_writer_finished[i].store(false, std::memory_order_relaxed);
+  }
+  assert(vec_writer_finished.size() == num_threads);
+  // cfg0: default cfg
+  // cfg1
+  SetupTxnExecutorCfg(vec_writer_insert_cfgs[1],
+                      0, 0, kMin,         // with_prepare_rate
+                      0, 0, kMin,         // to_be_rollbacked_rate
+                      0, 0, kMin,         // delay_ms_after_prepare
+                      1, 1, kMin);        // inc_per_time
+  // cfg2
+  SetupTxnExecutorCfg(vec_writer_insert_cfgs[2],
+                      70, 90, kRandom,    // with_prepare_rate
+                      5, 15, kRandom,     // to_be_rollbacked_rate
+                      1, 5, kRandom,      // delay_ms_after_prepare
+                      1, 10, kRandom);    // inc_per_time
+  // cfg3
+  SetupTxnExecutorCfg(vec_writer_insert_cfgs[3],
+                      100, 100, kMin,     // with_prepare_rate
+                      20, 30, kRandom,    // to_be_rollbacked_rate
+                      5, 10, kRandom,     // delay_ms_after_prepare
+                      20, 30, kRandom);   // inc_per_time
+
+  for (uint32_t i = 0; i < num_threads; ++i) {
+    vec_writer_threads.emplace_back(ThreadFuncInsertStoreWrOnly, txn_store_,
+                                    &vec_writer_insert_cfgs[i], i,
+                                    num_keys_in_set, total_increment,
+                                    &vec_writer_finished[i]);
+  }
+  for (uint32_t j = 0; j < num_threads; ++j) {
+    vec_reader_threads.emplace_back(ThreadFuncReadStoreRdOnly, txn_store_,
+                                    j, num_keys_in_set, total_increment,
+                                    &vec_writer_finished[j]);
+  }
+
+  for (uint32_t k = 0; k < num_threads; ++k) {
+    vec_writer_threads[k].join();
+    vec_reader_threads[k].join();
+  }
 }
 
 void InspectTxnTests::VersionIncrement() {

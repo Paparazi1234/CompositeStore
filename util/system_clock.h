@@ -39,6 +39,8 @@ class SystemClock {
 
   // Converts seconds-since-Jan-01-1970 to a printable string
   std::string TimeToString(uint64_t time);
+
+  static SystemClock* GetDefaultInstance() {return nullptr; }
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

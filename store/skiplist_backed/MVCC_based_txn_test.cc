@@ -11,7 +11,7 @@ class CommonMVCCTxnTest : public testing::Test {
 
   void TestCommonFunc(void (CommonTxnTests::*func)()) {
     TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
-                                     {true, false}, {true}, {"", "1314"});
+                                     {false, true}, {true}, {"", "1314"});
     TxnTestsSetups setups;                                      
     while (generator.NextTxnTestSetups(&setups)) {           
       CommonTxnTests* test = new CommonTxnTests(setups);        
@@ -85,19 +85,39 @@ TEST_F(CommonMVCCTxnTest, SingleTxnExcutionFlowTest) {
  TestCommonFunc(&CommonTxnTests::SingleTxnExcutionFlowTest);
 }
 
-TEST_F(CommonMVCCTxnTest, MultiThreadsTxnsExcution) {
-  TestCommonFunc(&CommonTxnTests::MultiThreadsTxnsExcution);
-}
-
-class MultiThreadedMVCCTxnTests : public testing::Test {
+class MultiThreadingMVCCTxnTests : public testing::Test {
  public:
-  MultiThreadedMVCCTxnTests() {}
-  ~MultiThreadedMVCCTxnTests() {}
+  MultiThreadingMVCCTxnTests() {}
+  ~MultiThreadingMVCCTxnTests() {}
+
+  void TestMultiThreadingFunc(void (MultiThreadingTxnTests::*func)()) {
+    TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+                                     {false, true}, {true}, {"", "1314"});
+    TxnTestsSetups setups;                                      
+    while (generator.NextTxnTestSetups(&setups)) {
+      MultiThreadingTxnTests* test = new MultiThreadingTxnTests(setups);   
+      (test->*func)();
+      delete test;
+    }
+  }
 };
 
-TEST_F(MultiThreadedMVCCTxnTests, SingleWriterMultiReaders) {
-  
+TEST_F(MultiThreadingMVCCTxnTests, MultiThreadsTxnsExcution) {
+  TestMultiThreadingFunc(&MultiThreadingTxnTests::MultiThreadsTxnsExcution);
 }
+
+TEST_F(MultiThreadingMVCCTxnTests, SingleWriterMultiReaders) {
+  TestMultiThreadingFunc(&MultiThreadingTxnTests::SingleWriterMultiReaders);
+}
+
+TEST_F(MultiThreadingMVCCTxnTests, SingleReaderMultiWriters) {
+  TestMultiThreadingFunc(&MultiThreadingTxnTests::SingleReaderMultiWriters);
+}
+
+TEST_F(MultiThreadingMVCCTxnTests, MultiWritersMultiReaders) {
+  TestMultiThreadingFunc(&MultiThreadingTxnTests::MultiWritersMultiReaders);
+}
+
 
 class InspectMVCCTxnTest : public testing::Test {
  public:
@@ -106,7 +126,8 @@ class InspectMVCCTxnTest : public testing::Test {
 
   void TestInspectFunc(void (InspectTxnTests::*func)()) {
     TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
-                                   {true, false}, {true, false}, {"", "1314"});
+                                     {false, true}, {false, true},
+                                     {"", "1314"});
     TxnTestsSetups setups;                                      
     while (generator.NextTxnTestSetups(&setups)) {           
       InspectTxnTests* test = new InspectTxnTests(setups);        
@@ -122,7 +143,7 @@ TEST_F(InspectMVCCTxnTest, VersionIncrement) {
 
 TEST_F(InspectMVCCTxnTest, VersionIncrementForPreparingOfEmptyWriteBatch) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
-                                   {true, false}, {true}, {"", "1314"});
+                                   {false, true}, {true}, {"", "1314"});
   TxnTestsSetups setups;  
   while (generator.NextTxnTestSetups(&setups)) {
     InspectTxnTests* test = new InspectTxnTests(setups);
@@ -143,7 +164,7 @@ TEST_F(InspectMVCCTxnTest, VersionIncrementForRollbackingOfEmptyWriteBatch) {
 
 TEST_F(InspectMVCCTxnTest, WriteBufferInsertTimingBetweenDifferentWritePolicy) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
-                                   {true, false}, {true}, {"", "1314"});
+                                   {false, true}, {true}, {"", "1314"});
   TxnTestsSetups setups;  
   while (generator.NextTxnTestSetups(&setups)) {
     InspectTxnTests* test = new InspectTxnTests(setups);
