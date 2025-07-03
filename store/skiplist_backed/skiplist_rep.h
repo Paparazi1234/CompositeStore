@@ -56,9 +56,7 @@ class SkipListKeyComparator : ROCKSDB_NAMESPACE::KeyComparator {
 	using ROCKSDB_NAMESPACE::KeyComparator::DecodedType;
 	using ROCKSDB_NAMESPACE::KeyComparator::decode_key;
 	SkipListKeyComparator(const MultiVersionsManager* mvm)
-			: multi_versions_manager_(mvm),
-			  version1_(multi_versions_manager_->CreateVersion()),
-				version2_(multi_versions_manager_->CreateVersion()) {}
+			: multi_versions_manager_(mvm) {}
 	~SkipListKeyComparator() {}
 
 	virtual int operator()(const char* prefix_len_key1,
@@ -70,9 +68,6 @@ class SkipListKeyComparator : ROCKSDB_NAMESPACE::KeyComparator {
 	int CompareImpl(const ROCKSDB_NAMESPACE::Slice& key1,
 								  const ROCKSDB_NAMESPACE::Slice& key2) const;
 	const MultiVersionsManager* multi_versions_manager_;
-	// use to decode version out of underlying stored format
-	std::unique_ptr<Version> version1_;
-	std::unique_ptr<Version> version2_;
 };
 
 class SkipListBackedRep {
@@ -81,7 +76,6 @@ class SkipListBackedRep {
 			: multi_versions_manager_(multi_versions_manager),
 				comparator_(multi_versions_manager),
 			  allocator_(),
-				version_for_get_(nullptr),
 				skiplist_rep_(comparator_, &allocator_),
 				num_entries_(0),
 				num_deletes_(0),
@@ -131,28 +125,9 @@ class SkipListBackedRep {
 		raw_data_size_ += value.size();
 	}
 
-	Version* VersionForLookupKey() {
-		if (version_for_lookup_key_.get() == nullptr) {
-			version_for_lookup_key_.reset(multi_versions_manager_->CreateVersion());
-		}
-		return version_for_lookup_key_.get();
-	}
-
-	Version* VersionForGet() {
-		if (version_for_get_.get() == nullptr) {
-			version_for_get_.reset(multi_versions_manager_->CreateVersion());
-		}
-		return version_for_get_.get();
-	}
 	const MultiVersionsManager* multi_versions_manager_;
 	SkipListKeyComparator comparator_;
 	MemoryAllocator allocator_;
-	
-	// used to construct SkipListLookupKey for looking up skiplist in Get path,
-	// lazy initialize
-	std::unique_ptr<Version> version_for_lookup_key_ = nullptr;
-	// used to decode version out of underlying store in Get path, lazy initialize
-	std::unique_ptr<Version> version_for_get_ = nullptr;
 	using SkipListRep =
 			ROCKSDB_NAMESPACE::InlineSkipList<const SkipListKeyComparator&>;
 	SkipListRep skiplist_rep_;

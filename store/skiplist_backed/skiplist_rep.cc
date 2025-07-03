@@ -36,9 +36,11 @@ int SkipListKeyComparator::CompareImpl(
       ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(prefix_len_version1).ToString();
   std::string version2_str =
       ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(prefix_len_version2).ToString();
-  version1_->DecodeFrom(version1_str);
-  version2_->DecodeFrom(version2_str);
-  return version1_->CompareWith(*version2_);
+  std::unique_ptr<Version> version1(multi_versions_manager_->CreateVersion());
+  std::unique_ptr<Version> version2(multi_versions_manager_->CreateVersion());
+  version1->DecodeFrom(version1_str);
+  version2->DecodeFrom(version2_str);
+  return version1->CompareWith(*version2);
 }
 
 Status SkipListBackedRep::Insert(const std::string& key,
@@ -83,8 +85,10 @@ Status SkipListBackedRep::Get(const std::string& key,
                               const Snapshot& read_snapshot,
                               std::string* value) {
   value->clear();
-  const Version* max_version =
-      read_snapshot.MaxVersionInSnapshot(VersionForLookupKey());
+  std::unique_ptr<const Version>
+      max_version(read_snapshot.MaxVersionInSnapshot());
+  std::unique_ptr<Version>
+      version_for_get(multi_versions_manager_->CreateVersion());
   SkipListLookupKey lookup_key(key, *max_version);
   ROCKSDB_NAMESPACE::Slice target_key = ROCKSDB_NAMESPACE::Slice(key);
   SkipListRep::Iterator iter(&skiplist_rep_);
@@ -96,7 +100,7 @@ Status SkipListBackedRep::Get(const std::string& key,
       ROCKSDB_NAMESPACE::Slice version_slice =
           ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(prefix_len_version);
       std::string version_str = version_slice.ToString();
-      Version* version = VersionForGet();
+      Version* version = version_for_get.get();
       version->DecodeFrom(version_str);
       Status s;
       bool found = ValidateVisibility(*version, read_snapshot, &s);
