@@ -39,8 +39,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/bin)
 include_directories(${PROJECT_SOURCE_DIR})
 
 option(BUILD_SHARED "Build shared libraries" ON)
-option(BUILD_TESTS "build with tests" ON)
-option(BUILD_EXAMPLES "build with examples" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 include(third_party_defines)
@@ -52,6 +50,7 @@ add_subdirectory(port)
 add_subdirectory(util)
 
 # if need to build test, then build gtest first
+option(BUILD_TESTS "build with tests" ON)
 if(BUILD_TESTS)
   add_subdirectory(third-party/gtest)
 endif()
@@ -69,6 +68,12 @@ add_subdirectory(txn_lock_manager)
 
 add_subdirectory(store)
 
+option(BUILD_EXAMPLES "build with examples" ON)
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+option(BUILD_BENCH "build with bench" ON)
+if(BUILD_BENCH)
+  add_subdirectory(bench)
 endif()

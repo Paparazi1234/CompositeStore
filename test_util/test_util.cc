@@ -58,6 +58,7 @@ Status TransactionExecutor::InsertStoreRdMoWr(
   delete txn;
   if (s.IsOK()) {
     assert(need_redo == false && remaining_increment == 0);
+    assert(next_inc == 0);
   }
   return s;
 }
@@ -115,6 +116,7 @@ Status TransactionExecutor::InsertStoreWrOnly(
   delete txn;
   assert(s.IsOK());
   assert(need_redo == false && remaining_increment == 0);
+  assert(next_inc == 0);
   return s;
 }
 

@@ -1044,8 +1044,8 @@ void MultiThreadingTxnTests::SingleReaderMultiWriters() {
   std::vector<port::Thread> vec_writer_threads;
   vec_writer_threads.reserve(num_writer_threads);
   std::vector<std::atomic<bool>> vec_writer_finished(num_writer_threads);
-  for (uint32_t i = 0; i < num_writer_threads; ++i) {
-    vec_writer_finished[i].store(false, std::memory_order_relaxed);
+  for (auto& wf : vec_writer_finished) {
+    wf = false;
   }
   assert(vec_writer_finished.size() == num_writer_threads);
   // cfg0: default cfg
@@ -1095,8 +1095,8 @@ void MultiThreadingTxnTests::MultiWritersMultiReaders() {
   std::vector<port::Thread> vec_reader_threads;
   vec_reader_threads.reserve(num_threads);
   std::vector<std::atomic<bool>> vec_writer_finished(num_threads);
-  for (uint32_t i = 0; i < num_threads; ++i) {
-    vec_writer_finished[i].store(false, std::memory_order_relaxed);
+  for (auto& wf : vec_writer_finished) {
+    wf = false;
   }
   assert(vec_writer_finished.size() == num_threads);
   // cfg0: default cfg
