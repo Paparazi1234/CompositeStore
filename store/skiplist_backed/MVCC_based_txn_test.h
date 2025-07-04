@@ -94,6 +94,8 @@ class CommonTxnTests : public TxnTestsBase {
   void PrepareEmptyWriteBatch();
   void CommitEmptyWriteBatch();
   void RollbackEmptyWriteBatch();
+  void InterleavingPrepareCommitBetweenMultiTxns();
+  void InterleavingPrepareRollbackBetweenMultiTxns();
   void ReadUnderSnapshot();
   void ReuseTransaction();
   void SingleTxnExcutionFlowTest();
@@ -684,6 +686,98 @@ void CommonTxnTests::RollbackEmptyWriteBatch() {
   ASSERT_TRUE(s.IsNotFound());
 
   delete txn;
+}
+
+void CommonTxnTests::InterleavingPrepareCommitBetweenMultiTxns() {
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
+  Transaction* txn0 = txn_store_->BeginTransaction(write_options);
+  Transaction* txn1 = txn_store_->BeginTransaction(write_options);
+  Transaction* txn2 = txn_store_->BeginTransaction(write_options);
+
+  s = txn0->Put("foo0", "bar0");
+  ASSERT_TRUE(s.IsOK());
+  s = txn1->Put("foo1", "bar1");
+  ASSERT_TRUE(s.IsOK());
+  s = txn2->Put("foo2", "bar2");
+  ASSERT_TRUE(s.IsOK());
+
+  // Prepare()
+  s = txn0->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn1->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn2->Prepare();
+  ASSERT_TRUE(s.IsOK());
+
+  // Interleave Commit()
+  s = txn1->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn2->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn0->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  // Verify
+  s = txn_store_->Get(read_options, "foo0", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar0");
+  s = txn_store_->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar1");
+  s = txn_store_->Get(read_options, "foo2", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar2");
+
+  delete txn0;
+  delete txn1;
+  delete txn2;
+}
+
+void CommonTxnTests::InterleavingPrepareRollbackBetweenMultiTxns() {
+  WriteOptions write_options;
+  ReadOptions read_options;
+  std::string value;
+  Status s;
+
+  Transaction* txn0 = txn_store_->BeginTransaction(write_options);
+  Transaction* txn1 = txn_store_->BeginTransaction(write_options);
+  Transaction* txn2 = txn_store_->BeginTransaction(write_options);
+
+  s = txn0->Put("foo0", "bar0");
+  ASSERT_TRUE(s.IsOK());
+  s = txn1->Put("foo1", "bar1");
+  ASSERT_TRUE(s.IsOK());
+  s = txn2->Put("foo2", "bar2");
+  ASSERT_TRUE(s.IsOK());
+
+  // Prepare()
+  s = txn0->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn1->Prepare();
+  ASSERT_TRUE(s.IsOK());
+  s = txn2->Prepare();
+  ASSERT_TRUE(s.IsOK());
+
+  // Interleave Rollback()
+  s = txn1->Rollback();
+  ASSERT_TRUE(s.IsOK());
+  s = txn2->Rollback();
+  ASSERT_TRUE(s.IsOK());
+  s = txn0->Rollback();
+  ASSERT_TRUE(s.IsOK());
+
+  // Verify
+  s = txn_store_->Get(read_options, "foo0", &value);
+  ASSERT_TRUE(s.IsNotFound());
+  s = txn_store_->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsNotFound());
+  s = txn_store_->Get(read_options, "foo2", &value);
+  ASSERT_TRUE(s.IsNotFound());
+
+  delete txn0;
+  delete txn1;
+  delete txn2;
 }
 
 void CommonTxnTests::ReadUnderSnapshot() {

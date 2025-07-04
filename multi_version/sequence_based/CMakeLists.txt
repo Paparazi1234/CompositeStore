@@ -13,6 +13,7 @@ endif()
 
 if(BUILD_TESTS)
   set(SEQ_BASED_MULTI_VERSIONS_TEST_SOURCES
+          infinite_commit_table_test.cc
           seq_based_multi_versions_test.cc)
 
   foreach(sourcefile ${SEQ_BASED_MULTI_VERSIONS_TEST_SOURCES})

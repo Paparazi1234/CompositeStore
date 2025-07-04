@@ -73,6 +73,14 @@ TEST_F(CommonMVCCTxnTest, RollbackEmptyWriteBatch) {
   TestCommonFunc(&CommonTxnTests::RollbackEmptyWriteBatch);
 }
 
+TEST_F(CommonMVCCTxnTest, InterleavingPrepareCommitBetweenMultiTxns) {
+  TestCommonFunc(&CommonTxnTests::InterleavingPrepareCommitBetweenMultiTxns);
+}
+
+TEST_F(CommonMVCCTxnTest, InterleavingPrepareRollbackBetweenMultiTxns) {
+  TestCommonFunc(&CommonTxnTests::InterleavingPrepareRollbackBetweenMultiTxns);
+}
+
 TEST_F(CommonMVCCTxnTest, ReadUnderSnapshot) {
   TestCommonFunc(&CommonTxnTests::ReadUnderSnapshot);
 }

@@ -18,6 +18,7 @@ if(BUILD_TESTS)
   set(SKIPLIST_BACKED_STORE_TEST_SOURCES
           MVCC_based_txn_test.cc
           skiplist_backed_in_memory_store_test.cc
+          skiplist_rep_test.cc
           write_batch_test.cc)
 
   foreach(sourcefile ${SKIPLIST_BACKED_STORE_TEST_SOURCES})

@@ -104,8 +104,13 @@ class WriteBatchDumpHandler : public WriteBatch::Handler {
 }   // anonymous namespace
 
 TEST_F(WriteBatchTest, IterateThroughWriteBatch) {
-  WriteBatch wb;
+  WriteBatch empty_wb;
+  WriteBatchDumpHandler empty_wb_handler;
+  Status s = empty_wb.Iterate(&empty_wb_handler);
+  ASSERT_TRUE(s.IsOK());
+  ASSERT_STREQ("", empty_wb_handler.GetDumpString().c_str());
 
+  WriteBatch wb;
   wb.Put("foo", "bar");
   wb.Delete("foo2");
   wb.Put("foo1", "bar");
@@ -124,7 +129,8 @@ TEST_F(WriteBatchTest, IterateThroughWriteBatch) {
     "{key: foo4,\ttype: Put\tvalue: bar}\n"
     "{key: foo5,\ttype: Put\tvalue: bar}";
   WriteBatchDumpHandler handler;
-  wb.Iterate(&handler);
+  s = wb.Iterate(&handler);
+  ASSERT_TRUE(s.IsOK());
   ASSERT_STREQ(expected.c_str(), handler.GetDumpString().c_str());
 }
 
