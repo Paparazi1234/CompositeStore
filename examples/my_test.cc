@@ -1,8 +1,8 @@
 #include <iostream>
 #include <assert.h>
 
-#include "store/skiplist_backed/skiplist_backed_in_memory_txn_store.h"
-#include "include/transaction_store.h"
+#include "transaction_store/mvcc_txn_store/mvcc_txn_store.h"
+#include "multi_version/sequence_based/seq_based_multi_versions.h"
 
 #define AssertTrue(cond)                                       \
   if (!(cond)) {                                               \
@@ -13,14 +13,15 @@ namespace MULTI_VERSIONS_NAMESPACE {
 
 class MyTest {
  public:
-  MyTest(TxnStoreWritePolicy wp, bool commit_with_prepare,
-      bool enable_two_write_queues)
+  MyTest(TxnStoreWritePolicy wp,
+         bool commit_with_prepare,
+         bool enable_two_write_queues)
       : write_policy_(wp), 
         commit_with_prepare_(commit_with_prepare),
         enable_two_write_queues_(enable_two_write_queues) {
     OpenStore();
   }
-  
+
   ~MyTest() {
     delete txn_store_;
   }
@@ -71,8 +72,8 @@ class MyTest {
 
   void OpenStore() {
     StoreOptions store_options;
-    StoreTraits store_traits;
     TransactionStoreOptions txn_store_options;
+    StoreTraits store_traits;
     Status s;
 
     store_options.enable_two_write_queues = enable_two_write_queues_;
@@ -80,11 +81,9 @@ class MyTest {
     s = TransactionStore::Open(
         store_options, txn_store_options, store_traits, &txn_store_);
     AssertTrue(s.IsOK());
-    txn_store_impl_ =
-        reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store_);
-    multi_versions_manager_impl_ =
-        reinterpret_cast<SeqBasedMultiVersionsManager*>(
-            txn_store_impl_->GetMultiVersionsManager());
+    txn_store_impl_ = reinterpret_cast<MVCCTxnStore*>(txn_store_);
+    mvm_impl_ = reinterpret_cast<SeqBasedMultiVersionsManager*>(
+                    txn_store_impl_->GetMultiVersionsManager());
   }
 
   void EchoTestSetups() const {
@@ -101,15 +100,15 @@ class MyTest {
 
   void EchoSeq(const char* tips) const {
     std::cout<<tips<<"\t";
-    std::cout<<"  {max_readable_seq_: "<<multi_versions_manager_impl_->MaxReadableVersion()
-        <<", max_visible_seq_: "<<multi_versions_manager_impl_->MaxVisibleVersion()
-        <<", so_far_allocated_: "<<multi_versions_manager_impl_->seq_allocator_.SoFarAllocated()
+    std::cout<<"  {max_readable_seq_: "<<mvm_impl_->MaxReadableVersion()
+        <<", max_visible_seq_: "<<mvm_impl_->MaxVisibleVersion()
+        <<", so_far_allocated_: "<<mvm_impl_->seq_allocator_.SoFarAllocated()
         <<"}"<<std::endl;
   }
 
   TransactionStore* txn_store_;
-  SkipListBackedInMemoryTxnStore* txn_store_impl_;
-  SeqBasedMultiVersionsManager* multi_versions_manager_impl_;
+  MVCCTxnStore* txn_store_impl_;
+  SeqBasedMultiVersionsManager* mvm_impl_;
   TxnStoreWritePolicy write_policy_;
   bool commit_with_prepare_;
   bool enable_two_write_queues_;

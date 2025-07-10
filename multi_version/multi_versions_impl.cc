@@ -30,17 +30,4 @@ SnapshotManager* WritePreparedMultiVersionsManagerFactory::
   return new WritePreparedSnapshotManager(sbmvm);
 }
 
-// empty
-MultiVersionsManager* EmptyMultiVersionsManagerFactory::
-    CreateMultiVersionsManager() const {
-  return new EmptyMultiVersionsManager();
-}
-
-SnapshotManager* EmptyMultiVersionsManagerFactory::
-    CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) const {
-  EmptyMultiVersionsManager* empty_mvm =
-      reinterpret_cast<EmptyMultiVersionsManager*>(multi_versions_manager);
-  return new EmptySnapshotManager(empty_mvm);
-}
-
 }   // namespace MULTI_VERSIONS_NAMESPACE

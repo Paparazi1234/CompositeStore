@@ -1,7 +1,5 @@
 #include "write_batch.h"
 
-#include <assert.h>
-
 namespace MULTI_VERSIONS_NAMESPACE {
 
 Status WriteBatch::Iterate(Handler* handler) {

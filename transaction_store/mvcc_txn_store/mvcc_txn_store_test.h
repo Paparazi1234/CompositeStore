@@ -1,23 +1,65 @@
-#include "skiplist_backed_in_memory_store.h"
+#pragma once
+
+#include "pessimistic_txn_store/write_committed_txn_store.h"
+#include "pessimistic_txn_store/write_prepared_txn_store.h"
+#include "txn_lock_manager/empty_txn_lock_manager.h"
+#include "test_util/test_util.h"
 #include "third-party/gtest/gtest.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class SkipListBackedInMemoryStoreTest : public testing::Test {
+class MVCCTxnStoreTests {
  public:
-  SkipListBackedInMemoryStoreTest() {
-    StoreOptions options;
-    EmptyMultiVersionsManagerFactory mvm_factory;
-    store_ptr_ = new SkipListBackedInMemoryStore(options, mvm_factory);
+  MVCCTxnStoreTests(const TxnTestsSetups& setups)
+      : write_policy_(setups.write_policy),
+        enable_two_write_queues_(setups.enable_two_write_queues) {
+    StoreOptions store_options;
+    TransactionStoreOptions txn_store_options;
+    EmptyTxnLockManagerFactory txn_lock_mgr_factory;
+    store_options.enable_two_write_queues = enable_two_write_queues_;
+    if (write_policy_ == WRITE_COMMITTED) {
+      store_ptr_ =
+          new WriteCommittedTxnStore(store_options,
+                                     txn_store_options,
+                                     txn_lock_mgr_factory,
+                                     new WriteCommittedTransactionFactory());
+    } else if (write_policy_ == WRITE_PREPARED) {
+      CommitTableOptions commit_table_options;
+      store_ptr_ =
+          new WritePreparedTxnStore(store_options,
+                                    txn_store_options,
+                                    txn_lock_mgr_factory,
+                                    new WritePreparedTransactionFactory(),
+                                    commit_table_options);
+    } else {
+      assert(false);
+    }
+    assert(store_ptr_);
+
+    if (setups.encoded_version != "") {
+      MultiVersionsManager* mvm = store_ptr_->GetMultiVersionsManager();
+      Version* orig = mvm->CreateVersion();
+      orig->DecodeFrom(setups.encoded_version);
+      store_ptr_->RecoverMultiVersionsManagerFrom(*orig);
+      delete orig;
+    }
   }
-  ~SkipListBackedInMemoryStoreTest() {
+  ~MVCCTxnStoreTests() {
     delete store_ptr_;
   }
+
+  void SimpleReadWrite();
+  void MultiKeysInterleavedManipulation();
+  void MultiThreadsQuery();
+  void DumpStoreKVPairs();
+
  protected:
-  SkipListBackedInMemoryStore* store_ptr_;
+  TxnStoreWritePolicy write_policy_;
+  bool enable_two_write_queues_;
+  MVCCTxnStore* store_ptr_;
 };
 
-TEST_F(SkipListBackedInMemoryStoreTest, SimpleReadWrite) {
+void MVCCTxnStoreTests::SimpleReadWrite() {
   ReadOptions read_options;
   WriteOptions write_options;
   std::string value;
@@ -50,7 +92,7 @@ TEST_F(SkipListBackedInMemoryStoreTest, SimpleReadWrite) {
   ASSERT_TRUE(s.IsOK());
 }
 
-TEST_F(SkipListBackedInMemoryStoreTest, MultiKeysInterleavedManipulation) {
+void MVCCTxnStoreTests::MultiKeysInterleavedManipulation() {
   ReadOptions read_options;
   WriteOptions write_options;
   std::string value;
@@ -80,11 +122,11 @@ TEST_F(SkipListBackedInMemoryStoreTest, MultiKeysInterleavedManipulation) {
   ASSERT_TRUE(s.IsOK() && value == "bar6");
 }
 
-TEST_F(SkipListBackedInMemoryStoreTest, MultiThreadsQuery) {
+void MVCCTxnStoreTests::MultiThreadsQuery() {
 
 }
 
-TEST_F(SkipListBackedInMemoryStoreTest, DumpStoreKVPairs) {
+void MVCCTxnStoreTests::DumpStoreKVPairs() {
   WriteOptions write_options;
   store_ptr_->Put(write_options, "foo", "bar");
   store_ptr_->Put(write_options, "foo1", "bar");
@@ -116,8 +158,3 @@ TEST_F(SkipListBackedInMemoryStoreTest, DumpStoreKVPairs) {
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE
-
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

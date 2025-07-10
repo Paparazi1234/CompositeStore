@@ -20,6 +20,12 @@ set(STORE_STATIC_LIB_LINKING_IMPLS
 set(STORE_SHARED_LIB_LINKING_IMPLS
         ${SKIPLIST_BACKED_STORE_SHARED_LIB})
 
+set(MVCC_TRANSACTION_SHARED_LIB mvcc_transaction-shared)
+set(TRANSACTION_SHARED_LIB transaction-shared)
+
+set(MVCC_TXN_STORE_SHARED_LIB mvcc_txn_store-shared)
+set(TRANSACTION_STORE_SHARED_LIB transaction_store-shared)
+
 # the library that links all multi_versions implementations defined above, don't touch
 set(MULTI_VERSIONS_STATIC_LIB multi_versions)
 set(MULTI_VERSIONS_SHARED_LIB multi_versions-shared)

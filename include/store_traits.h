@@ -4,9 +4,30 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
+// enum WriteBufferBackedType : unsigned char {
+//   kSkipListBacked = 0x0,
+//   kMaxStoreBackedType
+// };
+
 enum StoreBackedType : unsigned char {
   kSkipListBacked = 0x0,
   kMaxStoreBackedType
+};
+
+enum ConcurrencyControlPolicy : unsigned char {
+  kPessimisticConcurrencyControl = 0x0,
+  kOptimisticConcurrencyControl = 0x1,
+  kMaxConcurrencyControlPolicyType
+};
+
+enum PessimisticTxnWritePolicy : unsigned char {
+  kWriteCommitted = 0x0,
+  kWritePrepared = 0x1
+};
+
+enum OptimisticTxnValidatePolicy : unsigned char {
+  kValidateSerially = 0x0,
+  kValidateParallelly = 0x1
 };
 
 enum TxnStoreWritePolicy : unsigned char {

@@ -21,7 +21,7 @@
   1、 TransactionStore 以 MVCC进行分类：MVCCTransactionStore，而不是以writerbuffer的实现进行分类，如当前的：skiplistback
   2、事务采用TransactionFactory创建对应的实现，TransactionStore部分实现更加纯净
   3、添加WriterBuffer层接口，以对接不同的实现，如当前的skiplist
-  4、WriteBatch层添加接口，以对接不同的实现，如当前的unorderedmap
+  4、WriteBatch层添加接口（接口名叫TxnStagingWrite），以对接不同的实现，如当前的unorderedmap
 
 28 事务锁实现
 

@@ -154,16 +154,4 @@ class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
   std::unique_ptr<TakeSnapshotCallback> take_snapshot_callback_;
 };
 
-// just a wrapper of WriteCommittedSnapshotManager
-class EmptySnapshotManager : public WriteCommittedSnapshotManager {
- public:
-  // No copying allowed
-  EmptySnapshotManager(const EmptySnapshotManager&) = delete;
-  EmptySnapshotManager& operator=(const EmptySnapshotManager&) = delete;
-  
-  EmptySnapshotManager(SeqBasedMultiVersionsManager* multi_versions_manager)
-      : WriteCommittedSnapshotManager(multi_versions_manager) {}
-  ~EmptySnapshotManager() {}
-};
-
 }   // namespace MULTI_VERSIONS_NAMESPACE

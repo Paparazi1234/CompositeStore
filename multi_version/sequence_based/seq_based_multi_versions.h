@@ -94,7 +94,7 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
 
  protected:
   friend class MyTest;
-  friend class InspectTxnTests;
+  friend class InspectPessimisticTxnTests;
   void AdvanceMaxReadableVersion(const Version& version) {
     const SeqBasedVersion* version_impl =
         reinterpret_cast<const SeqBasedVersion*>(&version);
@@ -326,19 +326,6 @@ class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
   // when enable_two_write_queues == false, max_visible is same as max_readable
   std::atomic<uint64_t> max_visible_rep_ = {0};
   InfiniteCommitTable commit_table_;
-};
-
-// just a wrapper of WriteCommittedMultiVersionsManager and
-// enable_two_write_queues == false
-class EmptyMultiVersionsManager : public WriteCommittedMultiVersionsManager {
- public:
-  // No copying allowed
-  EmptyMultiVersionsManager(const EmptyMultiVersionsManager&) = delete;
-  EmptyMultiVersionsManager& operator=(
-      const EmptyMultiVersionsManager&) = delete;
-
-  EmptyMultiVersionsManager() {}
-  ~EmptyMultiVersionsManager() {}
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

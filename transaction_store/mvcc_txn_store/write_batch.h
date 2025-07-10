@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string>
-#include <deque>
 #include <map>
+#include <string>
 #include <assert.h>
 
 #include "skiplist_rep.h"

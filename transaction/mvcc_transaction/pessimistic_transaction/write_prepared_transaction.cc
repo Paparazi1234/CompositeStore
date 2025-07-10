@@ -1,217 +1,15 @@
-#include "MVCC_based_txn.h"
+#include "write_prepared_transaction.h"
 
-#include "multi_version/sequence_based/seq_based_snapshot.h"
+#include "transaction_store/mvcc_txn_store/pessimistic_txn_store/write_prepared_txn_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-MVCCBasedTxn::MVCCBasedTxn(TransactionStore* txn_store,
-                           const WriteOptions& write_options,
-                           const TransactionOptions& txn_options)
-                           : write_options_(write_options),
-                            txn_state_(STAGE_WRITING) {
-  txn_store_ = reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store);
-}
-
-Status MVCCBasedTxn::TryLock(const std::string& key) {
-  return txn_store_->TryLock(key);
-}
-
-void MVCCBasedTxn::UnLock(const std::string& key) {
-  txn_store_->TryLock(key);
-}
-
-Status MVCCBasedTxn::Put(const std::string& key, const std::string& value) {
-  if (!IsInWriteStage()) {
-    return Status::InvalidArgument();
-  }
-  Status s = TryLock(key);
-  if (s.IsOK()) {
-    write_batch_.Put(key, value);
-  }
-  return s;
-}
-
-Status MVCCBasedTxn::Delete(const std::string& key) {
-  if (!IsInWriteStage()) {
-    return Status::InvalidArgument();
-  }
-  Status s = TryLock(key);
-  if (s.IsOK()) {
-    write_batch_.Delete(key);
-  }
-  return s;
-}
-
-// first get from transaction's self buffered writes, if not found then get from
-// store
-Status MVCCBasedTxn::Get(const ReadOptions& read_options,
-                         const std::string& key, std::string* value) {
-  assert(value);
-  value->clear();
-  WriteBatch::GetReault result = write_batch_.Get(key, value);
-  if (result == WriteBatch::GetReault::kFound) {
-    return Status::OK();
-  } else if (result == WriteBatch::GetReault::kDeleted) {
-    return Status::NotFound();
-  } else {
-    assert(result == WriteBatch::GetReault::kNotFound);
-    return txn_store_->Get(read_options, key, value);
-  }
-}
-
-// only control the transaction excution behavior, let derived class
-// implements the details
-Status MVCCBasedTxn::Prepare() {
-  Status s;
-  if (txn_state_ == STAGE_WRITING) {
-    txn_state_.store(STAGE_PREPARING, std::memory_order_relaxed);
-    s = PrepareImpl();
-    if (s.IsOK()) {
-      txn_state_.store(STAGE_PREPARED, std::memory_order_relaxed);
-    }
-  } else if (txn_state_ == STAGE_PREPARED) {
-    s = Status::InvalidArgument();
-  } else if (txn_state_ == STAGE_COMMITTED) {
-    s = Status::InvalidArgument();
-  } else if (txn_state_ == STAGE_ROLLBACKED) {
-    s = Status::InvalidArgument();
-  } else {
-    s = Status::InvalidArgument();
-  }
-  return s;
-}
-
-Status MVCCBasedTxn::Commit() {
-  Status s;
-  if (txn_state_ == STAGE_WRITING) {
-    txn_state_.store(STAGE_COMMITTING, std::memory_order_relaxed);
-    s = CommitWithoutPrepareImpl();
-    // when commit without prepare, Clear() not mater commit successfully or not
-    Clear();
-    if (s.IsOK()) {
-      txn_state_.store(STAGE_COMMITTED, std::memory_order_relaxed);
-    }
-  } else if (txn_state_ == STAGE_PREPARED) {
-    txn_state_.store(STAGE_COMMITTING, std::memory_order_relaxed);
-    s = CommitWithPrepareImpl();
-    if (s.IsOK()) {
-      // when commit with prepare, Clear() only when commit successfully
-      Clear();
-      txn_state_.store(STAGE_COMMITTED, std::memory_order_relaxed);
-    }
-  } else if (txn_state_ == STAGE_COMMITTED) {
-    s = Status::InvalidArgument();
-  } else if (txn_state_ == STAGE_ROLLBACKED) {
-    s = Status::InvalidArgument();
-  } else {
-    s = Status::InvalidArgument();
-  }
-  return s;
-}
-
-Status MVCCBasedTxn::Rollback() {
-  Status s;
-  // if rollback during write stage, then txn remains in STAGE_WRITING state and
-  // can be used to do future writes(equivalent to rollback to savepoint)
-  if (txn_state_ == STAGE_WRITING) {
-    // when rollback during write stage, just Clear()
-    Clear();
-  } else if (txn_state_ == STAGE_PREPARED) {
-    txn_state_.store(STAGE_ROLLBACKING, std::memory_order_relaxed);
-    s = RollbackImpl();
-    if (s.IsOK()) {
-      // when rollback after prepare, Clear() only when rollback successfully
-      Clear();
-      // if rollback after prepare executed, the txn can't be used to do future 
-      // writes any more
-      txn_state_.store(STAGE_ROLLBACKED, std::memory_order_relaxed);
-    }
-  } else if (txn_state_ == STAGE_COMMITTED) {
-    s = Status::InvalidArgument();
-  } else if (txn_state_ == STAGE_ROLLBACKED) {
-    s = Status::InvalidArgument();
-  } else {
-    s = Status::InvalidArgument();
-  }
-  return s;
-}
-
-void MVCCBasedTxn::SetSnapshot() {
-
-}
-
-void MVCCBasedTxn::Reinitialize(TransactionStore* txn_store,
-                                const WriteOptions& write_options,
-                                const TransactionOptions& txn_options) {
-  txn_store_ = reinterpret_cast<SkipListBackedInMemoryTxnStore*>(txn_store);
-  write_options_ = write_options;
-  txn_state_ = STAGE_WRITING;
-  Clear();
-}
-
-class ReleaseTxnLockHandler : public WriteBatch::Handler {
- public:
-  ReleaseTxnLockHandler(MVCCBasedTxn* txn) : txn_(txn) {}
-  ~ReleaseTxnLockHandler() {}
-  virtual Status Put(const std::string& key,
-                     const std::string& value) override {
-    txn_->UnLock(key);
-    return Status::OK();
-  }
-
-  virtual Status Delete(const std::string& key) override {
-    txn_->UnLock(key);
-    return Status::OK();
-  }
- 
- private:
-  MVCCBasedTxn* txn_;
-};
-
-void MVCCBasedTxn::ClearTxnLocks() {
-  if (write_batch_.IsEmpty()) {
-    return;
-  }
-  ReleaseTxnLockHandler handler(this);
-  Status s = write_batch_.Iterate(&handler);
-  assert(s.IsOK());
-}
-
 namespace{
 // callbacks definition
-class WCTxnMaintainVersionsCB : public MaintainVersionsCallbacks {
-  public:
-  WCTxnMaintainVersionsCB(TransactionStore* store) {
-    store_impl_ = reinterpret_cast<WriteCommittedTxnStore*>(store);
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
-	~WCTxnMaintainVersionsCB() {}
-
-  bool NeedMaintainBeforePersistWAL() const override { return false; }
-	bool NeedMaintainBeforeInsertWriteBuffer() const override { return false; }
-	bool NeedMaintainAfterInsertWriteBuffer() const override { return true; }
-
-	Status AfterInsertWriteBufferCallback(const Version* version)  override {
-    const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
-    const Version& prepared_uncommitted_started = dummy_version;
-    const Version& committed = *version;
-    uint32_t num_prepared_uncommitteds = 0;
-    // as for WriteCommitted txn, all we need to do it's to advance max visible
-    // version after insert the txn's write batch to write buffer
-    multi_versions_manager_->EndCommitVersions(prepared_uncommitted_started,
-                                               committed,
-                                               num_prepared_uncommitteds);
-    return Status::OK();
-  }
-
- private:
-  WriteCommittedTxnStore* store_impl_;
-  MultiVersionsManager* multi_versions_manager_;
-};
-
 class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
  public:
-  WPTxnMaintainVersionsCBForPrepare(WritePreparedTxn* txn) : txn_(txn) {
+  WPTxnMaintainVersionsCBForPrepare(WritePreparedTransaction* txn)
+      : txn_(txn) {
     store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
     multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
   }
@@ -242,7 +40,7 @@ class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
 	}
 
  private:
-  WritePreparedTxn* txn_;
+  WritePreparedTransaction* txn_;
   WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
@@ -250,7 +48,7 @@ class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
 class WPTxnMaintainVersionsCBForCommitWithPrepare :
     public MaintainVersionsCallbacks {
  public:
-  WPTxnMaintainVersionsCBForCommitWithPrepare(WritePreparedTxn* txn)
+  WPTxnMaintainVersionsCBForCommitWithPrepare(WritePreparedTransaction* txn)
       : txn_(txn) {
     store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
     multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
@@ -307,7 +105,7 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
 	}
 
  private:
-  WritePreparedTxn* txn_;
+  WritePreparedTransaction* txn_;
   WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
@@ -315,7 +113,7 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
 class WPTxnMaintainVersionsCBForCommitWithoutPrepare :
     public MaintainVersionsCallbacks {
  public:
-  WPTxnMaintainVersionsCBForCommitWithoutPrepare(WritePreparedTxn* txn)
+  WPTxnMaintainVersionsCBForCommitWithoutPrepare(WritePreparedTransaction* txn)
       : txn_(txn) {
     store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
     multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
@@ -362,7 +160,7 @@ class WPTxnMaintainVersionsCBForCommitWithoutPrepare :
 	}
 
  private:
-  WritePreparedTxn* txn_;
+  WritePreparedTransaction* txn_;
   WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
@@ -370,7 +168,7 @@ class WPTxnMaintainVersionsCBForCommitWithoutPrepare :
 class WPTxnMaintainVersionsCBForPrepareForRollback :
     public MaintainVersionsCallbacks {
  public:
-  WPTxnMaintainVersionsCBForPrepareForRollback(WritePreparedTxn* txn)
+  WPTxnMaintainVersionsCBForPrepareForRollback(WritePreparedTransaction* txn)
       : txn_(txn) {
     store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
     multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
@@ -407,7 +205,7 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
 	}
 
  private:
-  WritePreparedTxn* txn_;
+  WritePreparedTransaction* txn_;
   WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
@@ -415,7 +213,7 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
 class WPTxnMaintainVersionsCBForRollbackWithPrepare :
     public MaintainVersionsCallbacks {
  public:
-  WPTxnMaintainVersionsCBForRollbackWithPrepare(WritePreparedTxn* txn)
+  WPTxnMaintainVersionsCBForRollbackWithPrepare(WritePreparedTransaction* txn)
       : txn_(txn) {
     store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
     multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
@@ -503,7 +301,7 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
 	}
 
  private:
-  WritePreparedTxn* txn_;
+  WritePreparedTransaction* txn_;
   WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
@@ -511,8 +309,9 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
 class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
     public MaintainVersionsCallbacks {
  public:
-  WPTxnMaintainVersionsCBForRollbackWithoutPrepare(WritePreparedTxn* txn)
-      : txn_(txn) {
+  WPTxnMaintainVersionsCBForRollbackWithoutPrepare(
+      WritePreparedTransaction* txn)
+        : txn_(txn) {
     store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
     multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
   }
@@ -588,49 +387,23 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
 	}
 
  private:
-  WritePreparedTxn* txn_;
+  WritePreparedTransaction* txn_;
   WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 }   // anonymous namespace
 
-Status WriteCommittedTxn::PrepareImpl() {
-  // in-memory only store, so nothing to do when prepare(because prepare mainly
-  // deals with WAL)
-  return Status::OK();
-}
-
-Status WriteCommittedTxn::CommitWithPrepareImpl() {
-  WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
-  return txn_store_->WriteInternal(write_options_,
-                                   &write_batch_,
-                                   wc_maintain_versions_cb,
-                                   txn_store_->GetCommitQueue());
-}
-
-Status WriteCommittedTxn::CommitWithoutPrepareImpl() {
-  WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
-  return txn_store_->WriteInternal(write_options_,
-                                   &write_batch_,
-                                   wc_maintain_versions_cb,
-                                   txn_store_->GetCommitQueue());
-}
-
-Status WriteCommittedTxn::RollbackImpl() {
-  // since write committed txn doesn't insert data to underlying store before
-  // Commit(), so there is nothing to rollback
-  return Status::OK();
-}
-
-Status WritePreparedTxn::PrepareImpl() {
+Status WritePreparedTransaction::PrepareImpl() {
+  WritePreparedTxnStore* store_impl =
+      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
   WPTxnMaintainVersionsCBForPrepare wp_maintain_versions_cb_for_prepare(this);
   return txn_store_->WriteInternal(write_options_,
                                    &write_batch_,
                                    wp_maintain_versions_cb_for_prepare,
-                                   txn_store_->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+                                   store_impl->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
-Status WritePreparedTxn::CommitWithPrepareImpl() {
+Status WritePreparedTransaction::CommitWithPrepareImpl() {
   // use an empty write batch for commit purpose, it will consume a version;
   // when we write an empty write batch in this way, it's will consume a 
   // version, but we won't add a committed version to commit_table_ for it,
@@ -640,17 +413,21 @@ Status WritePreparedTxn::CommitWithPrepareImpl() {
   // empty_write_batch is fine, since we have advance max visible version in
   // EndCommitVersions()
   WriteBatch empty_write_batch;
+  WritePreparedTxnStore* store_impl =
+      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
   WPTxnMaintainVersionsCBForCommitWithPrepare
       wp_maintain_versions_cb_for_commit_with_prepare(this);
   return txn_store_->WriteInternal(
       write_options_,
       &empty_write_batch,
       wp_maintain_versions_cb_for_commit_with_prepare,
-      txn_store_->GetCommitQueue());   // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+      store_impl->GetCommitQueue());   // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
-Status WritePreparedTxn::CommitWithoutPrepareImpl() {
-  bool enable_two_write_queues = txn_store_->IsEnableTwoWriteQueues();
+Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
+  WritePreparedTxnStore* store_impl =
+      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
+  bool enable_two_write_queues = store_impl->IsEnableTwoWriteQueues();
   // commit without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
   // will switch commit without prepare to commit with prepare internally
@@ -661,7 +438,7 @@ Status WritePreparedTxn::CommitWithoutPrepareImpl() {
         write_options_,
         &write_batch_,
         wp_maintain_versions_cb_for_commit_without_prepare,
-        txn_store_->GetCommitQueue());
+        store_impl->GetCommitQueue());
   }
 
   // enable_two_write_queues == true
@@ -671,7 +448,7 @@ Status WritePreparedTxn::CommitWithoutPrepareImpl() {
   Status s = txn_store_->WriteInternal(write_options_,
                                        &write_batch_,
                                        wp_maintain_versions_cb_for_prepare,
-                                       txn_store_->GetPrepareQueue());
+                                       store_impl->GetPrepareQueue());
   if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
     return s;
   }
@@ -691,10 +468,11 @@ Status WritePreparedTxn::CommitWithoutPrepareImpl() {
       write_options_,
       &empty_write_batch,
       wp_maintain_versions_cb_for_commit_with_prepare,
-      txn_store_->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+      store_impl->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
-class WritePreparedTxn::RollbackWriteBatchBuilder : public WriteBatch::Handler {
+class WritePreparedTransaction::RollbackWriteBatchBuilder :
+    public WriteBatch::Handler {
  public:
   RollbackWriteBatchBuilder(WritePreparedTxnStore* txn_store,
                             WriteBatch* rollback_write_batch)
@@ -736,22 +514,23 @@ class WritePreparedTxn::RollbackWriteBatchBuilder : public WriteBatch::Handler {
   WriteBatch* rollback_write_batch_;
 };
 
-Status WritePreparedTxn::RollbackImpl() {
+Status WritePreparedTransaction::RollbackImpl() {
   // build the rollback write batch
   WriteBatch rollback_write_batch;
-  RollbackWriteBatchBuilder rollback_builder(
-      reinterpret_cast<WritePreparedTxnStore*>(txn_store_),
-      &rollback_write_batch);
+  WritePreparedTxnStore* store_impl =
+      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
+  RollbackWriteBatchBuilder rollback_builder(store_impl, &rollback_write_batch);
   Status s = write_batch_.Iterate(&rollback_builder);
   if (!s.IsOK()) {
     return s;
   }
   // insert the rollback_write_batch into write buffer to eliminate this txn's
   // footprint in the write buffer
-  bool enable_two_write_queues = txn_store_->IsEnableTwoWriteQueues();
-  // commit without prepare only takes effect when
+
+  bool enable_two_write_queues = store_impl->IsEnableTwoWriteQueues();
+  // rollback without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
-  // will switch commit without prepare to commit with prepare internally
+  // will switch rollback without prepare to rollback with prepare internally
   if (!enable_two_write_queues) {
     WPTxnMaintainVersionsCBForRollbackWithoutPrepare
         wp_maintain_versions_cb_for_rollback_without_prepare(this);
@@ -759,7 +538,7 @@ Status WritePreparedTxn::RollbackImpl() {
         write_options_,
         &rollback_write_batch,
         wp_maintain_versions_cb_for_rollback_without_prepare,
-        txn_store_->GetCommitQueue());
+        store_impl->GetCommitQueue());
   }
 
   // enable_two_write_queues == true
@@ -770,7 +549,7 @@ Status WritePreparedTxn::RollbackImpl() {
       write_options_,
       &rollback_write_batch,
       wp_maintain_versions_cb_for_prepare_for_rollback,
-      txn_store_->GetPrepareQueue());
+      store_impl->GetPrepareQueue());
   if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
     return s;
   }
@@ -790,7 +569,7 @@ Status WritePreparedTxn::RollbackImpl() {
       write_options_,
       &empty_write_batch,
       wp_maintain_versions_cb_for_rollback_with_prepare,
-      txn_store_->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+      store_impl->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

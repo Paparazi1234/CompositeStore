@@ -156,14 +156,4 @@ class WritePreparedMultiVersionsManagerFactory :
   bool enable_two_write_queues_;
 };
 
-// Wrapper of WriteCommittedMultiVersionsManagerFactory
-class EmptyMultiVersionsManagerFactory : public MultiVersionsManagerFactory {
- public:
-  ~EmptyMultiVersionsManagerFactory() {}
-
-  virtual MultiVersionsManager* CreateMultiVersionsManager() const override;
-  virtual SnapshotManager* CreateSnapshotManager(
-      MultiVersionsManager* multi_versions_manager) const override;
-};
-
 }   // namespace MULTI_VERSIONS_NAMESPACE

@@ -1,0 +1,9 @@
+add_subdirectory(mvcc_txn_store)
+
+set(TRANSACTION_STORE_SOURCES
+        transaction_store_impl.cc)
+
+if(BUILD_SHARED)
+  add_library(${TRANSACTION_STORE_SHARED_LIB} SHARED ${TRANSACTION_STORE_SOURCES})
+  target_link_libraries(${TRANSACTION_STORE_SHARED_LIB} ${MVCC_TXN_STORE_SHARED_LIB} ${TXN_LOCK_MANAGER_SHARED_LIB} ${TRANSACTION_SHARED_LIB})
+endif()

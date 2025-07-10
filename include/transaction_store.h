@@ -22,7 +22,7 @@ class TransactionStore : public Store {
   virtual Transaction* BeginTransaction(
       const WriteOptions& write_options,
       const TransactionOptions& txn_options = TransactionOptions(),
-      Transaction* old_txn = nullptr) = 0;
+      Transaction* reused = nullptr) = 0;
 
   virtual const Snapshot* TakeSnapshot() = 0;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;

@@ -1,15 +1,16 @@
 #pragma once
 
+#include "write_committed_txn_store.h"
+#include "write_prepared_txn_store.h"
 #include "test_util/test_util.h"
-#include "MVCC_based_txn.h"
 #include "include/txn_lock_manager.h"
 #include "third-party/gtest/gtest.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class TxnTestsBase {
+class PessimisticTxnTestsBase {
  public:
-  TxnTestsBase(const TxnTestsSetups& setups)
+  PessimisticTxnTestsBase(const TxnTestsSetups& setups)
       : write_policy_(setups.write_policy),
         enable_two_write_queues_(setups.enable_two_write_queues),
         with_prepare_(setups.with_prepare),
@@ -19,15 +20,19 @@ class TxnTestsBase {
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     store_options.enable_two_write_queues = enable_two_write_queues_;
     if (write_policy_ == WRITE_COMMITTED) {
-      txn_store_impl_ = new WriteCommittedTxnStore(store_options,
-                                                   txn_store_options,
-                                                   txn_lock_mgr_factory);
+      txn_store_impl_ =
+          new WriteCommittedTxnStore(store_options,
+                                     txn_store_options,
+                                     txn_lock_mgr_factory,
+                                     new WriteCommittedTransactionFactory());
     } else if (write_policy_ == WRITE_PREPARED) {
       CommitTableOptions commit_table_options;
-      txn_store_impl_ = new WritePreparedTxnStore(store_options,
-                                                  txn_store_options,
-                                                  commit_table_options,
-                                                  txn_lock_mgr_factory);
+      txn_store_impl_ =
+          new WritePreparedTxnStore(store_options,
+                                    txn_store_options,
+                                    txn_lock_mgr_factory,
+                                    new WritePreparedTransactionFactory(),
+                                    commit_table_options);
     } else {
       assert(false);
     }
@@ -51,7 +56,7 @@ class TxnTestsBase {
     }
   }
 
-  virtual ~TxnTestsBase() {
+  virtual ~PessimisticTxnTestsBase() {
     delete txn_store_;
   }
 
@@ -72,14 +77,15 @@ class TxnTestsBase {
   bool with_prepare_;
   uint64_t started_version_seq_;
   TransactionStore* txn_store_;
-  SkipListBackedInMemoryTxnStore* txn_store_impl_;
+  PessimisticTxnStore* txn_store_impl_;
   SeqBasedMultiVersionsManager* mvm_impl_;
 };
 
-class CommonTxnTests : public TxnTestsBase {
+class CommonPessimisticTxnTests : public PessimisticTxnTestsBase {
  public:
-  CommonTxnTests(const TxnTestsSetups& setups) : TxnTestsBase(setups) {}
-  virtual ~CommonTxnTests() {}
+  CommonPessimisticTxnTests(const TxnTestsSetups& setups)
+      : PessimisticTxnTestsBase(setups) {}
+  virtual ~CommonPessimisticTxnTests() {}
 
   void SimpleTransactionalReadWrite();
   void SimpleNonTransactionalReadWrite();
@@ -101,10 +107,11 @@ class CommonTxnTests : public TxnTestsBase {
   void SingleTxnExcutionFlowTest();
 };
 
-class MultiThreadingTxnTests : public TxnTestsBase {
+class MultiThreadingPessimisticTxnTests : public PessimisticTxnTestsBase {
  public:
-  MultiThreadingTxnTests(const TxnTestsSetups& setups) : TxnTestsBase(setups) {}
-  virtual ~MultiThreadingTxnTests() {}
+  MultiThreadingPessimisticTxnTests(const TxnTestsSetups& setups)
+      : PessimisticTxnTestsBase(setups) {}
+  virtual ~MultiThreadingPessimisticTxnTests() {}
 
   void MultiThreadsTxnsExcution();
   void SingleWriterMultiReaders();
@@ -127,10 +134,11 @@ class MultiThreadingTxnTests : public TxnTestsBase {
   }
 };
 
-class InspectTxnTests : public TxnTestsBase {
+class InspectPessimisticTxnTests : public PessimisticTxnTestsBase {
  public:
-  InspectTxnTests(const TxnTestsSetups& setups) : TxnTestsBase(setups) {}
-  virtual ~InspectTxnTests() {}
+  InspectPessimisticTxnTests(const TxnTestsSetups& setups)
+      : PessimisticTxnTestsBase(setups) {}
+  virtual ~InspectPessimisticTxnTests() {}
 
   void VersionIncrement();
   void VersionIncrementForPreparingOfEmptyWriteBatch();
@@ -179,7 +187,7 @@ class InspectTxnTests : public TxnTestsBase {
   }
 };
 
-void CommonTxnTests::SimpleTransactionalReadWrite() {
+void CommonPessimisticTxnTests::SimpleTransactionalReadWrite() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -216,7 +224,7 @@ void CommonTxnTests::SimpleTransactionalReadWrite() {
   delete txn;
 }
 
-void CommonTxnTests::SimpleNonTransactionalReadWrite() {
+void CommonPessimisticTxnTests::SimpleNonTransactionalReadWrite() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -249,7 +257,7 @@ void CommonTxnTests::SimpleNonTransactionalReadWrite() {
   ASSERT_TRUE(s.IsOK());
 }
 
-void CommonTxnTests::ReadTxnOwnWrites() {
+void CommonPessimisticTxnTests::ReadTxnOwnWrites() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -289,7 +297,7 @@ void CommonTxnTests::ReadTxnOwnWrites() {
   delete txn;
 }
 
-void CommonTxnTests::ReadAfterPrepare() {
+void CommonPessimisticTxnTests::ReadAfterPrepare() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -324,7 +332,7 @@ void CommonTxnTests::ReadAfterPrepare() {
   delete txn;
 }
 
-void CommonTxnTests::ReadAfterCommit() {
+void CommonPessimisticTxnTests::ReadAfterCommit() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -385,7 +393,7 @@ void CommonTxnTests::ReadAfterCommit() {
   delete txn;
 }
 
-void CommonTxnTests::ReadAfterRollback() {
+void CommonPessimisticTxnTests::ReadAfterRollback() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -424,7 +432,7 @@ void CommonTxnTests::ReadAfterRollback() {
   delete txn;
 }
 
-void CommonTxnTests::CommitWithPrepare() {
+void CommonPessimisticTxnTests::CommitWithPrepare() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -460,7 +468,7 @@ void CommonTxnTests::CommitWithPrepare() {
   delete txn;
 }
 
-void CommonTxnTests::CommitWithoutPrepare() {
+void CommonPessimisticTxnTests::CommitWithoutPrepare() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -494,7 +502,7 @@ void CommonTxnTests::CommitWithoutPrepare() {
   delete txn;
 }
 
-void CommonTxnTests::RollbackWithPrepare() {
+void CommonPessimisticTxnTests::RollbackWithPrepare() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -541,7 +549,7 @@ void CommonTxnTests::RollbackWithPrepare() {
   delete txn;
 }
 
-void CommonTxnTests::RollbackWithoutPrepare() {
+void CommonPessimisticTxnTests::RollbackWithoutPrepare() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -589,7 +597,7 @@ void CommonTxnTests::RollbackWithoutPrepare() {
   delete txn;
 }
 
-void CommonTxnTests::PrepareEmptyWriteBatch() {
+void CommonPessimisticTxnTests::PrepareEmptyWriteBatch() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -612,7 +620,7 @@ void CommonTxnTests::PrepareEmptyWriteBatch() {
   delete txn;
 }
 
-void CommonTxnTests::CommitEmptyWriteBatch() {
+void CommonPessimisticTxnTests::CommitEmptyWriteBatch() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -650,7 +658,7 @@ void CommonTxnTests::CommitEmptyWriteBatch() {
   delete txn;
 }
 
-void CommonTxnTests::RollbackEmptyWriteBatch() {
+void CommonPessimisticTxnTests::RollbackEmptyWriteBatch() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -688,7 +696,7 @@ void CommonTxnTests::RollbackEmptyWriteBatch() {
   delete txn;
 }
 
-void CommonTxnTests::InterleavingPrepareCommitBetweenMultiTxns() {
+void CommonPessimisticTxnTests::InterleavingPrepareCommitBetweenMultiTxns() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -734,7 +742,7 @@ void CommonTxnTests::InterleavingPrepareCommitBetweenMultiTxns() {
   delete txn2;
 }
 
-void CommonTxnTests::InterleavingPrepareRollbackBetweenMultiTxns() {
+void CommonPessimisticTxnTests::InterleavingPrepareRollbackBetweenMultiTxns() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -780,7 +788,7 @@ void CommonTxnTests::InterleavingPrepareRollbackBetweenMultiTxns() {
   delete txn2;
 }
 
-void CommonTxnTests::ReadUnderSnapshot() {
+void CommonPessimisticTxnTests::ReadUnderSnapshot() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -845,7 +853,7 @@ void CommonTxnTests::ReadUnderSnapshot() {
   delete txn;
 }
 
-void CommonTxnTests::ReuseTransaction() {
+void CommonPessimisticTxnTests::ReuseTransaction() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -884,7 +892,7 @@ void CommonTxnTests::ReuseTransaction() {
   delete txn;
 }
 
-void CommonTxnTests::SingleTxnExcutionFlowTest() {
+void CommonPessimisticTxnTests::SingleTxnExcutionFlowTest() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -993,7 +1001,7 @@ void ThreadFuncInsertStoreRdMoWr(
 }
 }   // anonymous namespace
 
-void MultiThreadingTxnTests::MultiThreadsTxnsExcution() {
+void MultiThreadingPessimisticTxnTests::MultiThreadsTxnsExcution() {
   const uint32_t num_threads = 4;
   const uint32_t num_keys_in_set = 1000;
   const uint64_t total_increment = 1000;
@@ -1098,7 +1106,7 @@ void ThreadFuncReadStoreRdOnly1(
 }
 }   // anonymous namespace
 
-void MultiThreadingTxnTests::SingleWriterMultiReaders() {
+void MultiThreadingPessimisticTxnTests::SingleWriterMultiReaders() {
   const uint32_t num_reader_threads = 4;
   const uint16_t target_key_set = 0;
   const uint32_t num_keys_in_set = 1000;
@@ -1128,7 +1136,7 @@ void MultiThreadingTxnTests::SingleWriterMultiReaders() {
   }
 }
 
-void MultiThreadingTxnTests::SingleReaderMultiWriters() {
+void MultiThreadingPessimisticTxnTests::SingleReaderMultiWriters() {
   const uint32_t num_writer_threads = 4;
   const uint32_t num_key_set = num_writer_threads;
   const uint32_t num_keys_in_set = 1000;
@@ -1178,7 +1186,7 @@ void MultiThreadingTxnTests::SingleReaderMultiWriters() {
   reader_thread.join();
 }
 
-void MultiThreadingTxnTests::MultiWritersMultiReaders() {
+void MultiThreadingPessimisticTxnTests::MultiWritersMultiReaders() {
   const uint32_t num_threads = 4;
   const uint32_t num_key_set = num_threads;
   const uint32_t num_keys_in_set = 1000;
@@ -1231,7 +1239,7 @@ void MultiThreadingTxnTests::MultiWritersMultiReaders() {
   }
 }
 
-void InspectTxnTests::VersionIncrement() {
+void InspectPessimisticTxnTests::VersionIncrement() {
   std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn after-write after-prepare after-commit
       {{{0, 0, 0}, {0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
@@ -1297,7 +1305,8 @@ void InspectTxnTests::VersionIncrement() {
   delete txn;
 }
 
-void InspectTxnTests::VersionIncrementForPreparingOfEmptyWriteBatch() {
+void InspectPessimisticTxnTests::
+    VersionIncrementForPreparingOfEmptyWriteBatch() {
   std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare
       {{{0, 0, 0}, {1, 0, 1}},   // prepare() and 2-WQ
@@ -1332,7 +1341,8 @@ void InspectTxnTests::VersionIncrementForPreparingOfEmptyWriteBatch() {
   delete txn;
 }
 
-void InspectTxnTests::VersionIncrementForCommittingOfEmptyWriteBatch() {
+void InspectPessimisticTxnTests::
+    VersionIncrementForCommittingOfEmptyWriteBatch() {
   std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare after-commit
       {{{0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
@@ -1386,7 +1396,8 @@ void InspectTxnTests::VersionIncrementForCommittingOfEmptyWriteBatch() {
   delete txn;
 }
 
-void InspectTxnTests::VersionIncrementForRollbackingOfEmptyWriteBatch() {
+void InspectPessimisticTxnTests::
+    VersionIncrementForRollbackingOfEmptyWriteBatch() {
     std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare after-commit
       {{{0, 0, 0}, {1, 0, 1}, {2, 3, 3}},  // prepare() and 2-WQ
@@ -1440,7 +1451,8 @@ void InspectTxnTests::VersionIncrementForRollbackingOfEmptyWriteBatch() {
   delete txn;
 }
 
-void InspectTxnTests::WriteBufferInsertTimingBetweenDifferentWritePolicy() {
+void InspectPessimisticTxnTests::
+    WriteBufferInsertTimingBetweenDifferentWritePolicy() {
   std::string key("f", 100);
   std::string value("b", 100);
   uint64_t expected_raw_data_size = key.size() + value.size();

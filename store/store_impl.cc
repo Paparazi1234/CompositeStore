@@ -1,4 +1,4 @@
-#include "skiplist_backed/skiplist_backed_in_memory_store.h"
+#include "mvcc_store/mvcc_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -9,13 +9,12 @@ class StoreFactory {
   virtual Store* CreateStore(const StoreOptions& store_options) const = 0;
 };
 
-class SkipListBackedInMemoryStoreFactory : public StoreFactory {
+class MVCCStoreFactory : public StoreFactory {
  public:
-  ~SkipListBackedInMemoryStoreFactory() {}
+  ~MVCCStoreFactory() {}
 
-  virtual Store* CreateStore(const StoreOptions& store_options) const override {
-    EmptyMultiVersionsManagerFactory factory;
-    return new SkipListBackedInMemoryStore(store_options, factory);
+  Store* CreateStore(const StoreOptions& store_options) const override {
+    return new MVCCStore(store_options);
   }
 };
 
@@ -27,8 +26,7 @@ Status Store::Open(const StoreOptions& store_options,
   Status s;
   switch (store_traits.backed_type) {
     case kSkipListBacked :
-      *store_ptr =
-          SkipListBackedInMemoryStoreFactory().CreateStore(store_options);
+      *store_ptr = MVCCStoreFactory().CreateStore(store_options);
       break;
     default:
       *store_ptr = nullptr;

@@ -7,6 +7,8 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
+class TransactionStore;
+
 struct TransactionOptions {
   
 };
@@ -30,6 +32,39 @@ class Transaction {
   virtual Status Commit() = 0;
   virtual Status Rollback() = 0;
   virtual void SetSnapshot() = 0;
+};
+
+class TransactionFactory {
+ public:
+  TransactionFactory() {}
+  virtual ~TransactionFactory() {}
+
+  virtual Transaction* CreateTransaction(const WriteOptions& write_options, 
+                                         const TransactionOptions& txn_options,
+                                         TransactionStore* txn_store,
+                                         Transaction* reused = nullptr) = 0;
+};
+
+class WriteCommittedTransactionFactory : public TransactionFactory {
+ public:
+  WriteCommittedTransactionFactory() {}
+  ~WriteCommittedTransactionFactory() {}
+
+  Transaction* CreateTransaction(const WriteOptions& write_options, 
+                                 const TransactionOptions& txn_options,
+                                 TransactionStore* txn_store,
+                                 Transaction* reused = nullptr) override;
+};
+
+class WritePreparedTransactionFactory : public TransactionFactory {
+ public:
+  WritePreparedTransactionFactory() {}
+  ~WritePreparedTransactionFactory() {}
+
+  Transaction* CreateTransaction(const WriteOptions& write_options, 
+                                 const TransactionOptions& txn_options,
+                                 TransactionStore* txn_store,
+                                 Transaction* reused = nullptr) override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

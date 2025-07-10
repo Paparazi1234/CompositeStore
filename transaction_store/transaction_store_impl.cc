@@ -1,4 +1,5 @@
-#include "skiplist_backed/skiplist_backed_in_memory_txn_store.h"
+#include "mvcc_txn_store/pessimistic_txn_store/write_committed_txn_store.h"
+#include "mvcc_txn_store/pessimistic_txn_store/write_prepared_txn_store.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -6,33 +7,37 @@ class TxnStoreFactory {
  public:
   virtual ~TxnStoreFactory() {}
 
-  virtual TransactionStore* CreateTransactionStore(
+  virtual TransactionStore* CreateTxnStore(
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const StoreTraits& store_traits) const = 0;
 };
 
-class SkipListBackedInMemoryTxnStoreFactory : public TxnStoreFactory {
+class MVCCTxnStoreFactory : public TxnStoreFactory {
  public:
-  ~SkipListBackedInMemoryTxnStoreFactory() {}
+  ~MVCCTxnStoreFactory() {}
 
-  virtual TransactionStore* CreateTransactionStore(
+  TransactionStore* CreateTxnStore(
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
       const StoreTraits& store_traits) const override {
-    SkipListBackedInMemoryTxnStore* txn_store = nullptr;
+    MVCCTxnStore* txn_store = nullptr;
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     switch (store_traits.txn_write_policy) {
       case WRITE_COMMITTED:
-        txn_store = new WriteCommittedTxnStore(store_options,
-                                               txn_store_options,
-                                               txn_lock_mgr_factory);
+        txn_store =
+            new WriteCommittedTxnStore(store_options,
+                                       txn_store_options,
+                                       txn_lock_mgr_factory,
+                                       new WriteCommittedTransactionFactory());
         break;
       case WRITE_PREPARED:
-        txn_store = new WritePreparedTxnStore(store_options,
-                                              txn_store_options,
-                                              store_traits.commit_table_options,
-                                              txn_lock_mgr_factory);
+        txn_store =
+            new WritePreparedTxnStore(store_options,
+                                      txn_store_options,
+                                      txn_lock_mgr_factory,
+                                      new WritePreparedTransactionFactory(),
+                                      store_traits.commit_table_options);
         break;
       default:
         txn_store = nullptr;
@@ -50,9 +55,9 @@ Status TransactionStore::Open(const StoreOptions& store_options,
   Status s;
   switch (store_traits.backed_type) {
     case kSkipListBacked:
-      *txn_store_ptr = 
-          SkipListBackedInMemoryTxnStoreFactory().CreateTransactionStore(
-              store_options, txn_store_options, store_traits);
+      *txn_store_ptr = MVCCTxnStoreFactory().CreateTxnStore(store_options,
+                                                            txn_store_options,
+                                                            store_traits);
       break;
     default:
       *txn_store_ptr = nullptr;

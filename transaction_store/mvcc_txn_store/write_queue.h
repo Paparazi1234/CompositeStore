@@ -32,8 +32,8 @@ class WriteQueue {
  private:
   port::Mutex mutex_;
   MultiVersionsManager *const multi_versions_manager_;
-  // used to assign version for inserting entries in write path, lazy initialize
-  // protected by the WriteQueue self
+  // used to assign version for inserting entries in write path, lazy
+  // initialized and protected by the WriteQueue self
 	std::unique_ptr<Version> version_for_insert_ = nullptr;
 };
 

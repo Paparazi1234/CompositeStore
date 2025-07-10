@@ -66,7 +66,11 @@ add_subdirectory(multi_version)
 
 add_subdirectory(txn_lock_manager)
 
+add_subdirectory(transaction_store)
+
 add_subdirectory(store)
+
+add_subdirectory(transaction)
 
 option(BUILD_EXAMPLES "build with examples" ON)
 if(BUILD_EXAMPLES)
