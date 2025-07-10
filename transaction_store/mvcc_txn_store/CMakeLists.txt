@@ -8,10 +8,8 @@ set(MVCC_TXN_STORE_SOURCES
         pessimistic_txn_store/write_committed_txn_store.cc
         pessimistic_txn_store/write_prepared_txn_store.cc)
 
-if(BUILD_SHARED)
-  add_library(${MVCC_TXN_STORE_SHARED_LIB} SHARED ${MVCC_TXN_STORE_SOURCES})
-  target_link_libraries(${MVCC_TXN_STORE_SHARED_LIB} ${UTIL_SHARED_LIB} ${ROCKSDB_SHARED_LIB} ${MULTI_VERSIONS_SHARED_LIB}) # Todo: ${ROCKSDB_SHARED_LIB} ${MULTI_VERSIONS_SHARED_LIB}应该可以不依赖
-endif()
+add_library(${MVCC_TXN_STORE_SHARED_LIB} SHARED ${MVCC_TXN_STORE_SOURCES})
+target_link_libraries(${MVCC_TXN_STORE_SHARED_LIB} ${UTIL_SHARED_LIB} ${ROCKSDB_SHARED_LIB} ${MULTI_VERSIONS_SHARED_LIB}) # Todo: ${ROCKSDB_SHARED_LIB} ${MULTI_VERSIONS_SHARED_LIB}应该可以不依赖
 
 if(BUILD_TESTS)
   set(MVCC_TXN_STORE_TEST_SOURCES

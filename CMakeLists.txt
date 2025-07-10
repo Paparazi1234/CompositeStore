@@ -38,12 +38,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/bin)
 
 include_directories(${PROJECT_SOURCE_DIR})
 
-option(BUILD_SHARED "Build shared libraries" ON)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
-include(third_party_defines)
-include(common_libs_defines)
-include(pluggables_defines)
+include(cmake/third_party_defines)
+include(cmake/common_libs_defines)
+include(cmake/pluggables_defines)
 
 add_subdirectory(port)
 
