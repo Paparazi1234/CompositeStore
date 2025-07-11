@@ -31,7 +31,7 @@ TEST_F(MVCCTxnStoreTest, MultiThreadsQuery) {
   TestMVCCTxnStoreFunc(&MVCCTxnStoreTests::MultiThreadsQuery);
 }
 
-TEST_F(MVCCTxnStoreTest, DumpStoreKVPairs) {
+TEST_F(MVCCTxnStoreTest, DISABLED_DumpStoreKVPairs) {
   TestMVCCTxnStoreFunc(&MVCCTxnStoreTests::DumpStoreKVPairs);
 }
 

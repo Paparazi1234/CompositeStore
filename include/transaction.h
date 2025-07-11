@@ -36,7 +36,6 @@ class Transaction {
 
 class TransactionFactory {
  public:
-  TransactionFactory() {}
   virtual ~TransactionFactory() {}
 
   virtual Transaction* CreateTransaction(const WriteOptions& write_options, 

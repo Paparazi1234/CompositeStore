@@ -6,17 +6,17 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class TxnStagingWrite {
+class StagingWrite {
  public:
   // No copying allowed
-  TxnStagingWrite(const TxnStagingWrite&) = delete;
-  TxnStagingWrite& operator=(const TxnStagingWrite&) = delete;
+  StagingWrite(const StagingWrite&) = delete;
+  StagingWrite& operator=(const StagingWrite&) = delete;
 
-  TxnStagingWrite() {}
-  virtual ~TxnStagingWrite() {}
+  StagingWrite() {}
+  virtual ~StagingWrite() {}
 
-  virtual void Put(const std::string& key, const std::string& value) = 0;
-  virtual void Delete(const std::string& key) = 0;
+  virtual Status Put(const std::string& key, const std::string& value) = 0;
+  virtual Status Delete(const std::string& key) = 0;
 
   enum GetReault : unsigned char {
     kFound = 0x0,
@@ -38,6 +38,21 @@ class TxnStagingWrite {
   virtual uint64_t Count() const = 0;
 
   virtual void EncodeTo(std::string* dest) const = 0;
+};
+
+class StagingWriteFactory {
+ public:
+  virtual ~StagingWriteFactory() {}
+
+  virtual StagingWrite* CreateStagingWrite() = 0;
+};
+
+class OrderedMapBackedStagingWriteFactory : public StagingWriteFactory {
+ public:
+  OrderedMapBackedStagingWriteFactory() {}
+  virtual ~OrderedMapBackedStagingWriteFactory() {}
+
+  StagingWrite* CreateStagingWrite() override;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

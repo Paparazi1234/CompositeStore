@@ -64,6 +64,8 @@ add_subdirectory(multi_version)
 
 add_subdirectory(txn_lock_manager)
 
+add_subdirectory(staging_write)
+
 add_subdirectory(transaction_store)
 
 add_subdirectory(store)
