@@ -81,7 +81,9 @@ MVCCStore::MVCCStore(const StoreOptions& store_options)
                    TransactionStoreOptions(),
                    EmptyMultiVersionsManagerFactory(),
                    EmptyTxnLockManagerFactory(),
-                   nullptr) {}
+                   nullptr,
+                   new OrderedMapBackedStagingWriteFactory(),
+                   SkipListBackedMVCCWriteBufferFactory()) {}
 
 Status MVCCStore::Put(const WriteOptions& write_options,
                       const std::string& key,

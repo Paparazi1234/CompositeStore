@@ -16,6 +16,8 @@ class PessimisticTxnStore : public MVCCTxnStore {
       const MultiVersionsManagerFactory& multi_versions_mgr_factory,
       const TxnLockManagerFactory& txn_lock_mgr_factory,
       TransactionFactory* txn_factory,
+      StagingWriteFactory* staging_write_factory,
+      const MVCCWriteBufferFactory& mvcc_write_buffer_factory,
       WriteQueue& prepare_queue,
       WriteQueue& commit_queue);
 

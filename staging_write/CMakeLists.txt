@@ -1,12 +1,12 @@
 set(STAGING_WRITE_SOURCES
-        ordered_map_backed/ordered_map_backed_impl.cc
+        ordered_map_backed/ordered_map_backed_sw.cc
         staging_write_impl.cc)
 
 add_library(${STAGING_WRITE_SHARED_LIB} SHARED ${STAGING_WRITE_SOURCES})
 
 if(BUILD_TESTS)
   set(STAGING_WRITE_TEST_SOURCES
-          ordered_map_backed/ordered_map_backed_impl_test.cc)
+          ordered_map_backed/ordered_map_backed_sw_test.cc)
 
   foreach(sourcefile ${STAGING_WRITE_TEST_SOURCES})
     get_filename_component(exename ${sourcefile} NAME_WE)

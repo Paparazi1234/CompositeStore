@@ -66,6 +66,8 @@ add_subdirectory(txn_lock_manager)
 
 add_subdirectory(staging_write)
 
+add_subdirectory(mvcc_write_buffer)
+
 add_subdirectory(transaction_store)
 
 add_subdirectory(store)

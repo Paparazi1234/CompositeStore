@@ -1,4 +1,5 @@
 set(UTIL_SOURCES
+        memory_allocator.cc
         random.cc
         system_clock.cc)
 

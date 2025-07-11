@@ -1,11 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <sstream>
 
-#include "format.h"
-#include "memory_allocator.h"
+#include "include/format.h"
 #include "include/multi_versions.h"
+#include "util/memory_allocator.h"
 #include "third-party/rocksdb/inlineskiplist.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -20,7 +19,7 @@ class SkipListLookupKey {
 		uint32_t total_size =
 				ROCKSDB_NAMESPACE::VarintLength(key_size) + key_size +
 				ROCKSDB_NAMESPACE::VarintLength(version_size) + version_size;
-		if (total_size < (uint32_t)sizeof(space_)) {
+		if (total_size <= (uint32_t)sizeof(space_)) {
 			key_buff_ = space_;
 		} else {
 			key_buff_ = new char[total_size];
@@ -49,6 +48,24 @@ class SkipListLookupKey {
 	char space_[100];
 };
 
+class AllocatorForSkipList : public ROCKSDB_NAMESPACE::Allocator {
+ public:
+	AllocatorForSkipList(MemoryAllocator* memory_allocator)
+			: memory_allocator_(memory_allocator) {}
+	~AllocatorForSkipList() {}
+
+  char* Allocate(size_t bytes) {
+		return memory_allocator_->Allocate(bytes);
+	}
+
+  char* AllocateAligned(size_t bytes) {
+		return memory_allocator_->AllocateAligned(bytes);
+	}
+
+ private:
+	MemoryAllocator* memory_allocator_;
+};
+
 // key format:
 // |key len|key bytes|version len|version bytes|type|value len|value bytes|
 class SkipListKeyComparator : ROCKSDB_NAMESPACE::KeyComparator {
@@ -72,29 +89,28 @@ class SkipListKeyComparator : ROCKSDB_NAMESPACE::KeyComparator {
 
 class SkipListBackedRep {
  public:
-	SkipListBackedRep(const MultiVersionsManager* multi_versions_manager)
+	SkipListBackedRep(const MultiVersionsManager* multi_versions_manager,
+										MemoryAllocator* memory_allocator)
 			: multi_versions_manager_(multi_versions_manager),
 				comparator_(multi_versions_manager),
-			  allocator_(),
-				skiplist_rep_(comparator_, &allocator_),
-				num_entries_(0),
-				num_deletes_(0),
-				raw_data_size_(0) {}
+			  allocator_(memory_allocator),
+				skiplist_rep_(comparator_, &allocator_) {}
 	~SkipListBackedRep() {}
 
-	Status Insert(const std::string& key, const std::string& value,
-							  Version* version, ValueType type);
+	Status Insert(const std::string& key,
+								const std::string& value,
+								ValueType value_type,
+							  const Version& version);
 	
-	Status Get(const std::string& key, const Snapshot& read_snapshot,
-						 std::string* value);
+	Status Get(const std::string& key,
+						 std::string* value,
+						 const Snapshot& read_snapshot);
 
-	void Dump(std::stringstream* oss, const size_t dump_count = -1);
+	uint64_t Dump(std::stringstream* oss, const size_t dump_count = -1);
 
-	uint64_t RawDataSize() const {
-		return raw_data_size_;
-	}
  private:
-	bool ValidateVisibility(const Version& version, const Snapshot& snapshot,
+	bool ValidateVisibility(const Version& version,
+													const Snapshot& snapshot,
 													Status* status) {
 		assert(status);
 		bool found = true;
@@ -120,21 +136,12 @@ class SkipListBackedRep {
 		return found;
 	}
 
-	void RecordRawDataSize(const std::string& key, const std::string& value) {
-		raw_data_size_ += key.size();
-		raw_data_size_ += value.size();
-	}
-
 	const MultiVersionsManager* multi_versions_manager_;
 	SkipListKeyComparator comparator_;
-	MemoryAllocator allocator_;
+	AllocatorForSkipList allocator_;
 	using SkipListRep =
 			ROCKSDB_NAMESPACE::InlineSkipList<const SkipListKeyComparator&>;
 	SkipListRep skiplist_rep_;
-
-	uint64_t num_entries_;
-	uint64_t num_deletes_;
-	uint64_t raw_data_size_;	// the successfully inserted raw KV pairs size
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

@@ -1,15 +1,15 @@
-#include "skiplist_rep.h"
+#include "skiplist_backed_mvcc_wb.h"
 #include "third-party/gtest/gtest.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class SkipListRepTest : public testing::Test {
+class SkipListBackedMVCCWBTest : public testing::Test {
  public:
-  SkipListRepTest() {}
-  ~SkipListRepTest() {}
+  SkipListBackedMVCCWBTest() {}
+  ~SkipListBackedMVCCWBTest() {}
 };
 
-TEST_F(SkipListRepTest, BasicRead) {
+TEST_F(SkipListBackedMVCCWBTest, BasicRead) {
 
 }
 

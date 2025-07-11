@@ -4,10 +4,11 @@
 
 #include "write_queue.h"
 #include "write_batch.h"
-#include "skiplist_rep.h"
 #include "include/transaction_store.h"
 #include "include/multi_versions.h"
 #include "include/txn_lock_manager.h"
+#include "include/staging_write.h"
+#include "include/mvcc_write_buffer.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -41,7 +42,9 @@ class MVCCTxnStore : public TransactionStore {
       				 const TransactionStoreOptions& txn_store_options,
       				 const MultiVersionsManagerFactory& multi_versions_mgr_factory,
       				 const TxnLockManagerFactory& txn_lock_mgr_factory,
-      				 TransactionFactory* txn_factory);
+      				 TransactionFactory* txn_factory,
+							 StagingWriteFactory* staging_write_factory,
+							 const MVCCWriteBufferFactory& mvcc_write_buffer_factory);
   virtual ~MVCCTxnStore() {}
 
   virtual Status Put(const WriteOptions& write_options,
@@ -63,11 +66,11 @@ class MVCCTxnStore : public TransactionStore {
   void UnLock(const std::string& key);
 
 	void DumpKVPairs(std::stringstream* oss, const size_t dump_count = -1) {
-		skiplist_backed_rep_.Dump(oss, dump_count);
+		mvcc_write_buffer_->Dump(oss, dump_count);
 	}
 
 	uint64_t RawDataSize() const {
-		return skiplist_backed_rep_.RawDataSize();
+		return mvcc_write_buffer_->RawDataSize();
 	}
 
 	void RecoverMultiVersionsManagerFrom(const Version& orig) {
@@ -107,8 +110,9 @@ class MVCCTxnStore : public TransactionStore {
 	std::unique_ptr<SnapshotManager> snapshot_manager_;
 	std::unique_ptr<TxnLockManager> txn_lock_manager_;
 	std::unique_ptr<TransactionFactory> txn_factory_;
+	std::unique_ptr<StagingWriteFactory> staging_write_factory_;
 
-	SkipListBackedRep skiplist_backed_rep_;
+	std::unique_ptr<MVCCWriteBuffer> mvcc_write_buffer_;
 
 	// first write queue: can be used to deal with both write buffer relative and
 	// non write buffer relative operation, like WAL persisting, write buffer

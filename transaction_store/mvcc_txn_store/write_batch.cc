@@ -26,21 +26,4 @@ Status WriteBatch::Iterate(Handler* handler) {
   return s;
 }
 
-Status SkipListInsertHandler::Put(
-    const std::string& key, const std::string& value) {
-  MaybeAdvanceVersion();
-  Status s = skiplist_backed_rep_->Insert(
-      key, value, started_version_, kTypeValue);
-  is_first_iterated_entry_ = false;
-  return s;
-}
-
-Status SkipListInsertHandler::Delete(const std::string& key) {
-  MaybeAdvanceVersion();
-  Status s = skiplist_backed_rep_->Insert(
-      key, "", started_version_, kTypeDeletion);
-  is_first_iterated_entry_ = false;
-  return s;
-}
-
 }   // namespace MULTI_VERSIONS_NAMESPACE

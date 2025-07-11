@@ -18,21 +18,30 @@ class PessimisticTxnTestsBase {
     StoreOptions store_options;
     TransactionStoreOptions txn_store_options;
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
+    SkipListBackedMVCCWriteBufferFactory mvcc_write_buffer_factory;
     store_options.enable_two_write_queues = enable_two_write_queues_;
     if (write_policy_ == WRITE_COMMITTED) {
       txn_store_impl_ =
           new WriteCommittedTxnStore(store_options,
                                      txn_store_options,
+                                     WriteCommittedMultiVersionsManagerFactory(
+                                        store_options.enable_two_write_queues),
                                      txn_lock_mgr_factory,
-                                     new WriteCommittedTransactionFactory());
+                                     new WriteCommittedTransactionFactory(),
+                                     new OrderedMapBackedStagingWriteFactory(),
+                                     mvcc_write_buffer_factory);
     } else if (write_policy_ == WRITE_PREPARED) {
       CommitTableOptions commit_table_options;
       txn_store_impl_ =
           new WritePreparedTxnStore(store_options,
                                     txn_store_options,
+                                    WritePreparedMultiVersionsManagerFactory(
+                                        commit_table_options,
+                                        store_options.enable_two_write_queues),
                                     txn_lock_mgr_factory,
                                     new WritePreparedTransactionFactory(),
-                                    commit_table_options);
+                                    new OrderedMapBackedStagingWriteFactory(),
+                                    mvcc_write_buffer_factory);
     } else {
       assert(false);
     }

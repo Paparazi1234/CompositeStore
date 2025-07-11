@@ -4,11 +4,10 @@
 #include <memory>
 
 #include "include/multi_versions_namespace.h"
-#include "third-party/rocksdb/allocator.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-class MemoryAllocator : public ROCKSDB_NAMESPACE::Allocator {
+class MemoryAllocator {
  public:
   MemoryAllocator() {
     active_block_remaining_bytes_ = sizeof(inline_block_);
@@ -20,8 +19,8 @@ class MemoryAllocator : public ROCKSDB_NAMESPACE::Allocator {
   }
   ~MemoryAllocator() {}
 
-  virtual char* Allocate(size_t bytes) override;
-  virtual char* AllocateAligned(size_t bytes) override;
+  char* Allocate(size_t bytes);
+  char* AllocateAligned(size_t bytes);
 
  private:
   char* AllocateFallback(size_t bytes, bool aligned);

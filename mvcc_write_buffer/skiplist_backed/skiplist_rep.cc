@@ -1,5 +1,7 @@
 #include "skiplist_rep.h"
 
+#include <sstream>
+
 #include "third-party/rocksdb/coding.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
@@ -45,10 +47,10 @@ int SkipListKeyComparator::CompareImpl(
 
 Status SkipListBackedRep::Insert(const std::string& key,
                                  const std::string& value,
-                                 Version* version,
-                                 ValueType type) {
+                                 ValueType value_type,
+                                 const Version& version) {
   std::string version_str;
-  version->EncodeTo(&version_str);
+  version.EncodeTo(&version_str);
   uint32_t key_size = static_cast<uint32_t>(key.size());
   uint32_t value_size = static_cast<uint32_t>(value.size());
   uint32_t version_size = static_cast<uint32_t>(version_str.size());
@@ -57,7 +59,7 @@ Status SkipListBackedRep::Insert(const std::string& key,
   uint32_t total_size =
       ROCKSDB_NAMESPACE::VarintLength(key_size) + key_size +
       ROCKSDB_NAMESPACE::VarintLength(version_size) + version_size +
-      ROCKSDB_NAMESPACE::VarintLength((uint32_t)type) +
+      ROCKSDB_NAMESPACE::VarintLength((uint32_t)value_type) +
       ROCKSDB_NAMESPACE::VarintLength(value_size) + value_size;
   char* buf = skiplist_rep_.AllocateKey(total_size);
   char* p = ROCKSDB_NAMESPACE::EncodeVarint32(buf, key_size);
@@ -66,24 +68,17 @@ Status SkipListBackedRep::Insert(const std::string& key,
   p = ROCKSDB_NAMESPACE::EncodeVarint32(p, version_size);
   memcpy(p, version_str.data(), version_size);
   p += version_size;
-  p = ROCKSDB_NAMESPACE::EncodeVarint32(p, (uint32_t)type);
+  p = ROCKSDB_NAMESPACE::EncodeVarint32(p, (uint32_t)value_type);
   p = ROCKSDB_NAMESPACE::EncodeVarint32(p, value_size);
   memcpy(p, value.data(), value_size);
   assert((uint32_t)(p + value_size - buf) == total_size);
   bool inserted = skiplist_rep_.Insert(buf);
-  if (inserted) {
-    num_entries_++;
-    if (type == kTypeDeletion) {
-      num_deletes_++;
-    }
-    RecordRawDataSize(key, value);
-  }
   return inserted ? Status::OK() : Status::TryAgain(); 
 }
 
 Status SkipListBackedRep::Get(const std::string& key,
-                              const Snapshot& read_snapshot,
-                              std::string* value) {
+                              std::string* value,
+                              const Snapshot& read_snapshot) {
   value->clear();
   std::unique_ptr<const Version>
       max_version(read_snapshot.MaxVersionInSnapshot());
@@ -155,7 +150,8 @@ void ParseOneKVPair(const char* entry, std::string* key, std::string* value,
 }
 }  // anonymous namespace
 
-void SkipListBackedRep::Dump(std::stringstream* oss, const size_t dump_count) {
+uint64_t SkipListBackedRep::Dump(std::stringstream* oss,
+                                 const size_t dump_count) {
   std::string key, value, version, type_str;
   uint32_t type;
   SkipListRep::Iterator iter(&skiplist_rep_);
@@ -173,7 +169,7 @@ void SkipListBackedRep::Dump(std::stringstream* oss, const size_t dump_count) {
     }
     count++;
   }
-  *oss<<"  Total count in store: "<<num_entries_<<", dump count: "<<count<<"\n";
+  return count;
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

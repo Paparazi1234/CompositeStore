@@ -23,21 +23,32 @@ class MVCCTxnStoreFactory : public TxnStoreFactory {
       const StoreTraits& store_traits) const override {
     MVCCTxnStore* txn_store = nullptr;
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
+    SkipListBackedMVCCWriteBufferFactory mvcc_write_buffer_factory;
     switch (store_traits.txn_write_policy) {
       case WRITE_COMMITTED:
         txn_store =
-            new WriteCommittedTxnStore(store_options,
-                                       txn_store_options,
-                                       txn_lock_mgr_factory,
-                                       new WriteCommittedTransactionFactory());
+            new WriteCommittedTxnStore(
+                store_options,
+                txn_store_options,
+                WriteCommittedMultiVersionsManagerFactory(
+                    store_options.enable_two_write_queues),
+                txn_lock_mgr_factory,
+                new WriteCommittedTransactionFactory(),
+                new OrderedMapBackedStagingWriteFactory(),
+                mvcc_write_buffer_factory);
         break;
       case WRITE_PREPARED:
         txn_store =
-            new WritePreparedTxnStore(store_options,
-                                      txn_store_options,
-                                      txn_lock_mgr_factory,
-                                      new WritePreparedTransactionFactory(),
-                                      store_traits.commit_table_options);
+            new WritePreparedTxnStore(
+                store_options,
+                txn_store_options,
+                WritePreparedMultiVersionsManagerFactory(
+                    store_traits.commit_table_options,
+                    store_options.enable_two_write_queues),
+                txn_lock_mgr_factory,
+                new WritePreparedTransactionFactory(),
+                new OrderedMapBackedStagingWriteFactory(),
+                mvcc_write_buffer_factory);
         break;
       default:
         txn_store = nullptr;

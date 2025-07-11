@@ -7,14 +7,18 @@ MVCCTxnStore::MVCCTxnStore(
     const TransactionStoreOptions& txn_store_options,
     const MultiVersionsManagerFactory& multi_versions_mgr_factory,
     const TxnLockManagerFactory& txn_lock_mgr_factory,
-    TransactionFactory* txn_factory)
+    TransactionFactory* txn_factory,
+    StagingWriteFactory* staging_write_factory,
+    const MVCCWriteBufferFactory& mvcc_write_buffer_factory)
       : multi_versions_manager_(
             multi_versions_mgr_factory.CreateMultiVersionsManager()),
         snapshot_manager_(multi_versions_mgr_factory.CreateSnapshotManager(
             multi_versions_manager_.get())),
         txn_lock_manager_(txn_lock_mgr_factory.CreateTxnLockManager()),
         txn_factory_(txn_factory),
-        skiplist_backed_rep_(multi_versions_manager_.get()),
+        staging_write_factory_(staging_write_factory),
+        mvcc_write_buffer_(mvcc_write_buffer_factory.CreateMVCCWriteBuffer(
+            multi_versions_manager_.get())),
         first_write_queue_(multi_versions_manager_.get()),
         second_write_queue_(multi_versions_manager_.get()) {
   (void)store_options;
@@ -74,6 +78,49 @@ void MVCCTxnStore::UnLock(const std::string& key) {
   txn_lock_manager_->UnLock(key);
 }
 
+namespace {
+class InsertMVCCWriteBufferHandler : public WriteBatch::Handler {
+ public:
+  InsertMVCCWriteBufferHandler(MVCCWriteBuffer* mvcc_write_buffer,
+                               Version* started_version,
+                               uint64_t version_inc)
+      : mvcc_write_buffer_(mvcc_write_buffer),
+        started_version_(started_version),
+        version_inc_(version_inc) {
+    assert(started_version_);
+    assert(version_inc_ > 0);
+  }
+  ~InsertMVCCWriteBufferHandler() {}
+
+  Status Put(const std::string& key, const std::string& value) override {
+    MaybeAdvanceVersion();
+    Status s = mvcc_write_buffer_->Insert(key, value, kTypeValue,
+                                          *started_version_);
+    is_first_iterated_entry_ = false;
+    return s;
+  }
+
+  Status Delete(const std::string& key) override {
+    MaybeAdvanceVersion();
+    Status s = mvcc_write_buffer_->Insert(key, "", kTypeDeletion,
+                                          *started_version_);
+    is_first_iterated_entry_ = false;
+    return s;
+  }
+
+ private:
+  void MaybeAdvanceVersion() {
+    if (!is_first_iterated_entry_ && version_inc_ > 1) {
+      started_version_->IncreaseByOne();
+    }
+  }
+  MVCCWriteBuffer* mvcc_write_buffer_;
+  Version* started_version_;
+  uint64_t version_inc_;
+  bool is_first_iterated_entry_ = true;
+};
+}   // anonymous namespace
+
 Status MVCCTxnStore::WriteInternal(
     const WriteOptions& write_options,
     WriteBatch* write_batch,
@@ -100,8 +147,9 @@ Status MVCCTxnStore::WriteInternal(
       return s;
     }
   }
-  SkipListInsertHandler handler(&skiplist_backed_rep_, allocated_started,
-                                version_inc);
+  InsertMVCCWriteBufferHandler handler(mvcc_write_buffer_.get(),
+                                       allocated_started,
+                                       version_inc);
   // insert write buffer
   s = write_batch->Iterate(&handler);
   // after insert write buffer
@@ -128,7 +176,7 @@ Status MVCCTxnStore::GetInternal(const ReadOptions& read_options,
     read_snapshot = snapshot_tmp.get();
   }
   assert(read_snapshot != nullptr);
-  return skiplist_backed_rep_.Get(key, *read_snapshot, value);
+  return mvcc_write_buffer_->Get(key, value, *read_snapshot);
 }
 
 Transaction* MVCCTxnStore::BeginInternalTransaction(

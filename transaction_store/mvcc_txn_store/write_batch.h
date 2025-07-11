@@ -4,7 +4,8 @@
 #include <string>
 #include <assert.h>
 
-#include "skiplist_rep.h"
+#include "include/format.h"
+#include "include/status.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -85,33 +86,6 @@ class WriteBatch {
   // good with it
   using BufferedWrites = std::map<std::string, BufferedWrite>;
   BufferedWrites buffered_writes_;
-};
-
-class SkipListInsertHandler : public WriteBatch::Handler {
- public:
-  SkipListInsertHandler(SkipListBackedRep* skiplist_backed_rep,
-      Version* started_version, uint64_t version_inc)
-      : skiplist_backed_rep_(skiplist_backed_rep),
-        started_version_(started_version),
-        version_inc_(version_inc) {
-    assert(started_version_);
-    assert(version_inc_ > 0);
-  }
-  ~SkipListInsertHandler() {}
-
-  virtual Status Put(const std::string& key, const std::string& value) override;
-  virtual Status Delete(const std::string& key) override;
-
- private:
-  void MaybeAdvanceVersion() {
-    if (!is_first_iterated_entry_ && version_inc_ > 1) {
-      started_version_->IncreaseByOne();
-    }
-  }
-  SkipListBackedRep* skiplist_backed_rep_;
-  Version* started_version_;
-  uint64_t version_inc_;
-  bool is_first_iterated_entry_ = true;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

@@ -10,6 +10,9 @@ set(TXN_LOCK_MANAGER_SHARED_LIB txn_lock_manager-shared)
 # staging write lib building name
 set(STAGING_WRITE_SHARED_LIB staging_write-shared)
 
+# mvcc write buffer lib building name
+set(MVCC_WRITE_BUFFER_SHARED_LIB mvcc_write_buffer-shared)
+
 # transaction lib building names
 set(MVCC_TRANSACTION_SHARED_LIB mvcc_transaction-shared)
 set(TRANSACTION_SHARED_LIB transaction-shared)
