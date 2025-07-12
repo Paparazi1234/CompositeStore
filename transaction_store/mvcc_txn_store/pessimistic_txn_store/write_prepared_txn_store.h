@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pessimistic_txn_store.h"
-#include "multi_version/sequence_based/infinite_commit_table.h"
-#include "multi_version/sequence_based/seq_based_snapshot.h"
+#include "multi_version/sequence_based/infinite_commit_table.h"   // Todo: 解除该依赖
+#include "multi_version/sequence_based/seq_based_snapshot.h"      // Todo: 解除该依赖
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -34,8 +34,8 @@ class WritePreparedTxnStore : public PessimisticTxnStore {
       TransactionOptions txn_options;
       Transaction* txn = txn_store_->BeginTransaction(write_options,
                                                       txn_options, nullptr);
-      // commit(without prepare) an empty write batch will consume a seq
-      // commit(with prepare) an empty write batch will consume two seq
+      // commit(without prepare) an empty staging write will consume a seq
+      // commit(with prepare) an empty staging write will consume two seq
       Status s = txn->Commit();
       assert(s.IsOK());
       delete txn;
@@ -64,8 +64,8 @@ class WritePreparedTxnStore : public PessimisticTxnStore {
         multi_version_manager_impl->GetSnapshotCreationCallback());
   }
 
-  virtual uint64_t CalculateNumVersionsForWriteBatch(
-			const WriteBatch* write_batch) const override {
+  uint64_t CalculateNumVersionsForStagingWrite(
+			const StagingWrite* staging_write) const override {
     // 1 we employ seq per batch in WritePrepared policy
     // 2 when we commit an empty txn write, it will also consume a version
 		return 1;

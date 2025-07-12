@@ -388,7 +388,7 @@ uint64_t InfiniteCommitTable::CalculateNewHistoryBoundry(uint64_t based) const {
     new_history_boundary =
         std::min(based + HISTORY_BOUNDARY_INC_STEP, max_committed_version - 1);
   } else {
-    // legit when a commit entry in a write batch overwrite the previous one
+    // legit when a commit entry in a staging write overwrite the previous one
     new_history_boundary = based;
   }
   return new_history_boundary;

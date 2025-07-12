@@ -15,17 +15,9 @@
 24 考虑将公用变量的thread local storage改造
 25 system clock实现
 26 事务benchmark
-
-27 内部架构解耦
-  1、 TransactionStore 以 MVCC进行分类：MVCCTransactionStore，而不是以writerbuffer的实现进行分类，如当前的：skiplistback
-  2、事务采用TransactionFactory创建对应的实现，TransactionStore部分实现更加纯净
-  3、添加WriterBuffer层接口，以对接不同的实现，如当前的skiplist
-  4、WriteBatch层添加接口（接口名叫TxnStagingWrite），以对接不同的实现，如当前的unorderedmap
-
 28 事务锁实现
-
 29 multi versions 模块内部进一步细化划分
-
+30 减少类成员变脸的直接使用，改用Get接口获取：如，事务中的txn_store_、staging_write_的访问
 
 
 TodoList表头：

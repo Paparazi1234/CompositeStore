@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "write_queue.h"
-#include "write_batch.h"
 #include "include/transaction_store.h"
 #include "include/multi_versions.h"
 #include "include/txn_lock_manager.h"
@@ -85,8 +84,12 @@ class MVCCTxnStore : public TransactionStore {
 		return snapshot_manager_.get();
 	}
 
+	StagingWriteFactory* GetStagingWriteFactory() {
+		return staging_write_factory_.get();
+	}
+
 	Status WriteInternal(const WriteOptions& write_options,
-											 WriteBatch* write_batch,
+											 StagingWrite* staging_write,
 											 MaintainVersionsCallbacks& maintain_versions_callbacks,
 		  							   WriteQueue& write_queue);
 
@@ -94,11 +97,11 @@ class MVCCTxnStore : public TransactionStore {
              				 const std::string& key,
 										 std::string* value);
 
-	virtual uint64_t CalculateNumVersionsForWriteBatch(
-			const WriteBatch* write_batch) const {
-		assert(write_batch->Count() > 0);
+	virtual uint64_t CalculateNumVersionsForStagingWrite(
+			const StagingWrite* staging_write) const {
+		assert(staging_write->Count() > 0);
 		// default: version per key
-		return write_batch->Count();
+		return staging_write->Count();
 	}
 
 	void TEST_Crash() override {

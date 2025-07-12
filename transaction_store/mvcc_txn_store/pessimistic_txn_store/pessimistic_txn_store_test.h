@@ -106,9 +106,9 @@ class CommonPessimisticTxnTests : public PessimisticTxnTestsBase {
   void CommitWithoutPrepare();
   void RollbackWithPrepare();
   void RollbackWithoutPrepare();
-  void PrepareEmptyWriteBatch();
-  void CommitEmptyWriteBatch();
-  void RollbackEmptyWriteBatch();
+  void PrepareEmptyStagingWrite();
+  void CommitEmptyStagingWrite();
+  void RollbackEmptyStagingWrite();
   void InterleavingPrepareCommitBetweenMultiTxns();
   void InterleavingPrepareRollbackBetweenMultiTxns();
   void ReadUnderSnapshot();
@@ -150,9 +150,9 @@ class InspectPessimisticTxnTests : public PessimisticTxnTestsBase {
   virtual ~InspectPessimisticTxnTests() {}
 
   void VersionIncrement();
-  void VersionIncrementForPreparingOfEmptyWriteBatch();
-  void VersionIncrementForCommittingOfEmptyWriteBatch();
-  void VersionIncrementForRollbackingOfEmptyWriteBatch();
+  void VersionIncrementForPreparingOfEmptyStagingWrite();
+  void VersionIncrementForCommittingOfEmptyStagingWrite();
+  void VersionIncrementForRollbackingOfEmptyStagingWrite();
   void WriteBufferInsertTimingBetweenDifferentWritePolicy();
 
  private:
@@ -606,7 +606,7 @@ void CommonPessimisticTxnTests::RollbackWithoutPrepare() {
   delete txn;
 }
 
-void CommonPessimisticTxnTests::PrepareEmptyWriteBatch() {
+void CommonPessimisticTxnTests::PrepareEmptyStagingWrite() {
   WriteOptions write_options;
   ReadOptions read_options;
   std::string value;
@@ -617,7 +617,7 @@ void CommonPessimisticTxnTests::PrepareEmptyWriteBatch() {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  // prepare an empty write batch
+  // prepare an empty staging write
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
 
@@ -629,7 +629,7 @@ void CommonPessimisticTxnTests::PrepareEmptyWriteBatch() {
   delete txn;
 }
 
-void CommonPessimisticTxnTests::CommitEmptyWriteBatch() {
+void CommonPessimisticTxnTests::CommitEmptyStagingWrite() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -641,7 +641,7 @@ void CommonPessimisticTxnTests::CommitEmptyWriteBatch() {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  // commit(with prepare) an empty write batch
+  // commit(with prepare) an empty staging write
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
   s = txn->Commit();
@@ -656,7 +656,7 @@ void CommonPessimisticTxnTests::CommitEmptyWriteBatch() {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  // commit(without prepare) an empty write batch
+  // commit(without prepare) an empty staging write
   s = txn->Commit();
   ASSERT_TRUE(s.IsOK());
 
@@ -667,7 +667,7 @@ void CommonPessimisticTxnTests::CommitEmptyWriteBatch() {
   delete txn;
 }
 
-void CommonPessimisticTxnTests::RollbackEmptyWriteBatch() {
+void CommonPessimisticTxnTests::RollbackEmptyStagingWrite() {
   TransactionOptions txn_options;
   WriteOptions write_options;
   ReadOptions read_options;
@@ -679,7 +679,7 @@ void CommonPessimisticTxnTests::RollbackEmptyWriteBatch() {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  // rollback(without prepare) an empty write batch
+  // rollback(without prepare) an empty staging write
   s = txn->Rollback();
   ASSERT_TRUE(s.IsOK());
 
@@ -692,7 +692,7 @@ void CommonPessimisticTxnTests::RollbackEmptyWriteBatch() {
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  // rollback(with prepare) an empty write batch
+  // rollback(with prepare) an empty staging write
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
   s = txn->Rollback();
@@ -1315,7 +1315,7 @@ void InspectPessimisticTxnTests::VersionIncrement() {
 }
 
 void InspectPessimisticTxnTests::
-    VersionIncrementForPreparingOfEmptyWriteBatch() {
+    VersionIncrementForPreparingOfEmptyStagingWrite() {
   std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare
       {{{0, 0, 0}, {1, 0, 1}},   // prepare() and 2-WQ
@@ -1340,7 +1340,7 @@ void InspectPessimisticTxnTests::
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   ASSERT_TRUE(txn != nullptr);
 
-  // prepare an empty write batch
+  // prepare an empty staging write
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
   // After prepare
@@ -1351,7 +1351,7 @@ void InspectPessimisticTxnTests::
 }
 
 void InspectPessimisticTxnTests::
-    VersionIncrementForCommittingOfEmptyWriteBatch() {
+    VersionIncrementForCommittingOfEmptyStagingWrite() {
   std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare after-commit
       {{{0, 0, 0}, {1, 0, 1}, {1, 2, 2}},  // prepare() and 2-WQ
@@ -1381,7 +1381,7 @@ void InspectPessimisticTxnTests::
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   ASSERT_TRUE(txn != nullptr);
 
-  // commit an empty write batch
+  // commit an empty staging write
   if (with_prepare_) {
     // Prepare transaction
     s = txn->Prepare();
@@ -1406,7 +1406,7 @@ void InspectPessimisticTxnTests::
 }
 
 void InspectPessimisticTxnTests::
-    VersionIncrementForRollbackingOfEmptyWriteBatch() {
+    VersionIncrementForRollbackingOfEmptyStagingWrite() {
     std::vector<std::vector<SeqIncInfos>> expected_of_write_prepared =
   //  before-txn  after-prepare after-commit
       {{{0, 0, 0}, {1, 0, 1}, {2, 3, 3}},  // prepare() and 2-WQ
@@ -1436,7 +1436,7 @@ void InspectPessimisticTxnTests::
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   ASSERT_TRUE(txn != nullptr);
 
-  // rollback an empty write batch
+  // rollback an empty staging write
   if (with_prepare_) {
     // Prepare transaction
     s = txn->Prepare();

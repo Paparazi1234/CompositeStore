@@ -50,10 +50,10 @@ class MVCCTransaction : public Transaction {
 
   void ClearTxnLocks();
   virtual void Clear() {
-    // clear txn locks before clearing write_batch_, because clearing txn locks
-    // depends on the write_batch_
+    // clear txn locks before clearing staging_write_, because clearing txn
+    // locks depends on the staging_write_
     ClearTxnLocks();
-    write_batch_.Clear();
+    staging_write_->Clear();
   }
 
   bool IsInWriteStage() {
@@ -64,7 +64,7 @@ class MVCCTransaction : public Transaction {
   std::atomic<TransactionState> txn_state_;
 
   WriteOptions write_options_;
-  WriteBatch write_batch_;
+  std::unique_ptr<StagingWrite> staging_write_ = nullptr;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

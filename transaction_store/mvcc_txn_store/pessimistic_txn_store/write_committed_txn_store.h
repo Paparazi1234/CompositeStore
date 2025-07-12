@@ -21,9 +21,9 @@ class WriteCommittedTxnStore : public PessimisticTxnStore {
   ~WriteCommittedTxnStore() {}
 
  protected:
-  virtual uint64_t CalculateNumVersionsForWriteBatch(
-			const WriteBatch* write_batch) const override {
-    uint64_t count = write_batch->Count();
+  uint64_t CalculateNumVersionsForStagingWrite(
+			const StagingWrite* staging_write) const override {
+    uint64_t count = staging_write->Count();
     // we employ version per key in WriteCommitted policy
     if (count == 0) {
       // the commitment of an empty txn write will consume a version in

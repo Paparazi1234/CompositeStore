@@ -79,7 +79,7 @@ void MVCCTxnStore::UnLock(const std::string& key) {
 }
 
 namespace {
-class InsertMVCCWriteBufferHandler : public WriteBatch::Handler {
+class InsertMVCCWriteBufferHandler : public StagingWrite::Handler {
  public:
   InsertMVCCWriteBufferHandler(MVCCWriteBuffer* mvcc_write_buffer,
                                Version* started_version,
@@ -123,7 +123,7 @@ class InsertMVCCWriteBufferHandler : public WriteBatch::Handler {
 
 Status MVCCTxnStore::WriteInternal(
     const WriteOptions& write_options,
-    WriteBatch* write_batch,
+    StagingWrite* staging_write,
     MaintainVersionsCallbacks& maintain_versions_callbacks,
     WriteQueue& write_queue) {
   ManagedWriteQueue managed_write_lock = ManagedWriteQueue(&write_queue);
@@ -136,7 +136,7 @@ Status MVCCTxnStore::WriteInternal(
     }
   }
   Version* version_for_insert = write_queue.VersionForInsert();
-  uint64_t version_inc = CalculateNumVersionsForWriteBatch(write_batch);
+  uint64_t version_inc = CalculateNumVersionsForStagingWrite(staging_write);
   Version* allocated_started =
       multi_versions_manager_->AllocateVersion(version_inc, version_for_insert);
   // before insert write buffer
@@ -151,7 +151,7 @@ Status MVCCTxnStore::WriteInternal(
                                        allocated_started,
                                        version_inc);
   // insert write buffer
-  s = write_batch->Iterate(&handler);
+  s = staging_write->Iterate(&handler);
   // after insert write buffer
   if (s.IsOK() &&
       maintain_versions_callbacks.NeedMaintainAfterInsertWriteBuffer()) {

@@ -12,19 +12,19 @@ class OrderedMapBackedStagingWriteTest : public testing::Test {
 TEST_F(OrderedMapBackedStagingWriteTest, WriteToStagingWrite) {
   OrderedMapBackedStagingWrite sw;
 
-  // write to write batch
+  // write to staging write
   sw.Put("foo", "bar");
   sw.Put("foo1", "bar");
   sw.Delete("foo2");
   ASSERT_EQ(sw.Count(), 3ull);
 
-  // overwritten in write batch
+  // overwritten in staging write
   sw.Put("foo", "bar1");
   sw.Put("foo1", "bar1");
   sw.Delete("foo2");
   ASSERT_EQ(sw.Count(), 3ull);
 
-  // clear write batch
+  // clear staging write
   sw.Clear();
   ASSERT_TRUE(sw.IsEmpty());
 
@@ -44,7 +44,7 @@ TEST_F(OrderedMapBackedStagingWriteTest, ReadFromStagingWrite) {
   res = sw.Get("foo", &value);
   ASSERT_TRUE(res == StagingWrite::GetReault::kNotFound);
 
-  // read from write batch
+  // read from staging write
   sw.Put("foo", "bar");
   sw.Delete("foo1");
   res = sw.Get("foo", &value);
@@ -67,7 +67,7 @@ TEST_F(OrderedMapBackedStagingWriteTest, ReadFromStagingWrite) {
   res = sw.Get("foo1", &value);
   ASSERT_TRUE(res == StagingWrite::GetReault::kNotFound);
 
-  // read after reuse write batch
+  // read after reuse staging write
   sw.Put("foo2", "bar2");
   sw.Delete("foo3");
   res = sw.Get("foo2", &value);

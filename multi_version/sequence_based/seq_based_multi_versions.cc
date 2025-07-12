@@ -129,9 +129,9 @@ void WritePreparedMultiVersionsManager::BeginCommitVersions(
   uint64_t committed_seq = committed_impl->Seq();
   // commit the uncommitted versions to commit_table_ before insert write buffer
   // 1 when commit with prepare, the committed version comes from an internal
-  //   empty write batch;
+  //   empty staging write;
   // 2 when commit without prepare, the committed version comes from the txn's
-  //   own write batch
+  //   own staging write
   for (uint32_t i = 0; i < num_prepared_uncommitteds; ++i) {
     commit_table_.AddCommittedVersion(prepared_uncommitted_started_seq + i,
                                       committed_seq);
@@ -167,8 +167,8 @@ void WritePreparedMultiVersionsManager::BeginRollbackVersions(
     uint32_t num_rollbacked_uncommitteds) {
   // there must be some prepared uncommitted versions if we get to here
   assert(num_prepared_uncommitteds > 0);
-  // 1 the rollback write batch(without prepare) consume a version, or
-  // 2 the empty write batch for commit rollback write batch(with prepare)
+  // 1 the rollback staging write(without prepare) consume a version, or
+  // 2 the empty staging write for commit rollback staging write(with prepare)
   //   purpose consume a version
   assert(num_rollbacked_uncommitteds == 1);
   const SeqBasedVersion* prepared_uncommitted_started_impl =
@@ -188,12 +188,12 @@ void WritePreparedMultiVersionsManager::BeginRollbackVersions(
     commit_table_.AddCommittedVersion(prepared_uncommitted_started_seq + i,
                                       committed_seq);
   }
-  // then commit the versions of rollback write batch to commit_table_
-  // 1 when the rollback write batch went through an internal prepare stage,
-  //   the committed version comes from an internal empty write batch;
-  // 2 when the rollback write batch didn't go through an internal prepare
-  //   stage, the committed version comes from the rollback write batch;
-  // the prepared uncommitted versions and the rollback write batch share the
+  // then commit the versions of rollback staging write to commit_table_
+  // 1 when the rollback staging write went through an internal prepare stage,
+  //   the committed version comes from an internal empty staging write;
+  // 2 when the rollback staging write didn't go through an internal prepare
+  //   stage, the committed version comes from the rollback staging write;
+  // the prepared uncommitted versions and the rollback staging write share the
   // same committed version
   for (uint64_t j = 0; j < num_rollbacked_uncommitteds; ++j) {
     commit_table_.AddCommittedVersion(rollbacked_uncommitted_started_seq + j,
@@ -219,16 +219,16 @@ void WritePreparedMultiVersionsManager::EndRollbackVersions(
       rollbacked_uncommitted_started_impl->Seq();
 
   // advance max visible version after commit the versions of rollback write
-  // batch to commit_table_ and insert the rollback write batch to write buffer
+  // batch to commit_table_ and insert the rollback staging write to write buffer
   AdvanceMaxVisibleVersion(committed);
   // do cleanup
   // first cleanup the prepared uncommitted versions
   commit_table_.EraseUnCommittedVersion(prepared_uncommitted_started_seq,
                                         num_prepared_uncommitteds);
-  // then cleanup the uncommitted versions of rollback write batch if the
-  // rollback write batch went through a prepare stage
+  // then cleanup the uncommitted versions of rollback staging write if the
+  // rollback staging write went through a prepare stage
   if (num_rollbacked_uncommitteds > 0) {
-    // num_rollbacked_uncommitteds > 0: means the rollback write batch went
+    // num_rollbacked_uncommitteds > 0: means the rollback staging write went
     // through a prepare stage
     // otherwise, num_rollbacked_uncommitteds == 0: means the rollback write
     // batch didn't go through a prepare stage

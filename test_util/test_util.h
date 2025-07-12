@@ -10,8 +10,6 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-extern uint64_t SeededByThreadId();
-
 struct TxnTestsSetups {
   TxnStoreWritePolicy write_policy = WRITE_COMMITTED;
   bool enable_two_write_queues = false;

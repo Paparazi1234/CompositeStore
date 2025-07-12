@@ -73,7 +73,8 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
     txn_->GetPreparedUnCommittedSeqs(&prepared_uncommitted_started_seq,
                                      &num_prepared_uncommitted_seq);
     // there must have be something inserted during Prepare() even though we
-    // Prepare() an empty write batch(empty write batch also consume a version)
+    // Prepare() an empty staging write(empty staging write also consume a
+    // version)
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
     SeqBasedVersion
@@ -91,7 +92,8 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
     txn_->GetPreparedUnCommittedSeqs(&prepared_uncommitted_started_seq,
                                      &num_prepared_uncommitted_seq);
     // there must have be something inserted during Prepare() even though we
-    // Prepare() an empty write batch(empty write batch also consume a version)
+    // Prepare() an empty staging write(empty staging write also consume a
+    // version)
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
     SeqBasedVersion
@@ -134,7 +136,7 @@ class WPTxnMaintainVersionsCBForCommitWithoutPrepare :
     // currently committed == *version, since count == 1
     assert(committed.CompareWith(*version) == 0);
     // when commit without prepare takes effect: we just insert the committed
-    // versions of the txn's write batch to commit_table_
+    // versions of the txn's staging write to commit_table_
     // note that the prepared_uncommitted_started and committed are the same,
     // since the count is 1 currently
     const Version& prepared_uncommitted_started = *version;
@@ -181,12 +183,12 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
 
   Status BeforeInsertWriteBufferCallback(const Version* version,
 																				 uint32_t count) override {
-		// currently the rollback write batch consumes one version
+		// currently the rollback staging write consumes one version
     assert(count == 1);
     const SeqBasedVersion* version_impl =
         reinterpret_cast<const SeqBasedVersion*>(version);
-    // the rollback write batch goes through an internal prepare stage, so
-    // record the uncommitted versions info of the rollback write batch
+    // the rollback staging write goes through an internal prepare stage, so
+    // record the uncommitted versions info of the rollback staging write
     txn_->RecordRollbackedUnCommittedSeqs(version_impl->Seq(), count);
     const Version& rollbacked_uncommitted_started = *version;
     uint32_t num_rollbacked_uncommitteds = count;
@@ -197,7 +199,7 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
 	}
 
 	Status AfterInsertWriteBufferCallback(const Version* version) override {
-		// advance max readable version after insert the rollback write batch to
+		// advance max readable version after insert the rollback staging write to
     // write buffer
     const Version& end_uncommitted = *version;
     multi_versions_manager_->EndPrepareVersions(end_uncommitted);
@@ -226,7 +228,7 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
 
   Status BeforeInsertWriteBufferCallback(const Version* version,
 																				 uint32_t count) override {
-		// the internal empty write batch consumes one version
+		// the internal empty staging write consumes one version
     assert(count == 1);
     // calculate the final committed version
     SeqBasedVersion committed;
@@ -239,14 +241,14 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
     txn_->GetPreparedUnCommittedSeqs(&prepared_uncommitted_started_seq,
                                      &num_prepared_uncommitted_seq);
     // there must be some uncommitted version of Prepare() stage to rollback,
-    // even though we Prepare() an empty write batch during prepare stage
+    // even though we Prepare() an empty staging write during prepare stage
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
     uint64_t rollbacked_uncommitted_started_seq;
     uint32_t num_rollbacked_uncommitted_seq;
     txn_->GetRollackedUnCommittedSeqs(&rollbacked_uncommitted_started_seq,
                                       &num_rollbacked_uncommitted_seq);
-    // the rollback write batch went through prepare stage, so it's
+    // the rollback staging write went through prepare stage, so it's
     // rollbacked_uncommitted_started_seq and num_rollbacked_uncommitted_seq are
     // both not 0
     assert(rollbacked_uncommitted_started_seq > 0 &&
@@ -272,14 +274,14 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
     txn_->GetPreparedUnCommittedSeqs(&prepared_uncommitted_started_seq,
                                      &num_prepared_uncommitted_seq);
     // there must be some uncommitted version of Prepare() stage to rollback,
-    // even though we Prepare() an empty write batch during prepare stage
+    // even though we Prepare() an empty staging write during prepare stage
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
     uint64_t rollbacked_uncommitted_started_seq;
     uint32_t num_rollbacked_uncommitted_seq;
     txn_->GetRollackedUnCommittedSeqs(&rollbacked_uncommitted_started_seq,
                                       &num_rollbacked_uncommitted_seq);
-    // the rollback write batch went through prepare stage, so it's
+    // the rollback staging write went through prepare stage, so it's
     // rollbacked_uncommitted_started_seq and num_rollbacked_uncommitted_seq are
     // both not 0
     assert(rollbacked_uncommitted_started_seq > 0 &&
@@ -335,7 +337,7 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
     txn_->GetPreparedUnCommittedSeqs(&prepared_uncommitted_started_seq,
                                      &num_prepared_uncommitted_seq);
     // there must be some uncommitted version of Prepare() stage to rollback,
-    // even though we Prepare() an empty write batch during prepare stage
+    // even though we Prepare() an empty staging write during prepare stage
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
     SeqBasedVersion
@@ -359,14 +361,14 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
     txn_->GetPreparedUnCommittedSeqs(&prepared_uncommitted_started_seq,
                                      &num_prepared_uncommitted_seq);
     // there must be some uncommitted version of Prepare() stage to rollback,
-    // even though we Prepare() an empty write batch during prepare stage
+    // even though we Prepare() an empty staging write during prepare stage
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
     uint64_t rollbacked_uncommitted_started_seq;
     uint32_t num_rollbacked_uncommitted_seq;
     txn_->GetRollackedUnCommittedSeqs(&rollbacked_uncommitted_started_seq,
                                       &num_rollbacked_uncommitted_seq);
-    // the rollback write batch didn't go through prepare stage, so it's
+    // the rollback staging write didn't go through prepare stage, so it's
     // rollbacked_uncommitted_started_seq and num_rollbacked_uncommitted_seq are
     // both 0
     assert(rollbacked_uncommitted_started_seq == 0 &&
@@ -398,28 +400,28 @@ Status WritePreparedTransaction::PrepareImpl() {
       reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
   WPTxnMaintainVersionsCBForPrepare wp_maintain_versions_cb_for_prepare(this);
   return txn_store_->WriteInternal(write_options_,
-                                   &write_batch_,
+                                   staging_write_.get(),
                                    wp_maintain_versions_cb_for_prepare,
                                    store_impl->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 Status WritePreparedTransaction::CommitWithPrepareImpl() {
-  // use an empty write batch for commit purpose, it will consume a version;
-  // when we write an empty write batch in this way, it's will consume a 
+  // use an empty staging write for commit purpose, it will consume a version;
+  // when we write an empty staging write in this way, it's will consume a 
   // version, but we won't add a committed version to commit_table_ for it,
-  // while we commit an empty write batch through txn, it not only consumes a
+  // while we commit an empty staging write through txn, it not only consumes a
   // version but we add a committed version to commit_table_ for it;
   // that we don't add a committed version to commit_table_ for the
-  // empty_write_batch is fine, since we have advance max visible version in
+  // empty_staging_write is fine, since we have advance max visible version in
   // EndCommitVersions()
-  WriteBatch empty_write_batch;
+  StagingWrite* empty_staging_write = GetEmptyStagingWrite();
   WritePreparedTxnStore* store_impl =
       reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
   WPTxnMaintainVersionsCBForCommitWithPrepare
       wp_maintain_versions_cb_for_commit_with_prepare(this);
   return txn_store_->WriteInternal(
       write_options_,
-      &empty_write_batch,
+      empty_staging_write,
       wp_maintain_versions_cb_for_commit_with_prepare,
       store_impl->GetCommitQueue());   // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
@@ -436,52 +438,52 @@ Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
         wp_maintain_versions_cb_for_commit_without_prepare(this);
     return txn_store_->WriteInternal(
         write_options_,
-        &write_batch_,
+        staging_write_.get(),
         wp_maintain_versions_cb_for_commit_without_prepare,
         store_impl->GetCommitQueue());
   }
 
   // enable_two_write_queues == true
-  // first prepare: insert write batch into write buffer through an internal
+  // first prepare: insert staging write into write buffer through an internal
   // Prepare() stage
   WPTxnMaintainVersionsCBForPrepare wp_maintain_versions_cb_for_prepare(this);
   Status s = txn_store_->WriteInternal(write_options_,
-                                       &write_batch_,
+                                       staging_write_.get(),
                                        wp_maintain_versions_cb_for_prepare,
                                        store_impl->GetPrepareQueue());
   if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
     return s;
   }
   // then commit
-  // use an empty write batch for commit purpose, it will consume a version
-  // when we write an empty write batch in this way, it's will consume a 
+  // use an empty staging write for commit purpose, it will consume a version
+  // when we write an empty staging write in this way, it's will consume a 
   // version, but we won't add a committed version to commit_table_ for it,
-  // while we commit an empty write batch through txn, it not only consumes a
+  // while we commit an empty staging write through txn, it not only consumes a
   // version but we add a committed version to commit_table_ for it;
   // that we don't add a committed version to commit_table_ for the
-  // empty_write_batch is fine, since we have advance max visible version in
+  // empty_staging_write is fine, since we have advance max visible version in
   // EndCommitVersions()
-  WriteBatch empty_write_batch;
+  StagingWrite* empty_staging_write = GetEmptyStagingWrite();
   WPTxnMaintainVersionsCBForCommitWithPrepare
       wp_maintain_versions_cb_for_commit_with_prepare(this);
   return txn_store_->WriteInternal(
       write_options_,
-      &empty_write_batch,
+      empty_staging_write,
       wp_maintain_versions_cb_for_commit_with_prepare,
       store_impl->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
-class WritePreparedTransaction::RollbackWriteBatchBuilder :
-    public WriteBatch::Handler {
+class WritePreparedTransaction::RollbackStagingWriteBuilder :
+    public StagingWrite::Handler {
  public:
-  RollbackWriteBatchBuilder(WritePreparedTxnStore* txn_store,
-                            WriteBatch* rollback_write_batch)
-                            : snapshot_limit_max_(kSeqNumberLimitsMax),
-                              txn_store_(txn_store),
-                              rollback_write_batch_(rollback_write_batch) {
+  RollbackStagingWriteBuilder(WritePreparedTxnStore* txn_store,
+                              StagingWrite* rollback_staging_write)
+      : snapshot_limit_max_(kSeqNumberLimitsMax),
+        txn_store_(txn_store),
+        rollback_staging_write_(rollback_staging_write) {
     read_options_.snapshot = &snapshot_limit_max_;
   }
-  ~RollbackWriteBatchBuilder() {}
+  ~RollbackStagingWriteBuilder() {}
 
   Status Put(const std::string& key, const std::string& /*value*/) override {
     return GetLatestCommittedOfKey(key);
@@ -495,9 +497,9 @@ class WritePreparedTransaction::RollbackWriteBatchBuilder :
     std::string value;
     Status s = txn_store_->GetInternal(read_options_, key, &value);
     if (s.IsOK()) {
-      rollback_write_batch_->Put(key, value);
+      rollback_staging_write_->Put(key, value);
     } else if (s.IsNotFound()) {
-      rollback_write_batch_->Delete(key);
+      rollback_staging_write_->Delete(key);
       s = Status::OK();
     } else {
       assert(!s.IsTryAgain());
@@ -511,20 +513,23 @@ class WritePreparedTransaction::RollbackWriteBatchBuilder :
   // committed of target key 
   WPSeqBasedSnapshot snapshot_limit_max_;
   WritePreparedTxnStore* txn_store_;
-  WriteBatch* rollback_write_batch_;
+  StagingWrite* rollback_staging_write_;
 };
 
 Status WritePreparedTransaction::RollbackImpl() {
-  // build the rollback write batch
-  WriteBatch rollback_write_batch;
+  // build the rollback staging write
+  StagingWriteFactory* factory = GetTxnStore()->GetStagingWriteFactory();
+  std::unique_ptr<StagingWrite>
+      rollback_staging_write(factory->CreateStagingWrite());
   WritePreparedTxnStore* store_impl =
       reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
-  RollbackWriteBatchBuilder rollback_builder(store_impl, &rollback_write_batch);
-  Status s = write_batch_.Iterate(&rollback_builder);
+  RollbackStagingWriteBuilder
+      rollback_staging_write_builder(store_impl, rollback_staging_write.get());
+  Status s = staging_write_->Iterate(&rollback_staging_write_builder);
   if (!s.IsOK()) {
     return s;
   }
-  // insert the rollback_write_batch into write buffer to eliminate this txn's
+  // insert the rollback_staging_write into write buffer to eliminate this txn's
   // footprint in the write buffer
 
   bool enable_two_write_queues = store_impl->IsEnableTwoWriteQueues();
@@ -536,38 +541,38 @@ Status WritePreparedTransaction::RollbackImpl() {
         wp_maintain_versions_cb_for_rollback_without_prepare(this);
     return txn_store_->WriteInternal(
         write_options_,
-        &rollback_write_batch,
+        rollback_staging_write.get(),
         wp_maintain_versions_cb_for_rollback_without_prepare,
         store_impl->GetCommitQueue());
   }
 
   // enable_two_write_queues == true
-  // first prepare: insert rollback write batch into write buffer
+  // first prepare: insert rollback staging write into write buffer
   WPTxnMaintainVersionsCBForPrepareForRollback
       wp_maintain_versions_cb_for_prepare_for_rollback(this);
   s = txn_store_->WriteInternal(
       write_options_,
-      &rollback_write_batch,
+      rollback_staging_write.get(),
       wp_maintain_versions_cb_for_prepare_for_rollback,
       store_impl->GetPrepareQueue());
   if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
     return s;
   }
   // then commit
-  // use an empty write batch for commit purpose, it will consume a version
-  // when we write an empty write batch in this way, it's will consume a 
+  // use an empty staging write for commit purpose, it will consume a version
+  // when we write an empty staging write in this way, it's will consume a 
   // version, but we won't add a committed version to commit_table_ for it,
-  // while we commit an empty write batch through txn, it not only consumes a
+  // while we commit an empty staging write through txn, it not only consumes a
   // version but we add a committed version to commit_table_ for it;
   // that we don't add a committed version to commit_table_ for the
-  // empty_write_batch is fine, since we have advance max visible version in
+  // empty_staging_write is fine, since we have advance max visible version in
   // EndCommitVersions()
-  WriteBatch empty_write_batch;
+  StagingWrite* empty_staging_write = GetEmptyStagingWrite();
   WPTxnMaintainVersionsCBForRollbackWithPrepare
       wp_maintain_versions_cb_for_rollback_with_prepare(this);
   return txn_store_->WriteInternal(
       write_options_,
-      &empty_write_batch,
+      empty_staging_write,
       wp_maintain_versions_cb_for_rollback_with_prepare,
       store_impl->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }

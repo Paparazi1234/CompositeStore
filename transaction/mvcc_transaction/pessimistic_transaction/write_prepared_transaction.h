@@ -38,12 +38,22 @@ class WritePreparedTransaction : public PessimisticTransaction {
     *count = num_rollbacked_uncommitted_seq_;
   }
 
-  class RollbackWriteBatchBuilder;
+  class RollbackStagingWriteBuilder;
  private:
   virtual Status PrepareImpl() override;
   virtual Status CommitWithPrepareImpl() override;
   virtual Status CommitWithoutPrepareImpl() override;
   virtual Status RollbackImpl() override;
+
+  StagingWrite* GetEmptyStagingWrite() {
+    if (empty_staging_write_.get() == nullptr) {
+      StagingWriteFactory* factory = GetTxnStore()->GetStagingWriteFactory();
+      empty_staging_write_.reset(factory->CreateStagingWrite());
+    }
+    assert(empty_staging_write_.get() != nullptr &&
+           empty_staging_write_->IsEmpty());
+    return empty_staging_write_.get();
+  }
 
   void ResetUnCommittedSeqs() {
     prepared_uncommitted_started_seq_ = 0;
@@ -53,12 +63,15 @@ class WritePreparedTransaction : public PessimisticTransaction {
   }
 
   virtual void Clear() override {
-    // clear txn locks before clearing write_batch_, because clearing txn locks
-    // depends on the write_batch_
+    // clear txn locks before clearing staging_write_, because clearing txn locks
+    // depends on the staging_write_
     ClearTxnLocks();
-    write_batch_.Clear();
+    staging_write_->Clear();
     ResetUnCommittedSeqs();
   }
+
+  // for Commit purpose and lazy initialized
+  std::unique_ptr<StagingWrite> empty_staging_write_ = nullptr;
 
   uint64_t prepared_uncommitted_started_seq_ = 0;
   uint64_t num_prepared_uncommitted_seq_ = 0;

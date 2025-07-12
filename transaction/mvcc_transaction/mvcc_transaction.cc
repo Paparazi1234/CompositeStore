@@ -22,7 +22,7 @@ Status MVCCTransaction::Put(const std::string& key, const std::string& value) {
   }
   Status s = TryLock(key);
   if (s.IsOK()) {
-    write_batch_.Put(key, value);
+    staging_write_->Put(key, value);
   }
   return s;
 }
@@ -33,7 +33,7 @@ Status MVCCTransaction::Delete(const std::string& key) {
   }
   Status s = TryLock(key);
   if (s.IsOK()) {
-    write_batch_.Delete(key);
+    staging_write_->Delete(key);
   }
   return s;
 }
@@ -44,13 +44,13 @@ Status MVCCTransaction::Get(const ReadOptions& read_options,
                             const std::string& key, std::string* value) {
   assert(value);
   value->clear();
-  WriteBatch::GetReault result = write_batch_.Get(key, value);
-  if (result == WriteBatch::GetReault::kFound) {
+  StagingWrite::GetReault result = staging_write_->Get(key, value);
+  if (result == StagingWrite::GetReault::kFound) {
     return Status::OK();
-  } else if (result == WriteBatch::GetReault::kDeleted) {
+  } else if (result == StagingWrite::GetReault::kDeleted) {
     return Status::NotFound();
   } else {
-    assert(result == WriteBatch::GetReault::kNotFound);
+    assert(result == StagingWrite::GetReault::kNotFound);
     return txn_store_->Get(read_options, key, value);
   }
 }
@@ -65,10 +65,14 @@ void MVCCTransaction::Reinitialize(TransactionStore* txn_store,
   txn_store_ = reinterpret_cast<MVCCTxnStore*>(txn_store);
   txn_state_ = STAGE_WRITING;
   write_options_ = write_options;
+  if (staging_write_.get() == nullptr) {
+    staging_write_.reset(
+        txn_store_->GetStagingWriteFactory()->CreateStagingWrite());
+  }
   Clear();
 }
 
-class MVCCTransaction::ReleaseTxnLockHandler : public WriteBatch::Handler {
+class MVCCTransaction::ReleaseTxnLockHandler : public StagingWrite::Handler {
  public:
   ReleaseTxnLockHandler(MVCCTransaction* txn) : txn_(txn) {}
   ~ReleaseTxnLockHandler() {}
@@ -88,11 +92,11 @@ class MVCCTransaction::ReleaseTxnLockHandler : public WriteBatch::Handler {
 };
 
 void MVCCTransaction::ClearTxnLocks() {
-  if (write_batch_.IsEmpty()) {
+  if (staging_write_->IsEmpty()) {
     return;
   }
   ReleaseTxnLockHandler handler(this);
-  Status s = write_batch_.Iterate(&handler);
+  Status s = staging_write_->Iterate(&handler);
   assert(s.IsOK());
 }
 

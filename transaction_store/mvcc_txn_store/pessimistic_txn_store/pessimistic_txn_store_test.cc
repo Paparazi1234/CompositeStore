@@ -61,16 +61,16 @@ TEST_F(CommonPessimisticTxnTest, RollbackWithoutPrepare) {
   TestCommonFunc(&CommonPessimisticTxnTests::RollbackWithoutPrepare);
 }
 
-TEST_F(CommonPessimisticTxnTest, PrepareEmptyWriteBatch) {
-  TestCommonFunc(&CommonPessimisticTxnTests::PrepareEmptyWriteBatch);
+TEST_F(CommonPessimisticTxnTest, PrepareEmptyStagingWrite) {
+  TestCommonFunc(&CommonPessimisticTxnTests::PrepareEmptyStagingWrite);
 }
 
-TEST_F(CommonPessimisticTxnTest, CommitEmptyWriteBatch) {
-  TestCommonFunc(&CommonPessimisticTxnTests::CommitEmptyWriteBatch);
+TEST_F(CommonPessimisticTxnTest, CommitEmptyStagingWrite) {
+  TestCommonFunc(&CommonPessimisticTxnTests::CommitEmptyStagingWrite);
 }
 
-TEST_F(CommonPessimisticTxnTest, RollbackEmptyWriteBatch) {
-  TestCommonFunc(&CommonPessimisticTxnTests::RollbackEmptyWriteBatch);
+TEST_F(CommonPessimisticTxnTest, RollbackEmptyStagingWrite) {
+  TestCommonFunc(&CommonPessimisticTxnTests::RollbackEmptyStagingWrite);
 }
 
 TEST_F(CommonPessimisticTxnTest, InterleavingPrepareCommitBetweenMultiTxns) {
@@ -157,27 +157,27 @@ TEST_F(InspectPessimisticTxnTest, VersionIncrement) {
 }
 
 TEST_F(InspectPessimisticTxnTest,
-    VersionIncrementForPreparingOfEmptyWriteBatch) {
+    VersionIncrementForPreparingOfEmptyStagingWrite) {
   TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
                                    {false, true}, {true}, {"", "1314"});
   TxnTestsSetups setups;  
   while (generator.NextTxnTestSetups(&setups)) {
     InspectPessimisticTxnTests* test = new InspectPessimisticTxnTests(setups);
-    test->VersionIncrementForPreparingOfEmptyWriteBatch();
+    test->VersionIncrementForPreparingOfEmptyStagingWrite();
     delete test;
   }
 }
 
 TEST_F(InspectPessimisticTxnTest,
-    VersionIncrementForCommittingOfEmptyWriteBatch) {
+    VersionIncrementForCommittingOfEmptyStagingWrite) {
   TestInspectFunc(&InspectPessimisticTxnTests::
-      VersionIncrementForCommittingOfEmptyWriteBatch);
+      VersionIncrementForCommittingOfEmptyStagingWrite);
 }
 
 TEST_F(InspectPessimisticTxnTest,
-    VersionIncrementForRollbackingOfEmptyWriteBatch) {
+    VersionIncrementForRollbackingOfEmptyStagingWrite) {
   TestInspectFunc(&InspectPessimisticTxnTests::
-      VersionIncrementForRollbackingOfEmptyWriteBatch);
+      VersionIncrementForRollbackingOfEmptyStagingWrite);
 }
 
 TEST_F(InspectPessimisticTxnTest,

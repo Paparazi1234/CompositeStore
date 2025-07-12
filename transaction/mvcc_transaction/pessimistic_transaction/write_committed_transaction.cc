@@ -23,7 +23,7 @@ class WCTxnMaintainVersionsCB : public MaintainVersionsCallbacks {
     const Version& committed = *version;
     uint32_t num_prepared_uncommitteds = 0;
     // as for WriteCommitted txn, all we need to do it's to advance max visible
-    // version after insert the txn's write batch to write buffer
+    // version after insert the txn's staging write to write buffer
     multi_versions_manager_->EndCommitVersions(prepared_uncommitted_started,
                                                committed,
                                                num_prepared_uncommitteds);
@@ -47,7 +47,7 @@ Status WriteCommittedTransaction::CommitWithPrepareImpl() {
   WriteCommittedTxnStore* store_impl =
       reinterpret_cast<WriteCommittedTxnStore*>(txn_store_);
   return txn_store_->WriteInternal(write_options_,
-                                   &write_batch_,
+                                   staging_write_.get(),
                                    wc_maintain_versions_cb,
                                    store_impl->GetCommitQueue());
 }
@@ -57,7 +57,7 @@ Status WriteCommittedTransaction::CommitWithoutPrepareImpl() {
   WriteCommittedTxnStore* store_impl =
       reinterpret_cast<WriteCommittedTxnStore*>(txn_store_);
   return txn_store_->WriteInternal(write_options_,
-                                   &write_batch_,
+                                   staging_write_.get(),
                                    wc_maintain_versions_cb,
                                    store_impl->GetCommitQueue());
 }

@@ -88,22 +88,24 @@ MVCCStore::MVCCStore(const StoreOptions& store_options)
 Status MVCCStore::Put(const WriteOptions& write_options,
                       const std::string& key,
                       const std::string& value) {
-  WriteBatch write_batch;
-  write_batch.Put(key, value);
+  std::unique_ptr<StagingWrite>
+      staging_write(GetStagingWriteFactory()->CreateStagingWrite());
+  staging_write->Put(key, value);
   EmptyMaintainVersionsCallbacks empty_maintain_versions_cb(this);
   return WriteInternal(write_options,
-                       &write_batch,
+                       staging_write.get(),
                        empty_maintain_versions_cb,
                        first_write_queue_);
 }
 
 Status MVCCStore::Delete(const WriteOptions& write_options,
                          const std::string& key) {
-  WriteBatch write_batch;
-  write_batch.Delete(key);
+  std::unique_ptr<StagingWrite>
+      staging_write(GetStagingWriteFactory()->CreateStagingWrite());
+  staging_write->Delete(key);
   EmptyMaintainVersionsCallbacks empty_maintain_versions_cb(this);
   return WriteInternal(write_options,
-                       &write_batch,
+                       staging_write.get(),
                        empty_maintain_versions_cb,
                        first_write_queue_);
 }
