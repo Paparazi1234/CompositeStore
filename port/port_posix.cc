@@ -1,6 +1,8 @@
 #if !defined(OS_WIN)
 
 #include <assert.h>
+#include <cstdio>
+#include <cstdlib>
 
 #include "port_posix.h"
 

@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <memory>
+#include <cstddef>
 
 #include "include/multi_versions_namespace.h"
 

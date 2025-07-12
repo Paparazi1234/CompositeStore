@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <thread>
+#include <unordered_map>
 
 #include "cartesian_product.h"
 #include "include/transaction_store.h"

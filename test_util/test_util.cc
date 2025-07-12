@@ -1,7 +1,5 @@
 #include "test_util.h"
 
-#include <unordered_map>
-
 namespace MULTI_VERSIONS_NAMESPACE {
 
 Status TransactionExecutor::InsertStoreRdMoWr(
