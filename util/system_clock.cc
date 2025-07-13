@@ -27,17 +27,9 @@ std::string SystemClock::TimeToString(uint64_t secondsSince1970) {
   return dummy;
 }
 
-SystemClock* SystemClock::GetTLSInstance() {
-  static thread_local SystemClock* tls_instance;
-  static thread_local std::aligned_storage<sizeof(SystemClock)>::type 
-      tls_instance_bytes;
-
-  auto rv = tls_instance;
-  if (UNLIKELY(rv == nullptr)) {
-    rv = new (&tls_instance_bytes) SystemClock();
-    tls_instance = rv;
-  }
-  return rv;
+SystemClock* SystemClock::GetSingleton() {
+  static SystemClock singleton;
+  return &singleton;
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

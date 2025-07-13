@@ -90,7 +90,11 @@ class SystemClock {
   // Converts seconds-since-Jan-01-1970 to a printable string
   std::string TimeToString(uint64_t secondsSince1970);
 
-  static SystemClock* GetTLSInstance();
+  static SystemClock* GetSingleton();
+
+ private:
+  // for singleton
+  SystemClock() {}
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

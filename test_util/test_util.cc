@@ -11,7 +11,7 @@ Status TransactionExecutor::InsertStoreRdMoWr(
   uint64_t remaining_increment = target_increment;
   bool need_redo = false;
   Random* random = Random::GetTLSInstance();
-  SystemClock* system_clock = SystemClock::GetTLSInstance();
+  SystemClock* system_clock = SystemClock::GetSingleton();
   std::string key_prefix = GetKeyPrefix(target_key_set);
   Transaction* txn = nullptr;
   WriteOptions write_options;
