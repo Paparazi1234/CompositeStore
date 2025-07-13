@@ -6,14 +6,11 @@
   2 Commit cache满发生evict
   3 commit table多线程交互
   4 commit table内部各组件的单独测试（包含每个组件的多线程并发测试）
-  5 two write queue测试（测试各种write policy以及是否commit with prepare）
-  7 DB恢复测试
 15 内存泄漏检测：ASAN
 18 上github
 19 通用P90测试
 23 排查公用变量在多线程环境下的并发安全性，如: 写入、查询时说使用的version
 24 考虑将公用变量的thread local storage改造
-25 system clock实现
 26 事务benchmark
 28 事务锁实现
 29 multi versions 模块内部进一步细化划分

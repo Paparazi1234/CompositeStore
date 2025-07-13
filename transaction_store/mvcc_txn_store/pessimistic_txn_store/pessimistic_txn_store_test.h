@@ -1028,13 +1028,13 @@ void MultiThreadingPessimisticTxnTests::MultiThreadsTxnsExcution() {
   SetupTxnExecutorCfg(vec_cfgs[2],
                       70, 90, kRandom,    // with_prepare_rate
                       5, 15, kRandom,     // to_be_rollbacked_rate
-                      1, 5, kRandom,      // delay_ms_after_prepare
+                      0, 0, kMin,         // delay_ms_after_prepare
                       1, 10, kRandom);    // inc_per_time
   // cfg3
   SetupTxnExecutorCfg(vec_cfgs[3],
                       100, 100, kMin,     // with_prepare_rate
                       20, 30, kRandom,    // to_be_rollbacked_rate
-                      5, 10, kRandom,     // delay_ms_after_prepare
+                      0, 0, kMin,         // delay_ms_after_prepare
                       20, 30, kRandom);   // inc_per_time
   for (uint32_t i = 0; i < num_threads; ++i) {
     vec_threads.emplace_back(ThreadFuncInsertStoreRdMoWr, txn_store_,

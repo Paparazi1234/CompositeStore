@@ -11,6 +11,7 @@ Status TransactionExecutor::InsertStoreRdMoWr(
   uint64_t remaining_increment = target_increment;
   bool need_redo = false;
   Random* random = Random::GetTLSInstance();
+  SystemClock* system_clock = SystemClock::GetTLSInstance();
   std::string key_prefix = GetKeyPrefix(target_key_set);
   Transaction* txn = nullptr;
   WriteOptions write_options;
@@ -37,7 +38,10 @@ Status TransactionExecutor::InsertStoreRdMoWr(
     if (with_prepare) {
       s = txn->Prepare();
       assert(s.IsOK());
-      // uint32_t delay_ms = cfg_->delay_ms_after_prepare.Next();
+      uint32_t delay_ms = cfg_->delay_ms_after_prepare.Next();
+      if (delay_ms > 0) {
+        system_clock->SleepForMicroseconds(delay_ms * 1000);
+      }
     }
 
     bool to_be_rollbacked =
