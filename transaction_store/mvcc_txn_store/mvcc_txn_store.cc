@@ -121,7 +121,7 @@ class InsertMVCCWriteBufferHandler : public StagingWrite::Handler {
 };
 }   // anonymous namespace
 
-Status MVCCTxnStore::WriteInternal(
+Status MVCCTxnStore::CommitStagingWrite(
     const WriteOptions& write_options,
     StagingWrite* staging_write,
     MaintainVersionsCallbacks& maintain_versions_callbacks,

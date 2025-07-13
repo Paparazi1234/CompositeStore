@@ -88,10 +88,11 @@ class MVCCTxnStore : public TransactionStore {
 		return staging_write_factory_.get();
 	}
 
-	Status WriteInternal(const WriteOptions& write_options,
-											 StagingWrite* staging_write,
-											 MaintainVersionsCallbacks& maintain_versions_callbacks,
-		  							   WriteQueue& write_queue);
+	Status CommitStagingWrite(
+			const WriteOptions& write_options,
+			StagingWrite* staging_write,
+			MaintainVersionsCallbacks& maintain_versions_callbacks,
+			WriteQueue& write_queue);
 
 	Status GetInternal(const ReadOptions& read_options,
              				 const std::string& key,

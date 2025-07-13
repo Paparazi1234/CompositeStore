@@ -92,10 +92,10 @@ Status MVCCStore::Put(const WriteOptions& write_options,
       staging_write(GetStagingWriteFactory()->CreateStagingWrite());
   staging_write->Put(key, value);
   EmptyMaintainVersionsCallbacks empty_maintain_versions_cb(this);
-  return WriteInternal(write_options,
-                       staging_write.get(),
-                       empty_maintain_versions_cb,
-                       first_write_queue_);
+  return CommitStagingWrite(write_options,
+                            staging_write.get(),
+                            empty_maintain_versions_cb,
+                            first_write_queue_);
 }
 
 Status MVCCStore::Delete(const WriteOptions& write_options,
@@ -104,10 +104,10 @@ Status MVCCStore::Delete(const WriteOptions& write_options,
       staging_write(GetStagingWriteFactory()->CreateStagingWrite());
   staging_write->Delete(key);
   EmptyMaintainVersionsCallbacks empty_maintain_versions_cb(this);
-  return WriteInternal(write_options,
-                       staging_write.get(),
-                       empty_maintain_versions_cb,
-                       first_write_queue_);
+  return CommitStagingWrite(write_options,
+                            staging_write.get(),
+                            empty_maintain_versions_cb,
+                            first_write_queue_);
 }
 
 Status MVCCStore::Get(const ReadOptions& read_options,

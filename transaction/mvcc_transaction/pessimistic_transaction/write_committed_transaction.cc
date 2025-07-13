@@ -46,20 +46,20 @@ Status WriteCommittedTransaction::CommitWithPrepareImpl() {
   WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
   WriteCommittedTxnStore* store_impl =
       reinterpret_cast<WriteCommittedTxnStore*>(txn_store_);
-  return txn_store_->WriteInternal(write_options_,
-                                   staging_write_.get(),
-                                   wc_maintain_versions_cb,
-                                   store_impl->GetCommitQueue());
+  return txn_store_->CommitStagingWrite(write_options_,
+                                        staging_write_.get(),
+                                        wc_maintain_versions_cb,
+                                        store_impl->GetCommitQueue());
 }
 
 Status WriteCommittedTransaction::CommitWithoutPrepareImpl() {
   WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
   WriteCommittedTxnStore* store_impl =
       reinterpret_cast<WriteCommittedTxnStore*>(txn_store_);
-  return txn_store_->WriteInternal(write_options_,
-                                   staging_write_.get(),
-                                   wc_maintain_versions_cb,
-                                   store_impl->GetCommitQueue());
+  return txn_store_->CommitStagingWrite(write_options_,
+                                        staging_write_.get(),
+                                        wc_maintain_versions_cb,
+                                        store_impl->GetCommitQueue());
 }
 
 Status WriteCommittedTransaction::RollbackImpl() {
