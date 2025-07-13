@@ -11,7 +11,7 @@ namespace MULTI_VERSIONS_NAMESPACE {
 
 class SeqBasedSnapshot : public Snapshot {
  public:
-  SeqBasedSnapshot(uint64_t seq) : rep_(seq), refs_(0) {}
+  explicit SeqBasedSnapshot(uint64_t seq) : rep_(seq), refs_(0) {}
   ~SeqBasedSnapshot() {}
   uint64_t Seq() const {
     return rep_;
@@ -46,13 +46,14 @@ class SeqBasedSnapshot : public Snapshot {
   mutable uint64_t refs_;  // reference counted
 };
 
-class WPSeqBasedSnapshot : public SeqBasedSnapshot {
+class WritePreparedSeqBasedSnapshot : public SeqBasedSnapshot {
  public:
-  WPSeqBasedSnapshot(uint64_t seq,
-                     uint64_t min_uncommitted = kUnCommittedLimitsMin)
-                     : SeqBasedSnapshot(seq),
-                       min_uncommitted_(min_uncommitted) {}
-  ~WPSeqBasedSnapshot() {}
+  explicit WritePreparedSeqBasedSnapshot(
+      uint64_t seq,
+      uint64_t min_uncommitted = kUnCommittedLimitsMin)
+          : SeqBasedSnapshot(seq),
+            min_uncommitted_(min_uncommitted) {}
+  ~WritePreparedSeqBasedSnapshot() {}
 
   uint64_t MiniUnCommitted() const {
     return min_uncommitted_;
@@ -85,6 +86,14 @@ class SeqBasedSnapshotManager : public SnapshotManager {
   virtual uint32_t NumLivingSnapshot() const override;
   virtual void GetAllLivingSnapshots(
       std::vector<const Snapshot*>& snapshots) const override;
+  
+  virtual const Snapshot& SnapshotLimitsMin() const override {
+    return snapshot_limits_min_;
+  }
+
+  virtual const Snapshot& SnapshotLimitsMax() const override {
+    return snapshot_limits_max_;
+  }
 
  protected:
   virtual const SeqBasedSnapshot* TakeSnapshotInternal(
@@ -95,6 +104,10 @@ class SeqBasedSnapshotManager : public SnapshotManager {
   using SnapshotsMap =
     std::map<uint64_t, std::unique_ptr<const SeqBasedSnapshot>>;
   SnapshotsMap snapshots_map_;
+
+ private:
+  static const SeqBasedSnapshot snapshot_limits_min_;
+  static const SeqBasedSnapshot snapshot_limits_max_;
 };
 
 class  WriteCommittedSnapshotManager : public SeqBasedSnapshotManager {
@@ -128,6 +141,14 @@ class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
 
   virtual Snapshot* CreateSnapshot() const override;
 
+  virtual const Snapshot& SnapshotLimitsMin() const override {
+    return wp_snapshot_limits_min_;
+  }
+
+  virtual const Snapshot& SnapshotLimitsMax() const override {
+    return wp_snapshot_limits_max_;
+  }
+
   void GetSnapshots(uint64_t max, std::vector<uint64_t>& snapshots) const;
 
   class WPGetSnapshotsCallback : public GetSnapshotsCallback {
@@ -152,6 +173,9 @@ class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
       Snapshot* reused) override;
 
   std::unique_ptr<TakeSnapshotCallback> take_snapshot_callback_;
+
+  static const WritePreparedSeqBasedSnapshot wp_snapshot_limits_min_;
+  static const WritePreparedSeqBasedSnapshot wp_snapshot_limits_max_;
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

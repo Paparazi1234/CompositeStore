@@ -12,7 +12,7 @@ namespace MULTI_VERSIONS_NAMESPACE {
 class SeqBasedVersion : public Version {
  public:
   SeqBasedVersion() : rep_(0) {}
-  SeqBasedVersion(uint64_t seq) : rep_(seq) {}
+  explicit SeqBasedVersion(uint64_t seq) : rep_(seq) {}
   ~SeqBasedVersion() {}
 
   uint64_t Seq() const {
@@ -84,12 +84,12 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
     return new SeqBasedVersion();
   }
 
-  virtual const Version& VersionLimitsMax() const override {
-    return version_limits_max_;
-  }
-
   virtual const Version& VersionLimitsMin() const override {
     return version_limits_min_;
+  }
+
+  virtual const Version& VersionLimitsMax() const override {
+    return version_limits_max_;
   }
 
  protected:
@@ -161,8 +161,8 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
   SeqAllocator seq_allocator_;
 
  private:
-  static const SeqBasedVersion version_limits_max_;
   static const SeqBasedVersion version_limits_min_;
+  static const SeqBasedVersion version_limits_max_;
 };
 
 class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {

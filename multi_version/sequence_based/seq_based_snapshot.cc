@@ -2,6 +2,18 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
+const SeqBasedSnapshot SeqBasedSnapshotManager::snapshot_limits_min_ =
+    SeqBasedSnapshot(kSeqNumberLimitsMin);
+const SeqBasedSnapshot SeqBasedSnapshotManager::snapshot_limits_max_ =
+    SeqBasedSnapshot(kSeqNumberLimitsMax);
+
+const WritePreparedSeqBasedSnapshot
+    WritePreparedSnapshotManager::wp_snapshot_limits_min_ =
+      WritePreparedSeqBasedSnapshot(kSeqNumberLimitsMin, kUnCommittedLimitsMin);
+const WritePreparedSeqBasedSnapshot
+    WritePreparedSnapshotManager::wp_snapshot_limits_max_ =
+      WritePreparedSeqBasedSnapshot(kSeqNumberLimitsMax, kUnCommittedLimitsMin);
+
 Snapshot* SeqBasedSnapshotManager::CreateSnapshot() const {
   return new SeqBasedSnapshot(0);
 }
@@ -73,7 +85,7 @@ const SeqBasedSnapshot* WriteCommittedSnapshotManager::TakeSnapshotInternal(
 }
 
 Snapshot* WritePreparedSnapshotManager::CreateSnapshot() const {
-  return new WPSeqBasedSnapshot(0);
+  return new WritePreparedSeqBasedSnapshot(0);
 }
 
 void WritePreparedSnapshotManager::GetSnapshots(
@@ -96,13 +108,13 @@ const SeqBasedSnapshot* WritePreparedSnapshotManager::TakeSnapshotInternal(
   uint64_t min_uncommitted;
   take_snapshot_callback_->TakeSnapshot(&snapshot_seq, &min_uncommitted);
   if (reused != nullptr) {
-    WPSeqBasedSnapshot* reused_impl =
-        reinterpret_cast<WPSeqBasedSnapshot*>(reused);
+    WritePreparedSeqBasedSnapshot* reused_impl =
+        reinterpret_cast<WritePreparedSeqBasedSnapshot*>(reused);
     reused_impl->SetSeq(snapshot_seq);
     reused_impl->SetMiniUnCommitted(min_uncommitted);
     return reused_impl;
   } else {
-    return new WPSeqBasedSnapshot(snapshot_seq, min_uncommitted);
+    return new WritePreparedSeqBasedSnapshot(snapshot_seq, min_uncommitted);
   }
 }
 

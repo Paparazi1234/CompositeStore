@@ -69,8 +69,9 @@ class MultiVersionsManager {
   virtual bool IsVersionVisibleToSnapshot(const Version& version,
                                           const Snapshot& snapshot,
                                           bool* snap_exists) const = 0;
-  virtual const Version& VersionLimitsMax() const = 0;
+
   virtual const Version& VersionLimitsMin() const = 0;
+  virtual const Version& VersionLimitsMax() const = 0;
 
   virtual void MaybeCleanupVersionsWhenFails() {}       // Todo: 实现之
 
@@ -111,6 +112,9 @@ class SnapshotManager {
   virtual uint32_t NumLivingSnapshot() const = 0;
   virtual void GetAllLivingSnapshots(
       std::vector<const Snapshot*>& snapshots) const = 0;
+
+  virtual const Snapshot& SnapshotLimitsMin() const = 0;
+  virtual const Snapshot& SnapshotLimitsMax() const = 0;
 };
 
 // Factory function

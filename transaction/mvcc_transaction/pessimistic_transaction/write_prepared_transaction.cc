@@ -478,9 +478,10 @@ class WritePreparedTransaction::RollbackStagingWriteBuilder :
  public:
   RollbackStagingWriteBuilder(WritePreparedTxnStore* txn_store,
                               StagingWrite* rollback_staging_write)
-      : snapshot_limit_max_(kSeqNumberLimitsMax),
-        txn_store_(txn_store),
-        rollback_staging_write_(rollback_staging_write) {
+      : txn_store_(txn_store),
+        snapshot_manager_(txn_store_->GetSnapshotManager()),
+        rollback_staging_write_(rollback_staging_write),
+        snapshot_limit_max_(snapshot_manager_->SnapshotLimitsMax()) {
     read_options_.snapshot = &snapshot_limit_max_;
   }
   ~RollbackStagingWriteBuilder() {}
@@ -509,11 +510,12 @@ class WritePreparedTransaction::RollbackStagingWriteBuilder :
 
  private:
   ReadOptions read_options_;
+  WritePreparedTxnStore* txn_store_;
+  const SnapshotManager* snapshot_manager_;
+  StagingWrite* rollback_staging_write_;
   // can see all version during GetInternal(), but only care about latest
   // committed of target key 
-  WPSeqBasedSnapshot snapshot_limit_max_;
-  WritePreparedTxnStore* txn_store_;
-  StagingWrite* rollback_staging_write_;
+  const Snapshot& snapshot_limit_max_;
 };
 
 Status WritePreparedTransaction::RollbackImpl() {

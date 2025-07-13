@@ -7,9 +7,9 @@
 namespace MULTI_VERSIONS_NAMESPACE {
 
 const SeqBasedVersion SeqBasedMultiVersionsManager::version_limits_min_ =
-    kSeqNumberLimitsMin;
+    SeqBasedVersion(kSeqNumberLimitsMin);
 const SeqBasedVersion SeqBasedMultiVersionsManager::version_limits_max_ =
-    kSeqNumberLimitsMax;
+    SeqBasedVersion(kSeqNumberLimitsMax);
 
 void SeqBasedMultiVersionsManager::Initialize(const Version& orig) {
   const SeqBasedVersion* orig_impl =
@@ -241,8 +241,8 @@ bool WritePreparedMultiVersionsManager::IsVersionVisibleToSnapshot(
     const Version& version, const Snapshot& snapshot, bool* snap_exists) const {
   const SeqBasedVersion* version_impl =
       reinterpret_cast<const SeqBasedVersion*>(&version);
-  const WPSeqBasedSnapshot* snapshot_impl =
-      reinterpret_cast<const WPSeqBasedSnapshot*>(&snapshot);
+  const WritePreparedSeqBasedSnapshot* snapshot_impl =
+      reinterpret_cast<const WritePreparedSeqBasedSnapshot*>(&snapshot);
   return commit_table_.IsVersionVisibleToSnapshot(version_impl->Seq(), 
       snapshot_impl->Seq(), snapshot_impl->MiniUnCommitted(), snap_exists);
 }
