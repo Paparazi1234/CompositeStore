@@ -9,13 +9,11 @@
 15 内存泄漏检测：ASAN
 18 上github
 19 通用P90测试
-23 排查公用变量在多线程环境下的并发安全性，如: 写入、查询时说使用的version
 24 考虑将公用变量的thread local storage改造
 26 事务benchmark
 28 事务锁实现
 29 multi versions 模块内部进一步细化划分
-30 减少类成员变脸的直接使用，改用Get接口获取：如，事务中的txn_store_、staging_write_的访问
-32 Snapshotmanager添加: SnapshotLimitsMax和SnapshotLimitsMin接口
+30 减少类成员变量的直接使用，改用Get接口获取：如，事务中的txn_store_、staging_write_的访问
 33 想一个更好的project名称
 34 multi versions manager更改为versions manager
 

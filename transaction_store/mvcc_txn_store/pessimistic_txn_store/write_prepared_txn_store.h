@@ -64,7 +64,7 @@ class WritePreparedTxnStore : public PessimisticTxnStore {
         multi_version_manager_impl->GetSnapshotCreationCallback());
   }
 
-  uint64_t CalculateNumVersionsForStagingWrite(
+  uint64_t CalcuNumVersionsIncForStagingWrite(
 			const StagingWrite* staging_write) const override {
     // 1 we employ seq per batch in WritePrepared policy
     // 2 when we commit an empty txn write, it will also consume a version

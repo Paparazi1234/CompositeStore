@@ -136,7 +136,7 @@ Status MVCCTxnStore::CommitStagingWrite(
     }
   }
   Version* version_for_insert = write_queue.VersionForInsert();
-  uint64_t version_inc = CalculateNumVersionsForStagingWrite(staging_write);
+  uint64_t version_inc = CalcuNumVersionsIncForStagingWrite(staging_write);
   Version* allocated_started =
       multi_versions_manager_->AllocateVersion(version_inc, version_for_insert);
   // before insert write buffer

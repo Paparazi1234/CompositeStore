@@ -30,6 +30,15 @@ class SkipListBackedMVCCWriteBuffer : public MVCCWriteBuffer {
 
   void Dump(std::stringstream* oss, const size_t dump_count) override;
 
+  uint64_t NumInserts() const override {
+    assert(num_entries_ >= num_deletes_);
+    return num_entries_ - num_deletes_;
+  }
+
+  uint64_t NumDeletes() const override {
+    return num_deletes_;
+  }
+
  private:
   void RecordRawDataSize(const std::string& key, const std::string& value) {
 		raw_data_size_ += key.size();

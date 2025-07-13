@@ -98,7 +98,7 @@ class MVCCTxnStore : public TransactionStore {
              				 const std::string& key,
 										 std::string* value);
 
-	virtual uint64_t CalculateNumVersionsForStagingWrite(
+	virtual uint64_t CalcuNumVersionsIncForStagingWrite(
 			const StagingWrite* staging_write) const {
 		assert(staging_write->Count() > 0);
 		// default: version per key

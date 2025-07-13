@@ -21,7 +21,7 @@ class WriteCommittedTxnStore : public PessimisticTxnStore {
   ~WriteCommittedTxnStore() {}
 
  protected:
-  uint64_t CalculateNumVersionsForStagingWrite(
+  uint64_t CalcuNumVersionsIncForStagingWrite(
 			const StagingWrite* staging_write) const override {
     uint64_t count = staging_write->Count();
     // we employ version per key in WriteCommitted policy

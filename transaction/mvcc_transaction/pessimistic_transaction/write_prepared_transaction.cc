@@ -4,6 +4,8 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
+using VersionImpl = SeqBasedVersion;
+
 namespace{
 // callbacks definition
 class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
@@ -21,8 +23,8 @@ class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
 
   Status BeforeInsertWriteBufferCallback(const Version* version,
 																				 uint32_t count) override {
-		const SeqBasedVersion* version_impl =
-        reinterpret_cast<const SeqBasedVersion*>(version);
+		const VersionImpl* version_impl =
+        reinterpret_cast<const VersionImpl*>(version);
     // record the uncommitted versions info of the Prepare stage
     txn_->RecordPreparedUnCommittedSeqs(version_impl->Seq(), count);
     const Version& prepared_uncommitted_started = *version;
@@ -63,7 +65,7 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
 																				 uint32_t count) override {
 		assert(count == 1);
     // calculate the final committed version
-    SeqBasedVersion committed;
+    VersionImpl committed;
     committed.DuplicateFrom(*version);
     committed.IncreaseBy(count - 1);
     // currently committed == *version, since count == 1
@@ -77,8 +79,7 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
     // version)
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
-    SeqBasedVersion
-        prepared_uncommitted_started(prepared_uncommitted_started_seq);
+    VersionImpl prepared_uncommitted_started(prepared_uncommitted_started_seq);
     uint32_t num_prepared_uncommitteds = num_prepared_uncommitted_seq;
     multi_versions_manager_->BeginCommitVersions(prepared_uncommitted_started,
                                                  committed,
@@ -96,8 +97,7 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
     // version)
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
-    SeqBasedVersion
-        prepared_uncommitted_started(prepared_uncommitted_started_seq);
+    VersionImpl prepared_uncommitted_started(prepared_uncommitted_started_seq);
     const Version& committed = *version;
     uint32_t num_prepared_uncommitteds = num_prepared_uncommitted_seq;
     multi_versions_manager_->EndCommitVersions(prepared_uncommitted_started,
@@ -130,7 +130,7 @@ class WPTxnMaintainVersionsCBForCommitWithoutPrepare :
 																				 uint32_t count) override {
 		assert(count == 1);
     // calculate the final committed version
-    SeqBasedVersion committed;
+    VersionImpl committed;
     committed.DuplicateFrom(*version);
     committed.IncreaseBy(count - 1);
     // currently committed == *version, since count == 1
@@ -185,8 +185,8 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
 																				 uint32_t count) override {
 		// currently the rollback staging write consumes one version
     assert(count == 1);
-    const SeqBasedVersion* version_impl =
-        reinterpret_cast<const SeqBasedVersion*>(version);
+    const VersionImpl* version_impl =
+        reinterpret_cast<const VersionImpl*>(version);
     // the rollback staging write goes through an internal prepare stage, so
     // record the uncommitted versions info of the rollback staging write
     txn_->RecordRollbackedUnCommittedSeqs(version_impl->Seq(), count);
@@ -231,7 +231,7 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
 		// the internal empty staging write consumes one version
     assert(count == 1);
     // calculate the final committed version
-    SeqBasedVersion committed;
+    VersionImpl committed;
     committed.DuplicateFrom(*version);
     committed.IncreaseBy(count - 1);
     // currently committed == *version, since count == 1
@@ -253,9 +253,8 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
     // both not 0
     assert(rollbacked_uncommitted_started_seq > 0 &&
            num_rollbacked_uncommitted_seq > 0);
-    SeqBasedVersion
-        prepared_uncommitted_started(prepared_uncommitted_started_seq);
-    SeqBasedVersion
+    VersionImpl prepared_uncommitted_started(prepared_uncommitted_started_seq);
+    VersionImpl
         rollbacked_uncommitted_started(rollbacked_uncommitted_started_seq);
     uint32_t num_prepared_uncommitteds = num_prepared_uncommitted_seq;
     uint32_t num_rollbacked_uncommitteds = num_rollbacked_uncommitted_seq;
@@ -286,9 +285,8 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
     // both not 0
     assert(rollbacked_uncommitted_started_seq > 0 &&
            num_rollbacked_uncommitted_seq > 0);
-    SeqBasedVersion
-        prepared_uncommitted_started(prepared_uncommitted_started_seq);
-    SeqBasedVersion
+    VersionImpl prepared_uncommitted_started(prepared_uncommitted_started_seq);
+    VersionImpl
         rollbacked_uncommitted_started(rollbacked_uncommitted_started_seq);
     const Version& committed = *version;
     uint32_t num_prepared_uncommitteds = num_prepared_uncommitted_seq;
@@ -327,7 +325,7 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
 																				 uint32_t count) override {
 		assert(count == 1);
     // calculate the final committed version
-    SeqBasedVersion committed;
+    VersionImpl committed;
     committed.DuplicateFrom(*version);
     committed.IncreaseBy(count - 1);
     // currently committed == *version, since count == 1
@@ -340,8 +338,7 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
     // even though we Prepare() an empty staging write during prepare stage
     assert(prepared_uncommitted_started_seq > 0 &&
            num_prepared_uncommitted_seq > 0);
-    SeqBasedVersion
-        prepared_uncommitted_started(prepared_uncommitted_started_seq);
+    VersionImpl prepared_uncommitted_started(prepared_uncommitted_started_seq);
     const Version& rollbacked_uncommitted_started = *version;
     uint32_t num_prepared_uncommitteds = num_prepared_uncommitted_seq;
     uint32_t num_rollbacked_uncommitteds = count;
@@ -373,8 +370,7 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
     // both 0
     assert(rollbacked_uncommitted_started_seq == 0 &&
            num_rollbacked_uncommitted_seq == 0);
-    SeqBasedVersion
-        prepared_uncommitted_started(prepared_uncommitted_started_seq);
+    VersionImpl prepared_uncommitted_started(prepared_uncommitted_started_seq);
     const Version& rollbacked_uncommitted_started = dummy_version;
     const Version& committed = *version;
     uint32_t num_prepared_uncommitteds = num_prepared_uncommitted_seq;

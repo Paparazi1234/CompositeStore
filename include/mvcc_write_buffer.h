@@ -26,6 +26,9 @@ class MVCCWriteBuffer {
 
   virtual uint64_t RawDataSize() const = 0;
   virtual void Dump(std::stringstream* oss, const size_t dump_count) = 0;
+
+  virtual uint64_t NumInserts() const = 0;
+  virtual uint64_t NumDeletes() const = 0;
 };
 
 class MVCCWriteBufferFactory {
