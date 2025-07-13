@@ -404,41 +404,62 @@ void CommonPessimisticTxnTests::ReadAfterCommit() {
 
 void CommonPessimisticTxnTests::ReadAfterRollback() {
   WriteOptions write_options;
+  TransactionOptions txn_options;
   ReadOptions read_options;
   std::string value;
   Status s;
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
+
+  // first write somthing
   s = txn->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+  s = txn->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+  s = txn_store_->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  Transaction* txn1 = txn_store_->BeginTransaction(write_options);
+  s = txn1->Delete("foo");
   ASSERT_TRUE(s.IsOK());
 
   // rollback without prepare
-  s = txn->Rollback();
+  s = txn1->Rollback();
   ASSERT_TRUE(s.IsOK());
 
   // read after rollback
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
+  s = txn1->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
   s = txn_store_->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
+  ASSERT_TRUE(s.IsOK() && value == "bar");
 
   // can reuse txn after rollback without prepare
-  s = txn->Put("foo1", "bar");
+  s = txn1->Delete("foo");
+  ASSERT_TRUE(s.IsOK());
+  s = txn1->Put("foo1", "bar");
   ASSERT_TRUE(s.IsOK());
 
   // rollback with prepare
-  s = txn->Prepare();
+  s = txn1->Prepare();
   ASSERT_TRUE(s.IsOK());
-  s = txn->Rollback();
+  s = txn1->Rollback();
   ASSERT_TRUE(s.IsOK());
 
   // read after rollback
-  s = txn->Get(read_options, "foo", &value);
-  ASSERT_TRUE(s.IsNotFound());
+  s = txn1->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
   s = txn_store_->Get(read_options, "foo", &value);
+  ASSERT_TRUE(s.IsOK() && value == "bar");
+
+  s = txn1->Get(read_options, "foo1", &value);
+  ASSERT_TRUE(s.IsNotFound());
+  s = txn_store_->Get(read_options, "foo1", &value);
   ASSERT_TRUE(s.IsNotFound());
 
   delete txn;
+  delete txn1;
 }
 
 void CommonPessimisticTxnTests::CommitWithPrepare() {

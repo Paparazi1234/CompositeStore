@@ -163,9 +163,9 @@ uint64_t SkipListBackedRep::Dump(std::stringstream* oss,
     if (type == kTypeValue) {
       *oss<<"Put,\tvalue: "<<value<<"}\n";
     } else if (type == kTypeDeletion) {
-      *oss<<"Delete}\n";
+      *oss<<"Delete,\tvalue: Nil}\n";
     } else {
-      *oss<<"unknown}\n";
+      *oss<<"unknown,\tvalue: Nil}\n";
     }
     count++;
   }
