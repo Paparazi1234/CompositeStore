@@ -21,10 +21,10 @@ class SeqBasedSnapshot : public Snapshot {
     rep_ = seq;
   }
 
-  const Version* MaxVersionInSnapshot(Version* old_version) const override {
-    if (old_version) {
+  const Version* MaxVersionInSnapshot(Version* reused) const override {
+    if (reused) {
       SeqBasedVersion* version_impl =
-          reinterpret_cast<SeqBasedVersion*>(old_version);
+          reinterpret_cast<SeqBasedVersion*>(reused);
       version_impl->SetSeq(Seq());
       return version_impl;
     } else {
@@ -66,7 +66,6 @@ class WritePreparedSeqBasedSnapshot : public SeqBasedSnapshot {
  private:
   uint64_t min_uncommitted_;
 };
-
 
 class SeqBasedSnapshotManager : public SnapshotManager {
  public:

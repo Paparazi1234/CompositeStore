@@ -89,7 +89,7 @@ class Snapshot {
 
   // caller own the returned version
   virtual const Version* MaxVersionInSnapshot(
-      Version* old_version = nullptr) const = 0;
+      Version* reused = nullptr) const = 0;
 };
 
 class SnapshotManager {
