@@ -4,8 +4,9 @@
 #include <memory>
 #include <assert.h>
 
-#include "include/multi_versions.h"
 #include "infinite_commit_table.h"
+#include "include/multi_versions.h"
+#include "util/cast_util.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
@@ -35,14 +36,14 @@ class SeqBasedVersion : public Version {
 
   virtual void DuplicateFrom(const Version& src) override {
     const SeqBasedVersion* src_impl =
-        reinterpret_cast<const SeqBasedVersion*>(&src);
+        static_cast_with_check<const SeqBasedVersion>(&src);
     rep_ = src_impl->Seq();
   }
 
   // descending ordered by version
   virtual int CompareWith(const Version& rhs) const override {
     const SeqBasedVersion* rhs_impl =
-        reinterpret_cast<const SeqBasedVersion*>(&rhs);
+        static_cast_with_check<const SeqBasedVersion>(&rhs);
     if (rep_ != rhs_impl->Seq()) {
       if (rep_ < rhs_impl->Seq()) {
         return +1;
@@ -97,7 +98,7 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
   friend class InspectPessimisticTxnTests;
   void AdvanceMaxReadableVersion(const Version& version) {
     const SeqBasedVersion* version_impl =
-        reinterpret_cast<const SeqBasedVersion*>(&version);
+        static_cast_with_check<const SeqBasedVersion>(&version);
     uint64_t new_max_readable = version_impl->Seq();
     assert(new_max_readable >= max_readable_seq_);
     max_readable_seq_.store(new_max_readable, std::memory_order_seq_cst);
@@ -105,7 +106,7 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
 
   void AdvanceMaxVisibleVersion(const Version& version) {
     const SeqBasedVersion* version_impl =
-        reinterpret_cast<const SeqBasedVersion*>(&version);
+        static_cast_with_check<const SeqBasedVersion>(&version);
     uint64_t new_max_visible = version_impl->Seq();
     assert(new_max_visible >= max_visible_seq_);
     max_visible_seq_.store(new_max_visible, std::memory_order_seq_cst);

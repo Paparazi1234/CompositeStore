@@ -13,7 +13,7 @@ const SeqBasedVersion SeqBasedMultiVersionsManager::version_limits_max_ =
 
 void SeqBasedMultiVersionsManager::Initialize(const Version& orig) {
   const SeqBasedVersion* orig_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&orig);
+      static_cast_with_check<const SeqBasedVersion>(&orig);
   uint64_t seq = orig_impl->Seq() + 1;
   seq_allocator_.Initialize(seq);
   max_visible_seq_.store(seq, std::memory_order_seq_cst);
@@ -25,7 +25,8 @@ Version* SeqBasedMultiVersionsManager::AllocateVersion(uint32_t count,
   assert(count > 0);
   uint64_t allocated_started = seq_allocator_.Allocate(count);
   if (reused != nullptr) {
-    SeqBasedVersion* version_impl = reinterpret_cast<SeqBasedVersion*>(reused);
+    SeqBasedVersion* version_impl =
+        static_cast_with_check<SeqBasedVersion>(reused);
     version_impl->SetSeq(allocated_started);
     return reused;
   } else {
@@ -37,7 +38,8 @@ Version* SeqBasedMultiVersionsManager::LatestVisibleVersion(
     Version* reused) const {
   uint64_t latest_visible = max_visible_seq_.load(std::memory_order_seq_cst);
   if (reused != nullptr) {
-    SeqBasedVersion* version_impl = reinterpret_cast<SeqBasedVersion*>(reused);
+    SeqBasedVersion* version_impl =
+        static_cast_with_check<SeqBasedVersion>(reused);
     version_impl->SetSeq(latest_visible);
     return reused;
   } else {
@@ -91,9 +93,9 @@ bool WriteCommittedMultiVersionsManager::IsVersionVisibleToSnapshot(
     const Version& version, const Snapshot& snapshot, bool* snap_exists) const {
   *snap_exists = true;
   const SeqBasedVersion* version_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&version);
+      static_cast_with_check<const SeqBasedVersion>(&version);
   const SeqBasedSnapshot* snapshot_impl =
-      reinterpret_cast<const SeqBasedSnapshot*>(&snapshot);
+      static_cast_with_check<const SeqBasedSnapshot>(&snapshot);
   return version_impl->Seq() <= snapshot_impl->Seq();
 }
 
@@ -101,7 +103,8 @@ void WritePreparedMultiVersionsManager::BeginPrepareVersions(
     const Version& prepared_uncommitted_started,
     uint32_t num_prepared_uncommitteds) {
   const SeqBasedVersion* prepared_uncommitted_started_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&prepared_uncommitted_started);
+      static_cast_with_check<const SeqBasedVersion>(
+          &prepared_uncommitted_started);
   uint64_t prepared_uncommitted_started_seq =
       prepared_uncommitted_started_impl->Seq();
   // when Prepare(), we only need to record the uncommitted version in
@@ -121,9 +124,10 @@ void WritePreparedMultiVersionsManager::BeginCommitVersions(
     const Version& committed,
     uint32_t num_prepared_uncommitteds) {
   const SeqBasedVersion* prepared_uncommitted_started_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&prepared_uncommitted_started);
+      static_cast_with_check<const SeqBasedVersion>(
+          &prepared_uncommitted_started);
   const SeqBasedVersion* committed_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&committed);
+      static_cast_with_check<const SeqBasedVersion>(&committed);
   uint64_t prepared_uncommitted_started_seq =
       prepared_uncommitted_started_impl->Seq();
   uint64_t committed_seq = committed_impl->Seq();
@@ -151,7 +155,8 @@ void WritePreparedMultiVersionsManager::EndCommitVersions(
     // num_prepared_uncommitteds > 0: means commit with prepare
     // otherwise, num_prepared_uncommitteds == 0: means commit without prepare
     const SeqBasedVersion* prepared_uncommitted_started_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&prepared_uncommitted_started);
+      static_cast_with_check<const SeqBasedVersion>(
+          &prepared_uncommitted_started);
     uint64_t prepared_uncommitted_started_seq =
         prepared_uncommitted_started_impl->Seq();
     commit_table_.EraseUnCommittedVersion(prepared_uncommitted_started_seq,
@@ -172,11 +177,13 @@ void WritePreparedMultiVersionsManager::BeginRollbackVersions(
   //   purpose consume a version
   assert(num_rollbacked_uncommitteds == 1);
   const SeqBasedVersion* prepared_uncommitted_started_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&prepared_uncommitted_started);
+      static_cast_with_check<const SeqBasedVersion>(
+          &prepared_uncommitted_started);
   const SeqBasedVersion* rollbacked_uncommitted_started_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&rollbacked_uncommitted_started);
+      static_cast_with_check<const SeqBasedVersion>(
+          &rollbacked_uncommitted_started);
   const SeqBasedVersion* committed_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&committed);
+      static_cast_with_check<const SeqBasedVersion>(&committed);
   uint64_t prepared_uncommitted_started_seq =
       prepared_uncommitted_started_impl->Seq();
   uint64_t rollbacked_uncommitted_started_seq =
@@ -210,9 +217,11 @@ void WritePreparedMultiVersionsManager::EndRollbackVersions(
   // there must be some prepared uncommitted versions if we get to here
   assert(num_prepared_uncommitteds > 0);
   const SeqBasedVersion* prepared_uncommitted_started_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&prepared_uncommitted_started);
+      static_cast_with_check<const SeqBasedVersion>(
+          &prepared_uncommitted_started);
   const SeqBasedVersion* rollbacked_uncommitted_started_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&rollbacked_uncommitted_started);
+      static_cast_with_check<const SeqBasedVersion>(
+          &rollbacked_uncommitted_started);
   uint64_t prepared_uncommitted_started_seq =
       prepared_uncommitted_started_impl->Seq();
   uint64_t rollbacked_uncommitted_started_seq =
@@ -240,9 +249,9 @@ void WritePreparedMultiVersionsManager::EndRollbackVersions(
 bool WritePreparedMultiVersionsManager::IsVersionVisibleToSnapshot(
     const Version& version, const Snapshot& snapshot, bool* snap_exists) const {
   const SeqBasedVersion* version_impl =
-      reinterpret_cast<const SeqBasedVersion*>(&version);
+      static_cast_with_check<const SeqBasedVersion>(&version);
   const WritePreparedSeqBasedSnapshot* snapshot_impl =
-      reinterpret_cast<const WritePreparedSeqBasedSnapshot*>(&snapshot);
+      static_cast_with_check<const WritePreparedSeqBasedSnapshot>(&snapshot);
   return commit_table_.IsVersionVisibleToSnapshot(version_impl->Seq(), 
       snapshot_impl->Seq(), snapshot_impl->MiniUnCommitted(), snap_exists);
 }

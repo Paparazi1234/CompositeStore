@@ -42,17 +42,16 @@ class EmptyMultiVersionsManagerFactory : public MultiVersionsManagerFactory {
   SnapshotManager* CreateSnapshotManager(
       MultiVersionsManager* multi_versions_manager) const override {
     EmptyMultiVersionsManager* mvm_impl =
-        reinterpret_cast<EmptyMultiVersionsManager*>(multi_versions_manager);
+        static_cast_with_check<EmptyMultiVersionsManager>(
+            multi_versions_manager);
     return new EmptySnapshotManager(mvm_impl);
   }
 };
 
 class EmptyMaintainVersionsCallbacks : public MaintainVersionsCallbacks {
   public:
-  EmptyMaintainVersionsCallbacks(TransactionStore* store) {
-    store_impl_ = reinterpret_cast<MVCCTxnStore*>(store);
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+  EmptyMaintainVersionsCallbacks(MVCCTxnStore* store)
+      : multi_versions_manager_(store->GetMultiVersionsManager()) {}
 	~EmptyMaintainVersionsCallbacks() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -61,17 +60,18 @@ class EmptyMaintainVersionsCallbacks : public MaintainVersionsCallbacks {
 
 	Status AfterInsertWriteBufferCallback(const Version* version)  override {
     const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
-    const Version& started_uncommitted = dummy_version;
+    const Version& prepared_uncommitted_started = dummy_version;
     const Version& committed = *version;
-    uint32_t num_uncommitteds = 0;
-    multi_versions_manager_->EndCommitVersions(started_uncommitted,
+    uint32_t num_prepared_uncommitteds = 0;
+    // as for WriteCommitted txn, all we need to do it's to advance max visible
+    // version after insert the txn's staging write to write buffer
+    multi_versions_manager_->EndCommitVersions(prepared_uncommitted_started,
                                                committed,
-                                               num_uncommitteds);
+                                               num_prepared_uncommitteds);
     return Status::OK();
   }
 
  private:
-  MVCCTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 }   // anonymous namespace

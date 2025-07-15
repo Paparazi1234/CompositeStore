@@ -11,10 +11,9 @@ namespace{
 class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
  public:
   WPTxnMaintainVersionsCBForPrepare(WritePreparedTransaction* txn)
-      : txn_(txn) {
-    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+      : txn_(txn),
+        multi_versions_manager_(
+            txn_->GetTxnStore()->GetMultiVersionsManager()) {}
   ~WPTxnMaintainVersionsCBForPrepare() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -24,7 +23,7 @@ class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
   Status BeforeInsertWriteBufferCallback(const Version* version,
 																				 uint32_t count) override {
 		const VersionImpl* version_impl =
-        reinterpret_cast<const VersionImpl*>(version);
+        static_cast_with_check<const VersionImpl>(version);
     // record the uncommitted versions info of the Prepare stage
     txn_->RecordPreparedUnCommittedSeqs(version_impl->Seq(), count);
     const Version& prepared_uncommitted_started = *version;
@@ -43,7 +42,6 @@ class WPTxnMaintainVersionsCBForPrepare : public MaintainVersionsCallbacks {
 
  private:
   WritePreparedTransaction* txn_;
-  WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 
@@ -51,10 +49,9 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
     public MaintainVersionsCallbacks {
  public:
   WPTxnMaintainVersionsCBForCommitWithPrepare(WritePreparedTransaction* txn)
-      : txn_(txn) {
-    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+      : txn_(txn),
+        multi_versions_manager_(
+            txn_->GetTxnStore()->GetMultiVersionsManager()) {}
   ~WPTxnMaintainVersionsCBForCommitWithPrepare() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -108,7 +105,6 @@ class WPTxnMaintainVersionsCBForCommitWithPrepare :
 
  private:
   WritePreparedTransaction* txn_;
-  WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 
@@ -116,10 +112,9 @@ class WPTxnMaintainVersionsCBForCommitWithoutPrepare :
     public MaintainVersionsCallbacks {
  public:
   WPTxnMaintainVersionsCBForCommitWithoutPrepare(WritePreparedTransaction* txn)
-      : txn_(txn) {
-    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+      : txn_(txn),
+        multi_versions_manager_(
+            txn_->GetTxnStore()->GetMultiVersionsManager()) {}
   ~WPTxnMaintainVersionsCBForCommitWithoutPrepare() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -163,7 +158,6 @@ class WPTxnMaintainVersionsCBForCommitWithoutPrepare :
 
  private:
   WritePreparedTransaction* txn_;
-  WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 
@@ -171,10 +165,9 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
     public MaintainVersionsCallbacks {
  public:
   WPTxnMaintainVersionsCBForPrepareForRollback(WritePreparedTransaction* txn)
-      : txn_(txn) {
-    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+      : txn_(txn),
+        multi_versions_manager_(
+            txn_->GetTxnStore()->GetMultiVersionsManager()) {}
   ~WPTxnMaintainVersionsCBForPrepareForRollback() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -186,7 +179,7 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
 		// currently the rollback staging write consumes one version
     assert(count == 1);
     const VersionImpl* version_impl =
-        reinterpret_cast<const VersionImpl*>(version);
+        static_cast_with_check<const VersionImpl>(version);
     // the rollback staging write goes through an internal prepare stage, so
     // record the uncommitted versions info of the rollback staging write
     txn_->RecordRollbackedUnCommittedSeqs(version_impl->Seq(), count);
@@ -208,7 +201,6 @@ class WPTxnMaintainVersionsCBForPrepareForRollback :
 
  private:
   WritePreparedTransaction* txn_;
-  WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 
@@ -216,10 +208,9 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
     public MaintainVersionsCallbacks {
  public:
   WPTxnMaintainVersionsCBForRollbackWithPrepare(WritePreparedTransaction* txn)
-      : txn_(txn) {
-    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+      : txn_(txn),
+        multi_versions_manager_(
+            txn_->GetTxnStore()->GetMultiVersionsManager()) {}
   ~WPTxnMaintainVersionsCBForRollbackWithPrepare() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -302,7 +293,6 @@ class WPTxnMaintainVersionsCBForRollbackWithPrepare :
 
  private:
   WritePreparedTransaction* txn_;
-  WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 
@@ -311,10 +301,9 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
  public:
   WPTxnMaintainVersionsCBForRollbackWithoutPrepare(
       WritePreparedTransaction* txn)
-        : txn_(txn) {
-    store_impl_ = reinterpret_cast<WritePreparedTxnStore*>(txn_->GetTxnStore());
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+        : txn_(txn),
+        multi_versions_manager_(
+            txn_->GetTxnStore()->GetMultiVersionsManager()) {}
   ~WPTxnMaintainVersionsCBForRollbackWithoutPrepare() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -386,14 +375,13 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
 
  private:
   WritePreparedTransaction* txn_;
-  WritePreparedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 }   // anonymous namespace
 
 Status WritePreparedTransaction::PrepareImpl() {
   WritePreparedTxnStore* store_impl =
-      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
+      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
   WPTxnMaintainVersionsCBForPrepare wp_maintain_versions_cb_for_prepare(this);
   return txn_store_->CommitStagingWrite(write_options_,
                                         staging_write_.get(),
@@ -412,7 +400,7 @@ Status WritePreparedTransaction::CommitWithPrepareImpl() {
   // EndCommitVersions()
   StagingWrite* empty_staging_write = GetEmptyStagingWrite();
   WritePreparedTxnStore* store_impl =
-      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
+      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
   WPTxnMaintainVersionsCBForCommitWithPrepare
       wp_maintain_versions_cb_for_commit_with_prepare(this);
   return txn_store_->CommitStagingWrite(
@@ -424,7 +412,7 @@ Status WritePreparedTransaction::CommitWithPrepareImpl() {
 
 Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
   WritePreparedTxnStore* store_impl =
-      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
+      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
   bool enable_two_write_queues = store_impl->IsEnableTwoWriteQueues();
   // commit without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
@@ -520,7 +508,7 @@ Status WritePreparedTransaction::RollbackImpl() {
   std::unique_ptr<StagingWrite>
       rollback_staging_write(factory->CreateStagingWrite());
   WritePreparedTxnStore* store_impl =
-      reinterpret_cast<WritePreparedTxnStore*>(txn_store_);
+      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
   RollbackStagingWriteBuilder
       rollback_staging_write_builder(store_impl, rollback_staging_write.get());
   Status s = staging_write_->Iterate(&rollback_staging_write_builder);

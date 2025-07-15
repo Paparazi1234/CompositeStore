@@ -1,5 +1,7 @@
 #include "mvcc_transaction.h"
 
+#include "util/cast_util.h"
+
 namespace MULTI_VERSIONS_NAMESPACE {
 
 MVCCTransaction::MVCCTransaction(TransactionStore* txn_store,
@@ -62,7 +64,7 @@ void MVCCTransaction::SetSnapshot() {
 void MVCCTransaction::Reinitialize(TransactionStore* txn_store,
                                    const WriteOptions& write_options,
                                    const TransactionOptions& txn_options) {
-  txn_store_ = reinterpret_cast<MVCCTxnStore*>(txn_store);
+  txn_store_ = static_cast_with_check<MVCCTxnStore>(txn_store);
   txn_state_ = STAGE_WRITING;
   write_options_ = write_options;
   if (staging_write_.get() == nullptr) {

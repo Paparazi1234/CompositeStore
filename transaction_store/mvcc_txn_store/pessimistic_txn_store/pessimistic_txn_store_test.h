@@ -47,7 +47,7 @@ class PessimisticTxnTestsBase {
     }
     assert(txn_store_impl_);
     txn_store_ = txn_store_impl_;
-    mvm_impl_ = reinterpret_cast<SeqBasedMultiVersionsManager*>(
+    mvm_impl_ = static_cast_with_check<SeqBasedMultiVersionsManager>(
         txn_store_impl_->GetMultiVersionsManager());
     assert(mvm_impl_);
 

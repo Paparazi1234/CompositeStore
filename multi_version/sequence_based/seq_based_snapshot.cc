@@ -39,7 +39,7 @@ void SeqBasedSnapshotManager::ReleaseSnapshot(const Snapshot* snapshot) {
     return;
   }
   const SeqBasedSnapshot* snapshot_impl =
-      reinterpret_cast<const SeqBasedSnapshot*>(snapshot);
+      static_cast_with_check<const SeqBasedSnapshot>(snapshot);
   MutexLock lock(&map_mutex_);
   if (snapshots_map_.find(snapshot_impl->Seq()) != snapshots_map_.end()) {
     if (snapshot_impl->Unref()) {
@@ -70,13 +70,14 @@ void SeqBasedSnapshotManager::GetAllLivingSnapshots(
 const SeqBasedSnapshot* WriteCommittedSnapshotManager::TakeSnapshotInternal(
     Snapshot* reused) {
   const WriteCommittedMultiVersionsManager* WC_mvm =
-      reinterpret_cast<const WriteCommittedMultiVersionsManager*>
+      static_cast_with_check<const WriteCommittedMultiVersionsManager>
       (multi_versions_manager_);
   SeqBasedVersion tmp;
-  SeqBasedVersion* latest_visible = reinterpret_cast<SeqBasedVersion*>(
+  SeqBasedVersion* latest_visible = static_cast_with_check<SeqBasedVersion>(
       WC_mvm->LatestVisibleVersion(&tmp));
   if (reused != nullptr) {
-    SeqBasedSnapshot* reused_impl = reinterpret_cast<SeqBasedSnapshot*>(reused);
+    SeqBasedSnapshot* reused_impl =
+        static_cast_with_check<SeqBasedSnapshot>(reused);
     reused_impl->SetSeq(latest_visible->Seq());
     return reused_impl;
   } else {
@@ -109,7 +110,7 @@ const SeqBasedSnapshot* WritePreparedSnapshotManager::TakeSnapshotInternal(
   take_snapshot_callback_->TakeSnapshot(&snapshot_seq, &min_uncommitted);
   if (reused != nullptr) {
     WritePreparedSeqBasedSnapshot* reused_impl =
-        reinterpret_cast<WritePreparedSeqBasedSnapshot*>(reused);
+        static_cast_with_check<WritePreparedSeqBasedSnapshot>(reused);
     reused_impl->SetSeq(snapshot_seq);
     reused_impl->SetMiniUnCommitted(min_uncommitted);
     return reused_impl;

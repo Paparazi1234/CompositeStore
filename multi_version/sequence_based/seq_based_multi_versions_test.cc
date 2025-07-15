@@ -65,9 +65,9 @@ class CommonSeqBasedMultiVersionsTests {
 };
 
 void CommonSeqBasedMultiVersionsTests::SeqBasedVersionTest() {
-  SeqBasedVersion* version1 = reinterpret_cast<SeqBasedVersion*>(
+  SeqBasedVersion* version1 = static_cast_with_check<SeqBasedVersion>(
       multi_versions_manager_->CreateVersion());
-  SeqBasedVersion* version2 = reinterpret_cast<SeqBasedVersion*>(
+  SeqBasedVersion* version2 = static_cast_with_check<SeqBasedVersion>(
       multi_versions_manager_->CreateVersion());
 
   ASSERT_EQ(version1->Seq(), uint64_t(0));
@@ -180,7 +180,7 @@ void CommonSeqBasedMultiVersionsTests::SnapshotManagerTakeSnapshot() {
 
   latest_visible = multi_versions_manager_->LatestVisibleVersion(nullptr);
   latest_visible_seq =
-      reinterpret_cast<SeqBasedVersion*>(latest_visible)->Seq();
+      static_cast_with_check<SeqBasedVersion>(latest_visible)->Seq();
   snapshot1 = snapshot_manager_->TakeSnapshot();
   ASSERT_FALSE(snapshot_manager_->IsEmpty());
   ASSERT_EQ(snapshot_manager_->NumLivingSnapshot(), uint32_t(1));
@@ -209,7 +209,7 @@ void CommonSeqBasedMultiVersionsTests::SnapshotManagerTakeSnapshot() {
   uint32_t expected_step[3] = {0, 5, 10};
   for (size_t i = 0; i < snapshots.size(); ++i) {
     const SeqBasedSnapshot* snapshot_impl =
-        reinterpret_cast<const SeqBasedSnapshot*>(snapshots[i]);
+        static_cast_with_check<const SeqBasedSnapshot>(snapshots[i]);
     ASSERT_EQ(snapshot_impl->Seq(), latest_visible_seq + expected_step[i]);
   }
 

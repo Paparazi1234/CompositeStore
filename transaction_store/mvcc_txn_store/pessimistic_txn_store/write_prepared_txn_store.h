@@ -47,10 +47,10 @@ class WritePreparedTxnStore : public PessimisticTxnStore {
  protected:
   void PostInitializeMultiVersionManager() {
     WritePreparedMultiVersionsManager* multi_version_manager_impl =
-        reinterpret_cast<WritePreparedMultiVersionsManager*>(
+        static_cast_with_check<WritePreparedMultiVersionsManager>(
             GetMultiVersionsManager());
     WritePreparedSnapshotManager* snapshot_manager_impl =
-        reinterpret_cast<WritePreparedSnapshotManager*>(
+        static_cast_with_check<WritePreparedSnapshotManager>(
             GetSnapshotManager());
     // set AdvanceMaxCommittedByOneCallback to multi versions manager
     multi_version_manager_impl->SetAdvanceMaxCommittedByOneCallback(

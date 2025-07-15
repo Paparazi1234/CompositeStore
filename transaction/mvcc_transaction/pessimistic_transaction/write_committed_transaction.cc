@@ -1,16 +1,15 @@
 #include "write_committed_transaction.h"
 
 #include "transaction_store/mvcc_txn_store/pessimistic_txn_store/write_committed_txn_store.h"
+#include "util/cast_util.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
 namespace {
 class WCTxnMaintainVersionsCB : public MaintainVersionsCallbacks {
   public:
-  WCTxnMaintainVersionsCB(MVCCTxnStore* store) {
-    store_impl_ = reinterpret_cast<WriteCommittedTxnStore*>(store);
-    multi_versions_manager_ = store_impl_->GetMultiVersionsManager();
-  }
+  WCTxnMaintainVersionsCB(MVCCTxnStore* store)
+      : multi_versions_manager_(store->GetMultiVersionsManager()) {}
 	~WCTxnMaintainVersionsCB() {}
 
   bool NeedMaintainBeforePersistWAL() const override { return false; }
@@ -31,7 +30,6 @@ class WCTxnMaintainVersionsCB : public MaintainVersionsCallbacks {
   }
 
  private:
-  WriteCommittedTxnStore* store_impl_;
   MultiVersionsManager* multi_versions_manager_;
 };
 }   // anonymous namespace
@@ -45,7 +43,7 @@ Status WriteCommittedTransaction::PrepareImpl() {
 Status WriteCommittedTransaction::CommitWithPrepareImpl() {
   WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
   WriteCommittedTxnStore* store_impl =
-      reinterpret_cast<WriteCommittedTxnStore*>(txn_store_);
+      static_cast_with_check<WriteCommittedTxnStore>(txn_store_);
   return txn_store_->CommitStagingWrite(write_options_,
                                         staging_write_.get(),
                                         wc_maintain_versions_cb,
@@ -55,7 +53,7 @@ Status WriteCommittedTransaction::CommitWithPrepareImpl() {
 Status WriteCommittedTransaction::CommitWithoutPrepareImpl() {
   WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
   WriteCommittedTxnStore* store_impl =
-      reinterpret_cast<WriteCommittedTxnStore*>(txn_store_);
+      static_cast_with_check<WriteCommittedTxnStore>(txn_store_);
   return txn_store_->CommitStagingWrite(write_options_,
                                         staging_write_.get(),
                                         wc_maintain_versions_cb,

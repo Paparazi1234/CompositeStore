@@ -12,7 +12,8 @@ MultiVersionsManager* WriteCommittedMultiVersionsManagerFactory::
 SnapshotManager* WriteCommittedMultiVersionsManagerFactory::
     CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) const {
   SeqBasedMultiVersionsManager* sbmvm =
-      reinterpret_cast<SeqBasedMultiVersionsManager*>(multi_versions_manager);
+      static_cast_with_check<SeqBasedMultiVersionsManager>(
+          multi_versions_manager);
   return new WriteCommittedSnapshotManager(sbmvm);
 }
 
@@ -26,7 +27,8 @@ MultiVersionsManager* WritePreparedMultiVersionsManagerFactory::
 SnapshotManager* WritePreparedMultiVersionsManagerFactory::
     CreateSnapshotManager(MultiVersionsManager* multi_versions_manager) const {
   SeqBasedMultiVersionsManager* sbmvm =
-      reinterpret_cast<SeqBasedMultiVersionsManager*>(multi_versions_manager);
+      static_cast_with_check<SeqBasedMultiVersionsManager>(
+          multi_versions_manager);
   return new WritePreparedSnapshotManager(sbmvm);
 }
 

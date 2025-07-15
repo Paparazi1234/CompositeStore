@@ -24,7 +24,7 @@ class SeqBasedSnapshot : public Snapshot {
   const Version* MaxVersionInSnapshot(Version* reused) const override {
     if (reused) {
       SeqBasedVersion* version_impl =
-          reinterpret_cast<SeqBasedVersion*>(reused);
+          static_cast_with_check<SeqBasedVersion>(reused);
       version_impl->SetSeq(Seq());
       return version_impl;
     } else {

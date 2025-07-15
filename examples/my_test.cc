@@ -81,8 +81,8 @@ class MyTest {
     s = TransactionStore::Open(
         store_options, txn_store_options, store_traits, &txn_store_);
     AssertTrue(s.IsOK());
-    txn_store_impl_ = reinterpret_cast<MVCCTxnStore*>(txn_store_);
-    mvm_impl_ = reinterpret_cast<SeqBasedMultiVersionsManager*>(
+    txn_store_impl_ = static_cast_with_check<MVCCTxnStore>(txn_store_);
+    mvm_impl_ = static_cast_with_check<SeqBasedMultiVersionsManager>(
                     txn_store_impl_->GetMultiVersionsManager());
   }
 
