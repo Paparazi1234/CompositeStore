@@ -12,7 +12,6 @@
 24 考虑将公用变量的thread local storage改造
 26 事务benchmark
 28 事务锁实现
-29 multi versions 模块内部进一步细化划分
 33 想一个更好的project名称
 36 enum整改为enum class
 37 编译选线添加rtti针对debug和release模式的开启和关闭

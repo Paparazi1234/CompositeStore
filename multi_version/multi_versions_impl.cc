@@ -1,5 +1,7 @@
-#include "sequence_based/seq_based_multi_versions.h"
-#include "sequence_based/seq_based_snapshot.h"
+#include "sequence_based/write_committed/write_committed_multi_versions.h"
+#include "sequence_based/write_committed/write_committed_snapshot.h"
+#include "sequence_based/write_prepared/write_prepared_multi_versions.h"
+#include "sequence_based/write_prepared/write_prepared_snapshot.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

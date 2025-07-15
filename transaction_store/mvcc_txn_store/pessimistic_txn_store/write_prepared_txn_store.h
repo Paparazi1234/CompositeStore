@@ -1,8 +1,9 @@
 #pragma once
 
 #include "pessimistic_txn_store.h"
-#include "multi_version/sequence_based/infinite_commit_table.h"   // Todo: 解除该依赖
-#include "multi_version/sequence_based/seq_based_snapshot.h"      // Todo: 解除该依赖
+#include "multi_version/sequence_based/write_prepared/infinite_commit_table.h"   // Todo: 解除该依赖
+#include "multi_version/sequence_based/write_prepared/write_prepared_multi_versions.h"      // Todo: 解除该依赖
+#include "multi_version/sequence_based/write_prepared/write_prepared_snapshot.h"      // Todo: 解除该依赖
 
 namespace MULTI_VERSIONS_NAMESPACE {
 

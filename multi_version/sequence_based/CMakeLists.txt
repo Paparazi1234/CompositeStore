@@ -1,15 +1,19 @@
 set(SEQ_BASED_MULTI_VERSIONS_SOURCES
-        infinite_commit_table.cc
         seq_based_multi_versions.cc
-        seq_based_snapshot.cc)
+        seq_based_snapshot.cc
+        write_committed/write_committed_multi_versions.cc
+        write_committed/write_committed_snapshot.cc
+        write_prepared/infinite_commit_table.cc
+        write_prepared/write_prepared_multi_versions.cc
+        write_prepared/write_prepared_snapshot.cc)
 
 add_library(${SEQ_BASED_MULTI_VERSIONS_SHARED_LIB} SHARED ${SEQ_BASED_MULTI_VERSIONS_SOURCES})
 target_link_libraries(${SEQ_BASED_MULTI_VERSIONS_SHARED_LIB} ${UTIL_SHARED_LIB})
 
 if(BUILD_TESTS)
   set(SEQ_BASED_MULTI_VERSIONS_TEST_SOURCES
-          infinite_commit_table_test.cc
-          seq_based_multi_versions_test.cc)
+          seq_based_multi_versions_test.cc
+          write_prepared/infinite_commit_table_test.cc)
 
   foreach(sourcefile ${SEQ_BASED_MULTI_VERSIONS_TEST_SOURCES})
     get_filename_component(exename ${sourcefile} NAME_WE)

@@ -1,18 +1,14 @@
 #include "seq_based_snapshot.h"
 
+#include "seq_limits.h"
+#include "util/mutex_lock.h"
+
 namespace MULTI_VERSIONS_NAMESPACE {
 
 const SeqBasedSnapshot SeqBasedSnapshotManager::snapshot_limits_min_ =
     SeqBasedSnapshot(kSeqNumberLimitsMin);
 const SeqBasedSnapshot SeqBasedSnapshotManager::snapshot_limits_max_ =
     SeqBasedSnapshot(kSeqNumberLimitsMax);
-
-const WritePreparedSeqBasedSnapshot
-    WritePreparedSnapshotManager::wp_snapshot_limits_min_ =
-      WritePreparedSeqBasedSnapshot(kSeqNumberLimitsMin, kUnCommittedLimitsMin);
-const WritePreparedSeqBasedSnapshot
-    WritePreparedSnapshotManager::wp_snapshot_limits_max_ =
-      WritePreparedSeqBasedSnapshot(kSeqNumberLimitsMax, kUnCommittedLimitsMin);
 
 Snapshot* SeqBasedSnapshotManager::CreateSnapshot() const {
   return new SeqBasedSnapshot(0);
@@ -64,58 +60,6 @@ void SeqBasedSnapshotManager::GetAllLivingSnapshots(
   MutexLock lock(&map_mutex_);
   for (auto& snapshot : snapshots_map_) {
     snapshots.push_back(snapshot.second.get());
-  }
-}
-
-const SeqBasedSnapshot* WriteCommittedSnapshotManager::TakeSnapshotInternal(
-    Snapshot* reused) {
-  const WriteCommittedMultiVersionsManager* WC_mvm =
-      static_cast_with_check<const WriteCommittedMultiVersionsManager>
-      (multi_versions_manager_);
-  SeqBasedVersion tmp;
-  SeqBasedVersion* latest_visible = static_cast_with_check<SeqBasedVersion>(
-      WC_mvm->LatestVisibleVersion(&tmp));
-  if (reused != nullptr) {
-    SeqBasedSnapshot* reused_impl =
-        static_cast_with_check<SeqBasedSnapshot>(reused);
-    reused_impl->SetSeq(latest_visible->Seq());
-    return reused_impl;
-  } else {
-    return new SeqBasedSnapshot(latest_visible->Seq());
-  }
-}
-
-Snapshot* WritePreparedSnapshotManager::CreateSnapshot() const {
-  return new WritePreparedSeqBasedSnapshot(0);
-}
-
-void WritePreparedSnapshotManager::GetSnapshots(
-    uint64_t max, std::vector<uint64_t>& snapshots) const {
-  snapshots.clear();
-  MutexLock lock(&map_mutex_);
-  for (auto it = snapshots_map_.cbegin(); it != snapshots_map_.end(); ++it) {
-    uint64_t snapshot_seq = it->first;
-    if (snapshot_seq > max) {
-      break;
-    }
-    snapshots.push_back(snapshot_seq);
-  }
-}
-
-const SeqBasedSnapshot* WritePreparedSnapshotManager::TakeSnapshotInternal(
-    Snapshot* reused) {
-  assert(take_snapshot_callback_.get() != nullptr);
-  uint64_t snapshot_seq;
-  uint64_t min_uncommitted;
-  take_snapshot_callback_->TakeSnapshot(&snapshot_seq, &min_uncommitted);
-  if (reused != nullptr) {
-    WritePreparedSeqBasedSnapshot* reused_impl =
-        static_cast_with_check<WritePreparedSeqBasedSnapshot>(reused);
-    reused_impl->SetSeq(snapshot_seq);
-    reused_impl->SetMiniUnCommitted(min_uncommitted);
-    return reused_impl;
-  } else {
-    return new WritePreparedSeqBasedSnapshot(snapshot_seq, min_uncommitted);
   }
 }
 

@@ -1,5 +1,8 @@
-#include "seq_based_multi_versions.h"
-#include "seq_based_snapshot.h"
+#include "write_committed/write_committed_multi_versions.h"
+#include "write_committed/write_committed_snapshot.h"
+#include "write_prepared/write_prepared_multi_versions.h"
+#include "write_prepared/write_prepared_snapshot.h"
+
 #include "test_util/test_util.h"
 #include "third-party/gtest/gtest.h"
 
