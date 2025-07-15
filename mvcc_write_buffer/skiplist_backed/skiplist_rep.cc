@@ -103,9 +103,9 @@ Status SkipListBackedRep::Get(const std::string& key,
         const char* p = version_slice.data() + version_slice.size();
         uint32_t type;
         p = ROCKSDB_NAMESPACE::GetVarint32Ptr(p, p + 5, &type);
-        if (type == (uint32_t)kTypeDeletion) {
+        if (static_cast<ValueType>(type) == ValueType::kTypeDeletion) {
           return Status::NotFound();
-        } else if (type == (uint32_t)kTypeValue) {
+        } else if (static_cast<ValueType>(type) == ValueType::kTypeValue) {
           ROCKSDB_NAMESPACE::Slice value_slice =
               ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(p);
           value->assign(value_slice.data(), value_slice.size());
@@ -129,7 +129,7 @@ Status SkipListBackedRep::Get(const std::string& key,
 
 namespace {
 void ParseOneKVPair(const char* entry, std::string* key, std::string* value,
-    std::string* version, uint32_t* type) {
+    std::string* version, ValueType* value_type) {
   // key format:
   // |key len|key bytes|version len|version bytes|type|value len|value bytes|
   const char* p = entry;
@@ -141,8 +141,10 @@ void ParseOneKVPair(const char* entry, std::string* key, std::string* value,
       ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(p);
   version->assign(version_slice.data(), version_slice.size());
   p = version_slice.data() + version_slice.size();
-  p = ROCKSDB_NAMESPACE::GetVarint32Ptr(p, p + 5, type);
-  if (*type == kTypeValue) {
+  uint32_t type;
+  p = ROCKSDB_NAMESPACE::GetVarint32Ptr(p, p + 5, &type);
+  *value_type = static_cast<ValueType>(type);
+  if (*value_type == ValueType::kTypeValue) {
     ROCKSDB_NAMESPACE::Slice value_slice =
         ROCKSDB_NAMESPACE::GetLengthPrefixedSlice(p);
     value->assign(value_slice.data(), value_slice.size());
@@ -153,16 +155,16 @@ void ParseOneKVPair(const char* entry, std::string* key, std::string* value,
 uint64_t SkipListBackedRep::Dump(std::stringstream* oss,
                                  const size_t dump_count) {
   std::string key, value, version, type_str;
-  uint32_t type;
+  ValueType value_type;
   SkipListRep::Iterator iter(&skiplist_rep_);
   size_t count = 0;
   *oss<<"KV pairs in store:\n";
   for (iter.SeekToFirst(); count < dump_count && iter.Valid(); iter.Next()) {
-    ParseOneKVPair(iter.key(), &key, &value, &version, &type);
+    ParseOneKVPair(iter.key(), &key, &value, &version, &value_type);
     *oss<<"  {key: "<<key<<"@"<<version<<",\ttype: ";
-    if (type == kTypeValue) {
+    if (value_type == ValueType::kTypeValue) {
       *oss<<"Put,\tvalue: "<<value<<"}\n";
-    } else if (type == kTypeDeletion) {
+    } else if (value_type == ValueType::kTypeDeletion) {
       *oss<<"Delete,\tvalue: Nil}\n";
     } else {
       *oss<<"unknown,\tvalue: Nil}\n";

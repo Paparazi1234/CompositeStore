@@ -5,11 +5,16 @@
 #include <stdint.h>
 
 #include "status.h"
-#include "store_traits.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
 class Snapshot;
+
+struct CommitTableOptions {
+  uint32_t max_CAS_retries = 100;
+  uint32_t commit_cache_size_bits = 23;   // default: 8M entries
+  uint32_t snapshot_cache_size_bits = 7;  // default: 128 entries
+};
 
 class Version {
  public:

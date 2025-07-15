@@ -8,7 +8,8 @@ class MVCCTxnStoreTest : public testing::Test {
   ~MVCCTxnStoreTest() {}
 
   void TestMVCCTxnStoreFunc(void (MVCCTxnStoreTests::*func)()) {
-    TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+    TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                      TxnStoreWritePolicy::kWritePrepared},
                                      {false, true}, {true}, {"", "1314"});
     TxnTestsSetups setups;                                      
     while (generator.NextTxnTestSetups(&setups)) {           

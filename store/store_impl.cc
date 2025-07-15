@@ -24,8 +24,9 @@ Status Store::Open(const StoreOptions& store_options,
   assert(store_ptr);
   *store_ptr = nullptr;
   Status s;
-  switch (store_traits.backed_type) {
-    case kSkipListBacked :
+  switch (store_traits.txn_store_impl_type) {
+    case TxnStoreImplType::kDefault:
+    case TxnStoreImplType::kMVCC:
       *store_ptr = MVCCStoreFactory().CreateStore(store_options);
       break;
     default:

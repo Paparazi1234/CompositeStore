@@ -410,9 +410,7 @@ Status WritePreparedTransaction::CommitWithPrepareImpl() {
 
 Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
   MVCCTxnStore* txn_store = GetTxnStore();
-  WritePreparedTxnStore* store_impl =
-      static_cast_with_check<WritePreparedTxnStore>(txn_store);
-  bool enable_two_write_queues = store_impl->IsEnableTwoWriteQueues();
+  bool enable_two_write_queues = txn_store->EnableTwoWriteQueues();
   // commit without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
   // will switch commit without prepare to commit with prepare internally
@@ -459,7 +457,7 @@ Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
 class WritePreparedTransaction::RollbackStagingWriteBuilder :
     public StagingWrite::Handler {
  public:
-  RollbackStagingWriteBuilder(WritePreparedTxnStore* txn_store,
+  RollbackStagingWriteBuilder(MVCCTxnStore* txn_store,
                               StagingWrite* rollback_staging_write)
       : txn_store_(txn_store),
         snapshot_manager_(txn_store_->GetSnapshotManager()),
@@ -493,7 +491,7 @@ class WritePreparedTransaction::RollbackStagingWriteBuilder :
 
  private:
   ReadOptions read_options_;
-  WritePreparedTxnStore* txn_store_;
+  MVCCTxnStore* txn_store_;
   const SnapshotManager* snapshot_manager_;
   StagingWrite* rollback_staging_write_;
   // can see all version during GetInternal(), but only care about latest
@@ -507,10 +505,8 @@ Status WritePreparedTransaction::RollbackImpl() {
   StagingWriteFactory* factory = txn_store->GetStagingWriteFactory();
   std::unique_ptr<StagingWrite>
       rollback_staging_write(factory->CreateStagingWrite());
-  WritePreparedTxnStore* store_impl =
-      static_cast_with_check<WritePreparedTxnStore>(txn_store);
   RollbackStagingWriteBuilder
-      rollback_staging_write_builder(store_impl, rollback_staging_write.get());
+      rollback_staging_write_builder(txn_store, rollback_staging_write.get());
   Status s = GetStagingWrite()->Iterate(&rollback_staging_write_builder);
   if (!s.IsOK()) {
     return s;
@@ -518,7 +514,7 @@ Status WritePreparedTransaction::RollbackImpl() {
   // insert the rollback_staging_write into write buffer to eliminate this txn's
   // footprint in the write buffer
 
-  bool enable_two_write_queues = store_impl->IsEnableTwoWriteQueues();
+  bool enable_two_write_queues = txn_store->EnableTwoWriteQueues();
   // rollback without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
   // will switch rollback without prepare to rollback with prepare internally

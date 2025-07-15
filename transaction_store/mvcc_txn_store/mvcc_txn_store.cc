@@ -94,7 +94,7 @@ class InsertMVCCWriteBufferHandler : public StagingWrite::Handler {
 
   Status Put(const std::string& key, const std::string& value) override {
     MaybeAdvanceVersion();
-    Status s = mvcc_write_buffer_->Insert(key, value, kTypeValue,
+    Status s = mvcc_write_buffer_->Insert(key, value, ValueType::kTypeValue,
                                           *started_version_);
     is_first_iterated_entry_ = false;
     return s;
@@ -102,7 +102,7 @@ class InsertMVCCWriteBufferHandler : public StagingWrite::Handler {
 
   Status Delete(const std::string& key) override {
     MaybeAdvanceVersion();
-    Status s = mvcc_write_buffer_->Insert(key, "", kTypeDeletion,
+    Status s = mvcc_write_buffer_->Insert(key, "", ValueType::kTypeDeletion,
                                           *started_version_);
     is_first_iterated_entry_ = false;
     return s;

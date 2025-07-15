@@ -13,6 +13,10 @@ class TxnStoreFactory {
       const StoreTraits& store_traits) const = 0;
 };
 
+struct TxnStoreParam{
+
+};
+
 class MVCCTxnStoreFactory : public TxnStoreFactory {
  public:
   ~MVCCTxnStoreFactory() {}
@@ -24,8 +28,8 @@ class MVCCTxnStoreFactory : public TxnStoreFactory {
     MVCCTxnStore* txn_store = nullptr;
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     SkipListBackedMVCCWriteBufferFactory mvcc_write_buffer_factory;
-    switch (store_traits.txn_write_policy) {
-      case WRITE_COMMITTED:
+    switch (store_traits.txn_store_write_policy) {
+      case TxnStoreWritePolicy::kWriteCommitted:
         txn_store =
             new WriteCommittedTxnStore(
                 store_options,
@@ -37,7 +41,7 @@ class MVCCTxnStoreFactory : public TxnStoreFactory {
                 new OrderedMapBackedStagingWriteFactory(),
                 mvcc_write_buffer_factory);
         break;
-      case WRITE_PREPARED:
+      case TxnStoreWritePolicy::kWritePrepared:
         txn_store =
             new WritePreparedTxnStore(
                 store_options,
@@ -64,8 +68,9 @@ Status TransactionStore::Open(const StoreOptions& store_options,
   assert(txn_store_ptr);
   *txn_store_ptr = nullptr;
   Status s;
-  switch (store_traits.backed_type) {
-    case kSkipListBacked:
+  switch (store_traits.txn_store_impl_type) {
+    case TxnStoreImplType::kDefault:
+    case TxnStoreImplType::kMVCC:
       *txn_store_ptr = MVCCTxnStoreFactory().CreateTxnStore(store_options,
                                                             txn_store_options,
                                                             store_traits);

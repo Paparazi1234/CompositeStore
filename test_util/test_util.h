@@ -12,7 +12,7 @@
 namespace MULTI_VERSIONS_NAMESPACE {
 
 struct TxnTestsSetups {
-  TxnStoreWritePolicy write_policy = WRITE_COMMITTED;
+  TxnStoreWritePolicy write_policy = TxnStoreWritePolicy::kWriteCommitted;
   bool enable_two_write_queues = false;
   bool with_prepare = true;
   std::string encoded_version = "";
@@ -68,7 +68,7 @@ class RandomKeyGenerator {
  private:
 };
 
-enum GenType {
+enum class GenType : unsigned char {
   kRandom = 0x0,
   kMin,
   kMedian,
@@ -87,11 +87,11 @@ class UIntRange {
 
   uint32_t Next() {
     uint32_t res;
-    if (gen_type_ == kMin) {
+    if (gen_type_ == GenType::kMin) {
       res = min_;
-    } else if (gen_type_ == kMedian) {
+    } else if (gen_type_ == GenType::kMedian) {
       res = median_;
-    } else if (gen_type_ == kMax) {
+    } else if (gen_type_ == GenType::kMax) {
       res = max_;
     } else {
       uint32_t rnd_percentage = Random::GetTLSInstance()->Uniform(101);
@@ -113,10 +113,14 @@ class UIntRange {
 // cfg for TransactionExecutor
 struct TransactionExecutorCfg {
   TransactionExecutorCfg()
-      : with_prepare_rate(90, 90, kMin),      // default: 90% with_prepare
-        to_be_rollbacked_rate(5, 5, kMin),    // default: 5% rollback txn
-        delay_ms_after_prepare(0, 0, kMin),   // default: no delay after prepare
-        inc_per_time(1, 1, kMin) {}           // default: increase 1 per time
+        // default: 90% with_prepare
+      : with_prepare_rate(90, 90, GenType::kMin),
+        // default: 5% rollback txn
+        to_be_rollbacked_rate(5, 5, GenType::kMin),
+        // default: no delay after prepare
+        delay_ms_after_prepare(0, 0, GenType::kMin),
+        // default: increase 1 per time
+        inc_per_time(1, 1, GenType::kMin) {}
   UIntRange with_prepare_rate;
   UIntRange to_be_rollbacked_rate;
   UIntRange delay_ms_after_prepare;

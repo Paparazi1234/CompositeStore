@@ -9,10 +9,10 @@ Status OrderedMapBackedStagingWrite::Iterate(Handler* handler) {
   Status s;
   for (auto& buffered_write : buffered_writes_) {
     switch (buffered_write.second.Type()) {
-      case kTypeValue :
+      case ValueType::kTypeValue :
         s = handler->Put(buffered_write.first, buffered_write.second.Value());
         break;
-      case kTypeDeletion :
+      case ValueType::kTypeDeletion :
         s = handler->Delete(buffered_write.first);
         break;
       default:

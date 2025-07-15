@@ -11,7 +11,7 @@ Status SkipListBackedMVCCWriteBuffer::Insert(const std::string& key,
   Status s = skiplist_backed_rep_.Insert(key, value, value_type, version);
   if (s.IsOK()) {
     num_entries_++;
-    if (value_type == kTypeDeletion) {
+    if (value_type == ValueType::kTypeDeletion) {
       num_deletes_++;
     }
     RecordRawDataSize(key, value);

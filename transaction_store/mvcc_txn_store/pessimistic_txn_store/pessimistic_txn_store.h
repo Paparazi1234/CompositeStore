@@ -29,7 +29,7 @@ class PessimisticTxnStore : public MVCCTxnStore {
     return commit_queue_;
   }
 
-  bool IsEnableTwoWriteQueues() const {
+  virtual bool EnableTwoWriteQueues() const {
     return enable_two_write_queues_;
   }
  protected:

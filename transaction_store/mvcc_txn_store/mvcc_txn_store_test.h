@@ -18,7 +18,7 @@ class MVCCTxnStoreTests {
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     SkipListBackedMVCCWriteBufferFactory mvcc_write_buffer_factory;
     store_options.enable_two_write_queues = enable_two_write_queues_;
-    if (write_policy_ == WRITE_COMMITTED) {
+    if (write_policy_ == TxnStoreWritePolicy::kWriteCommitted) {
       store_ptr_ =
           new WriteCommittedTxnStore(store_options,
                                      txn_store_options,
@@ -28,7 +28,7 @@ class MVCCTxnStoreTests {
                                      new WriteCommittedTransactionFactory(),
                                      new OrderedMapBackedStagingWriteFactory(),
                                      mvcc_write_buffer_factory);
-    } else if (write_policy_ == WRITE_PREPARED) {
+    } else if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
       CommitTableOptions commit_table_options;
       store_ptr_ =
           new WritePreparedTxnStore(store_options,

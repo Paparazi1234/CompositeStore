@@ -77,7 +77,7 @@ class MyTest {
     Status s;
 
     store_options.enable_two_write_queues = enable_two_write_queues_;
-    store_traits.txn_write_policy = write_policy_;
+    store_traits.txn_store_write_policy = write_policy_;
     s = TransactionStore::Open(
         store_options, txn_store_options, store_traits, &txn_store_);
     AssertTrue(s.IsOK());
@@ -88,7 +88,8 @@ class MyTest {
 
   void EchoTestSetups() const {
     const char* write_policy =
-        write_policy_ == WRITE_COMMITTED ? "WRITE_COMMITTED" : "WRITE_PREPARED";
+        write_policy_ == TxnStoreWritePolicy::kWriteCommitted ? 
+            "kWriteCommitted" : "kWritePrepared";
     const char* commit_with_prepare = commit_with_prepare_ ? "TRUE" : "FALSE";
     const char* enable_two_write_queues =
         enable_two_write_queues_ ? "TRUE" : "FALSE";
@@ -119,20 +120,20 @@ class MyTest {
 using MULTI_VERSIONS_NAMESPACE::MyTest;
 
 int main() {
-  MyTest my_test0(MULTI_VERSIONS_NAMESPACE::WRITE_PREPARED, true, true);
-  MyTest my_test1(MULTI_VERSIONS_NAMESPACE::WRITE_PREPARED, true, false);
-  MyTest my_test2(MULTI_VERSIONS_NAMESPACE::WRITE_PREPARED, false, true);
-  MyTest my_test3(MULTI_VERSIONS_NAMESPACE::WRITE_PREPARED, false, false);
+  MyTest my_test0(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, true, true);
+  MyTest my_test1(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, true, false);
+  MyTest my_test2(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, false, true);
+  MyTest my_test3(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, false, false);
   my_test0.Run();
   my_test1.Run();
   my_test2.Run();
   my_test3.Run();
 
   std::cout<<std::endl;
-  MyTest my_test4(MULTI_VERSIONS_NAMESPACE::WRITE_COMMITTED, true, true);
-  MyTest my_test5(MULTI_VERSIONS_NAMESPACE::WRITE_COMMITTED, true, false);
-  MyTest my_test6(MULTI_VERSIONS_NAMESPACE::WRITE_COMMITTED, false, true);
-  MyTest my_test7(MULTI_VERSIONS_NAMESPACE::WRITE_COMMITTED, false, false);
+  MyTest my_test4(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, true, true);
+  MyTest my_test5(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, true, false);
+  MyTest my_test6(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, false, true);
+  MyTest my_test7(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, false, false);
   my_test4.Run();
   my_test5.Run();
   my_test6.Run();

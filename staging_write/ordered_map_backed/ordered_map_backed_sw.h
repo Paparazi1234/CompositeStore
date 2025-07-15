@@ -19,12 +19,14 @@ class OrderedMapBackedStagingWrite : public StagingWrite {
   virtual ~OrderedMapBackedStagingWrite() {}
 
   Status Put(const std::string& key, const std::string& value) override {
-    buffered_writes_.insert_or_assign(key, OneBufferedWrite(value, kTypeValue));
+    buffered_writes_.insert_or_assign(
+        key, OneBufferedWrite(value, ValueType::kTypeValue));
     return Status::OK();
   }
 
   Status Delete(const std::string& key) override {
-    buffered_writes_.insert_or_assign(key, OneBufferedWrite("", kTypeDeletion));
+    buffered_writes_.insert_or_assign(
+        key, OneBufferedWrite("", ValueType::kTypeDeletion));
     return Status::OK();
   }
 
@@ -33,10 +35,10 @@ class OrderedMapBackedStagingWrite : public StagingWrite {
     if (iter == buffered_writes_.end()) {
       return kNotFound;
     }
-    if (iter->second.Type() == kTypeDeletion) {
+    if (iter->second.Type() == ValueType::kTypeDeletion) {
       return kDeleted;
     }
-    assert(iter->second.Type() == kTypeValue);
+    assert(iter->second.Type() == ValueType::kTypeValue);
     *value = iter->second.Value();
     return kFound;
   }

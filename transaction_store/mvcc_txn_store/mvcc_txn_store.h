@@ -115,6 +115,10 @@ class MVCCTxnStore : public TransactionStore {
 		return first_write_queue_;
 	}
 
+	virtual bool EnableTwoWriteQueues() const {
+    return false;
+  }
+
 	void TEST_Crash() override {
     multi_versions_manager_->TEST_Crash();
   }

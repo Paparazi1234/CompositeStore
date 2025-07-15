@@ -16,12 +16,12 @@ class CommonSeqBasedMultiVersionsTests {
       const std::string& encoded_version = std::string(""))
         : write_policy_(write_policy),
           enable_two_write_queues_(enable_two_write_queues) {
-    if (write_policy_ == WRITE_COMMITTED) {
+    if (write_policy_ == TxnStoreWritePolicy::kWriteCommitted) {
       multi_versions_manager_ =
           new WriteCommittedMultiVersionsManager(enable_two_write_queues_);
       snapshot_manager_ =
           new WriteCommittedSnapshotManager(multi_versions_manager_);
-    } else if (write_policy_ == WRITE_PREPARED) {
+    } else if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
       CommitTableOptions options;
       multi_versions_manager_ =
           new WritePreparedMultiVersionsManager(
@@ -243,7 +243,8 @@ class SeqBasedMultiVersionsTest : public testing::Test {
 };
 
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_SeqBasedVersionTest) {
-  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+  TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                    TxnStoreWritePolicy::kWritePrepared},
                                    {true});
   TxnTestsSetups setups;
   while (generator.NextTxnTestSetups(&setups)) {
@@ -257,7 +258,8 @@ TEST_F(SeqBasedMultiVersionsTest, DISABLED_SeqBasedVersionTest) {
 }
 
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerReadView) {
-  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+  TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                    TxnStoreWritePolicy::kWritePrepared},
                                    {true, false}, {true}, {"", "1314"});
   TxnTestsSetups setups;
   while (generator.NextTxnTestSetups(&setups)) {
@@ -271,7 +273,8 @@ TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerReadView) {
 }
 
 TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerTakeSnapshot) {
-  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+  TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                    TxnStoreWritePolicy::kWritePrepared},
                                    {true, false}, {true}, {"", "1314"});
   TxnTestsSetups setups;
   while (generator.NextTxnTestSetups(&setups)) {

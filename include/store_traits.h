@@ -1,55 +1,61 @@
 #pragma once
 
-#include "multi_versions_namespace.h"
+#include "multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
-// enum WriteBufferBackedType : unsigned char {
-//   kSkipListBacked = 0x0,
-//   kMaxStoreBackedType
-// };
-
-enum StoreBackedType : unsigned char {
-  kSkipListBacked = 0x0,
-  kMaxStoreBackedType
+enum class TxnStoreImplType : unsigned char {
+  kDefault = 0x0,
+  kMVCC = 0x1,
+  kMaxStoreImplType
 };
 
-enum ConcurrencyControlPolicy : unsigned char {
+enum class MVCCWriteBufferBackedType : unsigned char {
+  kSkipListBacked = 0x0,
+  kMaxBackedType
+};
+
+enum class StagingWriteType : unsigned char {
+  kOrderedMapBacked = 0x0,
+  kMaxStagingWriteType
+};
+
+enum class ConcurrencyControlPolicy : unsigned char {
   kPessimisticConcurrencyControl = 0x0,
   kOptimisticConcurrencyControl = 0x1,
   kMaxConcurrencyControlPolicyType
 };
 
-enum PessimisticTxnWritePolicy : unsigned char {
-  kWriteCommitted = 0x0,
-  kWritePrepared = 0x1
-};
-
-enum OptimisticTxnValidatePolicy : unsigned char {
+enum class OptimisticTxnValidatePolicy : unsigned char {
   kValidateSerially = 0x0,
-  kValidateParallelly = 0x1
+  kMaxValidatePolicyType
 };
 
-enum TxnStoreWritePolicy : unsigned char {
-  WRITE_COMMITTED = 0x0,
-  WRITE_PREPARED = 0x1
+enum class TxnStoreWritePolicy : unsigned char {
+  kWriteCommitted = 0x0,
+  kWritePrepared = 0x1,
+  kMaxWritePolicyType
 };
 
-enum TxnLockManagerType : unsigned char {
-  kEmptyTxnLoxkManager = 0x0
-};
-
-struct CommitTableOptions {
-  uint32_t max_CAS_retries = 100;
-  uint32_t commit_cache_size_bits = 23;   // default: 8M entries
-  uint32_t snapshot_cache_size_bits = 7;  // default: 128 entries
+enum class TxnLockManagerType : unsigned char {
+  kEmptyTxnLoxkManager = 0x0,
+  kMaxLockManagerType
 };
 
 struct StoreTraits {
-  StoreBackedType backed_type = kSkipListBacked;
-  TxnStoreWritePolicy txn_write_policy = WRITE_COMMITTED;
-  TxnLockManagerType txn_lock_manager_type = kEmptyTxnLoxkManager;
-  CommitTableOptions commit_table_options;  // used for WRITE_PREPARED policy
+  TxnStoreImplType txn_store_impl_type = TxnStoreImplType::kDefault;
+  MVCCWriteBufferBackedType write_buffer_backed_type =
+      MVCCWriteBufferBackedType::kSkipListBacked;
+  StagingWriteType staging_write_type = StagingWriteType::kOrderedMapBacked;
+  ConcurrencyControlPolicy concurrency_control_Policy =
+      ConcurrencyControlPolicy::kPessimisticConcurrencyControl;
+  OptimisticTxnValidatePolicy optimistic_txn_validate_policy = 
+      OptimisticTxnValidatePolicy::kValidateSerially;
+  TxnStoreWritePolicy txn_store_write_policy =
+      TxnStoreWritePolicy::kWriteCommitted;
+  TxnLockManagerType txn_lock_manager_type =
+      TxnLockManagerType::kEmptyTxnLoxkManager;
+  CommitTableOptions commit_table_options;  // used for kWritePrepared policy
 };
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

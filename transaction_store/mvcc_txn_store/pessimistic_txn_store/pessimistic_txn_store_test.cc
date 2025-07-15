@@ -10,7 +10,8 @@ class CommonPessimisticTxnTest : public testing::Test {
   ~CommonPessimisticTxnTest() {}
 
   void TestCommonFunc(void (CommonPessimisticTxnTests::*func)()) {
-    TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+    TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                      TxnStoreWritePolicy::kWritePrepared},
                                      {false, true}, {true}, {"", "1314"});
     TxnTestsSetups setups;                                      
     while (generator.NextTxnTestSetups(&setups)) {           
@@ -102,7 +103,8 @@ class MultiThreadingPessimisticTxnTest : public testing::Test {
 
   void TestMultiThreadingFunc(
       void (MultiThreadingPessimisticTxnTests::*func)()) {
-    TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+    TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                      TxnStoreWritePolicy::kWritePrepared},
                                      {false, true}, {true}, {"", "1314"});
     TxnTestsSetups setups;                                      
     while (generator.NextTxnTestSetups(&setups)) {
@@ -140,7 +142,8 @@ class InspectPessimisticTxnTest : public testing::Test {
   ~InspectPessimisticTxnTest() {}
 
   void TestInspectFunc(void (InspectPessimisticTxnTests::*func)()) {
-    TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+    TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                      TxnStoreWritePolicy::kWritePrepared},
                                      {false, true}, {false, true},
                                      {"", "1314"});
     TxnTestsSetups setups;                                      
@@ -158,7 +161,8 @@ TEST_F(InspectPessimisticTxnTest, VersionIncrement) {
 
 TEST_F(InspectPessimisticTxnTest,
     VersionIncrementForPreparingOfEmptyStagingWrite) {
-  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+  TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                    TxnStoreWritePolicy::kWritePrepared},
                                    {false, true}, {true}, {"", "1314"});
   TxnTestsSetups setups;  
   while (generator.NextTxnTestSetups(&setups)) {
@@ -182,7 +186,8 @@ TEST_F(InspectPessimisticTxnTest,
 
 TEST_F(InspectPessimisticTxnTest,
     WriteBufferInsertTimingBetweenDifferentWritePolicy) {
-  TxnTestSetupsGenerator generator({WRITE_COMMITTED, WRITE_PREPARED},
+  TxnTestSetupsGenerator generator({TxnStoreWritePolicy::kWriteCommitted,
+                                    TxnStoreWritePolicy::kWritePrepared},
                                    {false, true}, {true}, {"", "1314"});
   TxnTestsSetups setups;  
   while (generator.NextTxnTestSetups(&setups)) {

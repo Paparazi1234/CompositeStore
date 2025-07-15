@@ -18,8 +18,8 @@ WriteCommittedTxnStore::WriteCommittedTxnStore(
               txn_factory,
               staging_write_factory,
               mvcc_write_buffer_factory,
-              CalcuPrepareQueue(store_options.enable_two_write_queues),
-              CalcuCommitQueue(store_options.enable_two_write_queues)) {
+              this->CalcuPrepareQueue(store_options.enable_two_write_queues),
+              this->CalcuCommitQueue(store_options.enable_two_write_queues)) {
   assert(std::addressof(commit_queue_) == &first_write_queue_);
   if (store_options.enable_two_write_queues) {
     assert(std::addressof(prepare_queue_) == &second_write_queue_);
@@ -29,6 +29,7 @@ WriteCommittedTxnStore::WriteCommittedTxnStore(
   if (!store_options.enable_two_write_queues) {
     assert(std::addressof(prepare_queue_) == std::addressof(commit_queue_));
   }
+  CalcuCommitQueue(store_options.enable_two_write_queues);
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

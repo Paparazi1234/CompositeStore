@@ -20,7 +20,7 @@ class PessimisticTxnTestsBase {
     EmptyTxnLockManagerFactory txn_lock_mgr_factory;
     SkipListBackedMVCCWriteBufferFactory mvcc_write_buffer_factory;
     store_options.enable_two_write_queues = enable_two_write_queues_;
-    if (write_policy_ == WRITE_COMMITTED) {
+    if (write_policy_ == TxnStoreWritePolicy::kWriteCommitted) {
       txn_store_impl_ =
           new WriteCommittedTxnStore(store_options,
                                      txn_store_options,
@@ -30,7 +30,7 @@ class PessimisticTxnTestsBase {
                                      new WriteCommittedTransactionFactory(),
                                      new OrderedMapBackedStagingWriteFactory(),
                                      mvcc_write_buffer_factory);
-    } else if (write_policy_ == WRITE_PREPARED) {
+    } else if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
       CommitTableOptions commit_table_options;
       txn_store_impl_ =
           new WritePreparedTxnStore(store_options,
@@ -71,7 +71,8 @@ class PessimisticTxnTestsBase {
 
   void PrintTestSetups() const {
     const char* write_policy =
-        write_policy_ == WRITE_COMMITTED ? "WRITE_COMMITTED" : "WRITE_PREPARED";
+        write_policy_ == TxnStoreWritePolicy::kWriteCommitted ?
+            "kWriteCommitted" : "kWritePrepared";
     const char* two_write_queues = enable_two_write_queues_ ? "TRUE" : "FALSE";
     const char* with_prepare = with_prepare_ ? "TRUE" : "FALSE";
     std::cout<<"Write policy: "<<write_policy
@@ -1041,22 +1042,22 @@ void MultiThreadingPessimisticTxnTests::MultiThreadsTxnsExcution() {
   // cfg0: default cfg
   // cfg1
   SetupTxnExecutorCfg(vec_cfgs[1],
-                      0, 0, kMin,         // with_prepare_rate
-                      0, 0, kMin,         // to_be_rollbacked_rate
-                      0, 0, kMin,         // delay_ms_after_prepare
-                      1, 1, kMin);        // inc_per_time
+                      0, 0, GenType::kMin,         // with_prepare_rate
+                      0, 0, GenType::kMin,         // to_be_rollbacked_rate
+                      0, 0, GenType::kMin,         // delay_ms_after_prepare
+                      1, 1, GenType::kMin);        // inc_per_time
   // cfg2
   SetupTxnExecutorCfg(vec_cfgs[2],
-                      70, 90, kRandom,    // with_prepare_rate
-                      5, 15, kRandom,     // to_be_rollbacked_rate
-                      0, 0, kMin,         // delay_ms_after_prepare
-                      1, 10, kRandom);    // inc_per_time
+                      70, 90, GenType::kRandom,    // with_prepare_rate
+                      5, 15, GenType::kRandom,     // to_be_rollbacked_rate
+                      0, 0, GenType::kMin,         // delay_ms_after_prepare
+                      1, 10, GenType::kRandom);    // inc_per_time
   // cfg3
   SetupTxnExecutorCfg(vec_cfgs[3],
-                      100, 100, kMin,     // with_prepare_rate
-                      20, 30, kRandom,    // to_be_rollbacked_rate
-                      0, 0, kMin,         // delay_ms_after_prepare
-                      20, 30, kRandom);   // inc_per_time
+                      100, 100, GenType::kMin,     // with_prepare_rate
+                      20, 30, GenType::kRandom,    // to_be_rollbacked_rate
+                      0, 0, GenType::kMin,         // delay_ms_after_prepare
+                      20, 30, GenType::kRandom);   // inc_per_time
   for (uint32_t i = 0; i < num_threads; ++i) {
     vec_threads.emplace_back(ThreadFuncInsertStoreRdMoWr, txn_store_,
                              &vec_cfgs[i], i, num_keys_in_set, total_increment);
@@ -1147,10 +1148,10 @@ void MultiThreadingPessimisticTxnTests::SingleWriterMultiReaders() {
   // writer insert cfg
   TransactionExecutorCfg writer_insert_cfg;
   SetupTxnExecutorCfg(writer_insert_cfg,
-                      70, 90, kRandom,    // with_prepare_rate
-                      5, 15, kRandom,     // to_be_rollbacked_rate
-                      1, 5, kRandom,      // delay_ms_after_prepare
-                      1, 10, kRandom);    // inc_per_time
+                      70, 90, GenType::kRandom,    // with_prepare_rate
+                      5, 15, GenType::kRandom,     // to_be_rollbacked_rate
+                      1, 5, GenType::kRandom,      // delay_ms_after_prepare
+                      1, 10, GenType::kRandom);    // inc_per_time
   port::Thread writer_thread(ThreadFuncInsertStoreWrOnly, txn_store_,
                              &writer_insert_cfg, target_key_set,
                              num_keys_in_set, total_increment,
@@ -1183,22 +1184,22 @@ void MultiThreadingPessimisticTxnTests::SingleReaderMultiWriters() {
   // cfg0: default cfg
   // cfg1
   SetupTxnExecutorCfg(vec_writer_insert_cfgs[1],
-                      0, 0, kMin,         // with_prepare_rate
-                      0, 0, kMin,         // to_be_rollbacked_rate
-                      0, 0, kMin,         // delay_ms_after_prepare
-                      1, 1, kMin);        // inc_per_time
+                      0, 0, GenType::kMin,         // with_prepare_rate
+                      0, 0, GenType::kMin,         // to_be_rollbacked_rate
+                      0, 0, GenType::kMin,         // delay_ms_after_prepare
+                      1, 1, GenType::kMin);        // inc_per_time
   // cfg2
   SetupTxnExecutorCfg(vec_writer_insert_cfgs[2],
-                      70, 90, kRandom,    // with_prepare_rate
-                      5, 15, kRandom,     // to_be_rollbacked_rate
-                      1, 5, kRandom,      // delay_ms_after_prepare
-                      1, 10, kRandom);    // inc_per_time
+                      70, 90, GenType::kRandom,    // with_prepare_rate
+                      5, 15, GenType::kRandom,     // to_be_rollbacked_rate
+                      1, 5, GenType::kRandom,      // delay_ms_after_prepare
+                      1, 10, GenType::kRandom);    // inc_per_time
   // cfg3
   SetupTxnExecutorCfg(vec_writer_insert_cfgs[3],
-                      100, 100, kMin,     // with_prepare_rate
-                      20, 30, kRandom,    // to_be_rollbacked_rate
-                      5, 10, kRandom,     // delay_ms_after_prepare
-                      20, 30, kRandom);   // inc_per_time
+                      100, 100, GenType::kMin,     // with_prepare_rate
+                      20, 30, GenType::kRandom,    // to_be_rollbacked_rate
+                      5, 10, GenType::kRandom,     // delay_ms_after_prepare
+                      20, 30, GenType::kRandom);   // inc_per_time
 
   for (uint32_t i = 0; i < num_writer_threads; ++i) {
     vec_writer_threads.emplace_back(ThreadFuncInsertStoreWrOnly, txn_store_,
@@ -1234,22 +1235,22 @@ void MultiThreadingPessimisticTxnTests::MultiWritersMultiReaders() {
   // cfg0: default cfg
   // cfg1
   SetupTxnExecutorCfg(vec_writer_insert_cfgs[1],
-                      0, 0, kMin,         // with_prepare_rate
-                      0, 0, kMin,         // to_be_rollbacked_rate
-                      0, 0, kMin,         // delay_ms_after_prepare
-                      1, 1, kMin);        // inc_per_time
+                      0, 0, GenType::kMin,         // with_prepare_rate
+                      0, 0, GenType::kMin,         // to_be_rollbacked_rate
+                      0, 0, GenType::kMin,         // delay_ms_after_prepare
+                      1, 1, GenType::kMin);        // inc_per_time
   // cfg2
   SetupTxnExecutorCfg(vec_writer_insert_cfgs[2],
-                      70, 90, kRandom,    // with_prepare_rate
-                      5, 15, kRandom,     // to_be_rollbacked_rate
-                      1, 5, kRandom,      // delay_ms_after_prepare
-                      1, 10, kRandom);    // inc_per_time
+                      70, 90, GenType::kRandom,    // with_prepare_rate
+                      5, 15, GenType::kRandom,     // to_be_rollbacked_rate
+                      1, 5, GenType::kRandom,      // delay_ms_after_prepare
+                      1, 10, GenType::kRandom);    // inc_per_time
   // cfg3
   SetupTxnExecutorCfg(vec_writer_insert_cfgs[3],
-                      100, 100, kMin,     // with_prepare_rate
-                      20, 30, kRandom,    // to_be_rollbacked_rate
-                      5, 10, kRandom,     // delay_ms_after_prepare
-                      20, 30, kRandom);   // inc_per_time
+                      100, 100, GenType::kMin,     // with_prepare_rate
+                      20, 30, GenType::kRandom,    // to_be_rollbacked_rate
+                      5, 10, GenType::kRandom,     // delay_ms_after_prepare
+                      20, 30, GenType::kRandom);   // inc_per_time
 
   for (uint32_t i = 0; i < num_threads; ++i) {
     vec_writer_threads.emplace_back(ThreadFuncInsertStoreWrOnly, txn_store_,
@@ -1286,7 +1287,7 @@ void InspectPessimisticTxnTests::VersionIncrement() {
                                                       //   not 2-WQ
 
   std::vector<SeqIncInfos>* expected;
-  if (write_policy_ == WRITE_PREPARED) {
+  if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
     GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
   } else {
     GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
@@ -1346,7 +1347,7 @@ void InspectPessimisticTxnTests::
       {{{0, 0, 0}, {0, 0, 0}},   // prepare() and 2-WQ
        {{0, 0, 0}, {0, 0, 0}}};  // prepare() and not 2-WQ
   std::vector<SeqIncInfos>* expected;
-  if (write_policy_ == WRITE_PREPARED) {
+  if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
     GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
   } else {
     GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
@@ -1387,7 +1388,7 @@ void InspectPessimisticTxnTests::
        {{0, 0, 0},            {1, 1, 1}}}; // not prepare() and not 2-WQ
 
   std::vector<SeqIncInfos>* expected;
-  if (write_policy_ == WRITE_PREPARED) {
+  if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
     GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
   } else {
     GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
@@ -1442,7 +1443,7 @@ void InspectPessimisticTxnTests::
        {{0, 0, 0},            {0, 0, 0}}}; // not prepare() and not 2-WQ
 
   std::vector<SeqIncInfos>* expected;
-  if (write_policy_ == WRITE_PREPARED) {
+  if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
     GetExpectedSeqIncInfos(&expected, expected_of_write_prepared);
   } else {
     GetExpectedSeqIncInfos(&expected, expected_of_write_committed);
@@ -1502,7 +1503,7 @@ void InspectPessimisticTxnTests::
   s = txn->Prepare();
   ASSERT_TRUE(s.IsOK());
   // write prepared txn insert data to store during Prepare()
-  if (write_policy_ == WRITE_PREPARED) {
+  if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
     ASSERT_EQ(txn_store_impl_->RawDataSize(), expected_raw_data_size);
   } else {
     // write committed txn insert data to store during Commit()

@@ -13,13 +13,12 @@
 
 #include "port/likely.h"
 
-#define STORAGE_DECL static thread_local
-
 namespace MULTI_VERSIONS_NAMESPACE {
 
 Random* Random::GetTLSInstance() {
-  STORAGE_DECL Random* tls_instance;
-  STORAGE_DECL std::aligned_storage<sizeof(Random)>::type tls_instance_bytes;
+  static thread_local Random* tls_instance;
+  static thread_local std::aligned_storage<sizeof(Random)>::type
+      tls_instance_bytes;
 
   auto rv = tls_instance;
   if (UNLIKELY(rv == nullptr)) {
