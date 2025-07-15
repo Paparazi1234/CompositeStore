@@ -56,6 +56,11 @@ class MVCCTransaction : public Transaction {
     staging_write_->Clear();
   }
 
+  StagingWrite* GetStagingWrite() const {
+    assert(staging_write_.get() != nullptr);
+    return staging_write_.get();
+  }
+
   bool IsInWriteStage() {
     return txn_state_ == STAGE_WRITING;
   }

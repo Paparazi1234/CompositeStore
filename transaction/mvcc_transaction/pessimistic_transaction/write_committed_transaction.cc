@@ -1,38 +1,8 @@
 #include "write_committed_transaction.h"
 
-#include "transaction_store/mvcc_txn_store/pessimistic_txn_store/write_committed_txn_store.h"
 #include "util/cast_util.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
-
-namespace {
-class WCTxnMaintainVersionsCB : public MaintainVersionsCallbacks {
-  public:
-  WCTxnMaintainVersionsCB(MVCCTxnStore* store)
-      : multi_versions_manager_(store->GetMultiVersionsManager()) {}
-	~WCTxnMaintainVersionsCB() {}
-
-  bool NeedMaintainBeforePersistWAL() const override { return false; }
-	bool NeedMaintainBeforeInsertWriteBuffer() const override { return false; }
-	bool NeedMaintainAfterInsertWriteBuffer() const override { return true; }
-
-	Status AfterInsertWriteBufferCallback(const Version* version)  override {
-    const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
-    const Version& prepared_uncommitted_started = dummy_version;
-    const Version& committed = *version;
-    uint32_t num_prepared_uncommitteds = 0;
-    // as for WriteCommitted txn, all we need to do it's to advance max visible
-    // version after insert the txn's staging write to write buffer
-    multi_versions_manager_->EndCommitVersions(prepared_uncommitted_started,
-                                               committed,
-                                               num_prepared_uncommitteds);
-    return Status::OK();
-  }
-
- private:
-  MultiVersionsManager* multi_versions_manager_;
-};
-}   // anonymous namespace
 
 Status WriteCommittedTransaction::PrepareImpl() {
   // in-memory only store, so nothing to do when prepare(because prepare mainly
@@ -41,23 +11,21 @@ Status WriteCommittedTransaction::PrepareImpl() {
 }
 
 Status WriteCommittedTransaction::CommitWithPrepareImpl() {
-  WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
-  WriteCommittedTxnStore* store_impl =
-      static_cast_with_check<WriteCommittedTxnStore>(txn_store_);
-  return txn_store_->CommitStagingWrite(write_options_,
-                                        staging_write_.get(),
-                                        wc_maintain_versions_cb,
-                                        store_impl->GetCommitQueue());
+  MVCCTxnStore* txn_store = GetTxnStore();
+  WCTxnMaintainVersionsCB wc_maintain_versions_cb(txn_store);
+  return txn_store->CommitStagingWrite(write_options_,
+                                       GetStagingWrite(),
+                                       wc_maintain_versions_cb,
+                                       txn_store->GetCommitQueue());
 }
 
 Status WriteCommittedTransaction::CommitWithoutPrepareImpl() {
-  WCTxnMaintainVersionsCB wc_maintain_versions_cb(this->txn_store_);
-  WriteCommittedTxnStore* store_impl =
-      static_cast_with_check<WriteCommittedTxnStore>(txn_store_);
-  return txn_store_->CommitStagingWrite(write_options_,
-                                        staging_write_.get(),
-                                        wc_maintain_versions_cb,
-                                        store_impl->GetCommitQueue());
+  MVCCTxnStore* txn_store = GetTxnStore();
+  WCTxnMaintainVersionsCB wc_maintain_versions_cb(txn_store);
+  return txn_store->CommitStagingWrite(write_options_,
+                                       GetStagingWrite(),
+                                       wc_maintain_versions_cb,
+                                       txn_store->GetCommitQueue());
 }
 
 Status WriteCommittedTransaction::RollbackImpl() {

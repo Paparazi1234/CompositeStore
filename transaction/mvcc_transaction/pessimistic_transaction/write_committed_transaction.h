@@ -4,6 +4,33 @@
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
+class WCTxnMaintainVersionsCB : public MaintainVersionsCallbacks {
+ public:
+  WCTxnMaintainVersionsCB(MVCCTxnStore* store)
+      : multi_versions_manager_(store->GetMultiVersionsManager()) {}
+  virtual ~WCTxnMaintainVersionsCB() {}
+
+  bool NeedMaintainBeforePersistWAL() const override { return false; }
+	bool NeedMaintainBeforeInsertWriteBuffer() const override { return false; }
+	bool NeedMaintainAfterInsertWriteBuffer() const override { return true; }
+
+	Status AfterInsertWriteBufferCallback(const Version* version)  override {
+    const Version& dummy_version = multi_versions_manager_->VersionLimitsMax();
+    const Version& prepared_uncommitted_started = dummy_version;
+    const Version& committed = *version;
+    uint32_t num_prepared_uncommitteds = 0;
+    // as for WriteCommitted txn, all we need to do it's to advance max visible
+    // version after insert the txn's staging write to write buffer
+    multi_versions_manager_->EndCommitVersions(prepared_uncommitted_started,
+                                               committed,
+                                               num_prepared_uncommitteds);
+    return Status::OK();
+  }
+
+ private:
+  MultiVersionsManager* multi_versions_manager_;
+};
+
 class WriteCommittedTransaction : public PessimisticTransaction {
  public:
   // No copying allowed

@@ -380,13 +380,12 @@ class WPTxnMaintainVersionsCBForRollbackWithoutPrepare :
 }   // anonymous namespace
 
 Status WritePreparedTransaction::PrepareImpl() {
-  WritePreparedTxnStore* store_impl =
-      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
+  MVCCTxnStore* txn_store = GetTxnStore();
   WPTxnMaintainVersionsCBForPrepare wp_maintain_versions_cb_for_prepare(this);
-  return txn_store_->CommitStagingWrite(write_options_,
-                                        staging_write_.get(),
-                                        wp_maintain_versions_cb_for_prepare,
-                                        store_impl->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+  return txn_store->CommitStagingWrite(write_options_,
+                                       GetStagingWrite(),
+                                       wp_maintain_versions_cb_for_prepare,
+                                       txn_store->GetPrepareQueue());    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 Status WritePreparedTransaction::CommitWithPrepareImpl() {
@@ -399,20 +398,20 @@ Status WritePreparedTransaction::CommitWithPrepareImpl() {
   // empty_staging_write is fine, since we have advance max visible version in
   // EndCommitVersions()
   StagingWrite* empty_staging_write = GetEmptyStagingWrite();
-  WritePreparedTxnStore* store_impl =
-      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
   WPTxnMaintainVersionsCBForCommitWithPrepare
       wp_maintain_versions_cb_for_commit_with_prepare(this);
-  return txn_store_->CommitStagingWrite(
+  MVCCTxnStore* txn_store = GetTxnStore();
+  return txn_store->CommitStagingWrite(
       write_options_,
       empty_staging_write,
       wp_maintain_versions_cb_for_commit_with_prepare,
-      store_impl->GetCommitQueue());   // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+      txn_store->GetCommitQueue());   // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
+  MVCCTxnStore* txn_store = GetTxnStore();
   WritePreparedTxnStore* store_impl =
-      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
+      static_cast_with_check<WritePreparedTxnStore>(txn_store);
   bool enable_two_write_queues = store_impl->IsEnableTwoWriteQueues();
   // commit without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
@@ -420,21 +419,21 @@ Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
   if (!enable_two_write_queues) {
     WPTxnMaintainVersionsCBForCommitWithoutPrepare
         wp_maintain_versions_cb_for_commit_without_prepare(this);
-    return txn_store_->CommitStagingWrite(
+    return txn_store->CommitStagingWrite(
         write_options_,
-        staging_write_.get(),
+        GetStagingWrite(),
         wp_maintain_versions_cb_for_commit_without_prepare,
-        store_impl->GetCommitQueue());
+        txn_store->GetCommitQueue());
   }
 
   // enable_two_write_queues == true
   // first prepare: insert staging write into write buffer through an internal
   // Prepare() stage
   WPTxnMaintainVersionsCBForPrepare wp_maintain_versions_cb_for_prepare(this);
-  Status s = txn_store_->CommitStagingWrite(write_options_,
-                                            staging_write_.get(),
-                                            wp_maintain_versions_cb_for_prepare,
-                                            store_impl->GetPrepareQueue());
+  Status s = txn_store->CommitStagingWrite(write_options_,
+                                           GetStagingWrite(),
+                                           wp_maintain_versions_cb_for_prepare,
+                                           txn_store->GetPrepareQueue());
   if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
     return s;
   }
@@ -450,11 +449,11 @@ Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
   StagingWrite* empty_staging_write = GetEmptyStagingWrite();
   WPTxnMaintainVersionsCBForCommitWithPrepare
       wp_maintain_versions_cb_for_commit_with_prepare(this);
-  return txn_store_->CommitStagingWrite(
+  return txn_store->CommitStagingWrite(
       write_options_,
       empty_staging_write,
       wp_maintain_versions_cb_for_commit_with_prepare,
-      store_impl->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+      txn_store->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 class WritePreparedTransaction::RollbackStagingWriteBuilder :
@@ -504,14 +503,15 @@ class WritePreparedTransaction::RollbackStagingWriteBuilder :
 
 Status WritePreparedTransaction::RollbackImpl() {
   // build the rollback staging write
-  StagingWriteFactory* factory = GetTxnStore()->GetStagingWriteFactory();
+  MVCCTxnStore* txn_store = GetTxnStore();
+  StagingWriteFactory* factory = txn_store->GetStagingWriteFactory();
   std::unique_ptr<StagingWrite>
       rollback_staging_write(factory->CreateStagingWrite());
   WritePreparedTxnStore* store_impl =
-      static_cast_with_check<WritePreparedTxnStore>(txn_store_);
+      static_cast_with_check<WritePreparedTxnStore>(txn_store);
   RollbackStagingWriteBuilder
       rollback_staging_write_builder(store_impl, rollback_staging_write.get());
-  Status s = staging_write_->Iterate(&rollback_staging_write_builder);
+  Status s = GetStagingWrite()->Iterate(&rollback_staging_write_builder);
   if (!s.IsOK()) {
     return s;
   }
@@ -525,22 +525,22 @@ Status WritePreparedTransaction::RollbackImpl() {
   if (!enable_two_write_queues) {
     WPTxnMaintainVersionsCBForRollbackWithoutPrepare
         wp_maintain_versions_cb_for_rollback_without_prepare(this);
-    return txn_store_->CommitStagingWrite(
+    return txn_store->CommitStagingWrite(
         write_options_,
         rollback_staging_write.get(),
         wp_maintain_versions_cb_for_rollback_without_prepare,
-        store_impl->GetCommitQueue());
+        txn_store->GetCommitQueue());
   }
 
   // enable_two_write_queues == true
   // first prepare: insert rollback staging write into write buffer
   WPTxnMaintainVersionsCBForPrepareForRollback
       wp_maintain_versions_cb_for_prepare_for_rollback(this);
-  s = txn_store_->CommitStagingWrite(
+  s = txn_store->CommitStagingWrite(
       write_options_,
       rollback_staging_write.get(),
       wp_maintain_versions_cb_for_prepare_for_rollback,
-      store_impl->GetPrepareQueue());
+      txn_store->GetPrepareQueue());
   if (!s.IsOK()) {    // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
     return s;
   }
@@ -556,11 +556,11 @@ Status WritePreparedTransaction::RollbackImpl() {
   StagingWrite* empty_staging_write = GetEmptyStagingWrite();
   WPTxnMaintainVersionsCBForRollbackWithPrepare
       wp_maintain_versions_cb_for_rollback_with_prepare(this);
-  return txn_store_->CommitStagingWrite(
+  return txn_store->CommitStagingWrite(
       write_options_,
       empty_staging_write,
       wp_maintain_versions_cb_for_rollback_with_prepare,
-      store_impl->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
+      txn_store->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
 }   // namespace MULTI_VERSIONS_NAMESPACE

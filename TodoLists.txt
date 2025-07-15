@@ -13,13 +13,11 @@
 26 事务benchmark
 28 事务锁实现
 29 multi versions 模块内部进一步细化划分
-30 减少类成员变量的直接使用，改用Get接口获取：如，事务中的txn_store_、staging_write_的访问
 33 想一个更好的project名称
-34 multi versions manager更改为versions manager
-35 reinterpret_cast替换为static_cast
 36 enum整改为enum class
 37 编译选线添加rtti针对debug和release模式的开启和关闭
 38 统一上层入口创建
+39 删除enable_two_write_queues_变量
 
 TodoList表头：
 

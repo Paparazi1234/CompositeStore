@@ -24,7 +24,7 @@ Status MVCCTransaction::Put(const std::string& key, const std::string& value) {
   }
   Status s = TryLock(key);
   if (s.IsOK()) {
-    staging_write_->Put(key, value);
+    GetStagingWrite()->Put(key, value);
   }
   return s;
 }
@@ -35,7 +35,7 @@ Status MVCCTransaction::Delete(const std::string& key) {
   }
   Status s = TryLock(key);
   if (s.IsOK()) {
-    staging_write_->Delete(key);
+    GetStagingWrite()->Delete(key);
   }
   return s;
 }
@@ -46,7 +46,7 @@ Status MVCCTransaction::Get(const ReadOptions& read_options,
                             const std::string& key, std::string* value) {
   assert(value);
   value->clear();
-  StagingWrite::GetReault result = staging_write_->Get(key, value);
+  StagingWrite::GetReault result = GetStagingWrite()->Get(key, value);
   if (result == StagingWrite::GetReault::kFound) {
     return Status::OK();
   } else if (result == StagingWrite::GetReault::kDeleted) {
@@ -94,11 +94,12 @@ class MVCCTransaction::ReleaseTxnLockHandler : public StagingWrite::Handler {
 };
 
 void MVCCTransaction::ClearTxnLocks() {
-  if (staging_write_->IsEmpty()) {
+  StagingWrite* staging_write = GetStagingWrite();
+  if (staging_write->IsEmpty()) {
     return;
   }
   ReleaseTxnLockHandler handler(this);
-  Status s = staging_write_->Iterate(&handler);
+  Status s = staging_write->Iterate(&handler);
   assert(s.IsOK());
 }
 

@@ -21,11 +21,11 @@ class PessimisticTxnStore : public MVCCTxnStore {
       WriteQueue& prepare_queue,
       WriteQueue& commit_queue);
 
-  WriteQueue& GetPrepareQueue() {
+  virtual WriteQueue& GetPrepareQueue() {
     return prepare_queue_;
   }
 
-  WriteQueue& GetCommitQueue() {
+  virtual WriteQueue& GetCommitQueue() {
     return commit_queue_;
   }
 

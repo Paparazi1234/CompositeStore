@@ -105,6 +105,16 @@ class MVCCTxnStore : public TransactionStore {
 		return staging_write->Count();
 	}
 
+	// Default: use first_write_queue_ as prepare queue
+	virtual WriteQueue& GetPrepareQueue() {
+		return first_write_queue_;
+	}
+
+	// Default: use first_write_queue_ as commit queue
+	virtual WriteQueue& GetCommitQueue() {
+		return first_write_queue_;
+	}
+
 	void TEST_Crash() override {
     multi_versions_manager_->TEST_Crash();
   }

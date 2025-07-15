@@ -66,7 +66,7 @@ class WritePreparedTransaction : public PessimisticTransaction {
     // clear txn locks before clearing staging_write_, because clearing txn locks
     // depends on the staging_write_
     ClearTxnLocks();
-    staging_write_->Clear();
+    GetStagingWrite()->Clear();
     ResetUnCommittedSeqs();
   }
 
