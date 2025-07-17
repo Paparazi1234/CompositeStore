@@ -13,10 +13,6 @@ class TxnStoreFactory {
       const StoreTraits& store_traits) const = 0;
 };
 
-struct TxnStoreParam{
-
-};
-
 class MVCCTxnStoreFactory : public TxnStoreFactory {
  public:
   ~MVCCTxnStoreFactory() {}

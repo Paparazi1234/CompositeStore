@@ -14,8 +14,8 @@
 28 事务锁实现
 37 编译选线添加rtti针对debug和release模式的开启和关闭
 38 统一上层入口创建
-39 加一个bench_util.h文件
-40 readme.md
+40 readme.md：项目介绍
+41 license文件
 
 TodoList表头：
 
