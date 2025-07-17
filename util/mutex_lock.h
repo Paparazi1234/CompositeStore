@@ -2,7 +2,7 @@
 
 #include "port/port.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 // Helper class that locks a mutex on construction and unlocks the mutex when
 // the destructor of the MutexLock object is invoked.
@@ -62,4 +62,4 @@ class WriteLock {
   port::SharedMutex *const mu_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

@@ -12,7 +12,6 @@
 24 考虑将Get/Write path上频繁创建的临时堆变量改造为thread local storage（这种TLS实现需要详细考虑）
 26 事务benchmark
 28 事务锁实现
-33 想一个更好的project名称，如：CompositeStore
 37 编译选线添加rtti针对debug和release模式的开启和关闭
 38 统一上层入口创建
 39 加一个bench_util.h文件

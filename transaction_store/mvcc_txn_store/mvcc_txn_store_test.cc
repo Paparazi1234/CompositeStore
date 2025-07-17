@@ -1,6 +1,6 @@
 #include "mvcc_txn_store_test.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MVCCTxnStoreTest : public testing::Test {
  public:
@@ -36,7 +36,7 @@ TEST_F(MVCCTxnStoreTest, DISABLED_DumpStoreKVPairs) {
   TestMVCCTxnStoreFunc(&MVCCTxnStoreTests::DumpStoreKVPairs);
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

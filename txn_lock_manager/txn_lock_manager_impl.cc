@@ -1,9 +1,9 @@
 #include "empty_txn_lock_manager.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 TxnLockManager* EmptyTxnLockManagerFactory::CreateTxnLockManager() const {
   return new EmptyTxnLockManager();
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

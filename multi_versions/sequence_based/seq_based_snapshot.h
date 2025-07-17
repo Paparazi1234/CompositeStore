@@ -6,7 +6,7 @@
 #include "seq_based_multi_versions.h"
 #include "port/port.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class SeqBasedSnapshot : public Snapshot {
  public:
@@ -87,4 +87,4 @@ class SeqBasedSnapshotManager : public SnapshotManager {
   static const SeqBasedSnapshot snapshot_limits_max_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

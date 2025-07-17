@@ -2,7 +2,7 @@
 
 #include "seq_limits.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 const SeqBasedVersion SeqBasedMultiVersionsManager::version_limits_min_ =
     SeqBasedVersion(kSeqNumberLimitsMin);
@@ -45,4 +45,4 @@ Version* SeqBasedMultiVersionsManager::LatestVisibleVersion(
   }
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

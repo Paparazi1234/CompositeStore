@@ -6,7 +6,7 @@
 
 #include "status.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class Snapshot;
 
@@ -165,4 +165,4 @@ class WritePreparedMultiVersionsManagerFactory :
   bool enable_two_write_queues_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

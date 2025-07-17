@@ -1,6 +1,6 @@
 #include "pessimistic_transaction.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 // only control the transaction excution behavior, let derived class
 // implements the details
@@ -79,4 +79,4 @@ Status PessimisticTransaction::Rollback() {
   return s;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

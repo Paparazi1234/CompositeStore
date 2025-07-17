@@ -3,7 +3,7 @@
 #include "options.h"
 #include "store_traits.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class Store {
  public:
@@ -26,4 +26,4 @@ class Store {
   virtual void TEST_Crash() {}
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

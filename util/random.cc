@@ -13,7 +13,7 @@
 
 #include "port/likely.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 Random* Random::GetTLSInstance() {
   static thread_local Random* tls_instance;
@@ -56,4 +56,4 @@ std::string Random::RandomBinaryString(int len) {
   return ret;
 }
 
-}  // namespace MULTI_VERSIONS_NAMESPACE
+}  // namespace COMPOSITE_STORE_NAMESPACE

@@ -1,7 +1,7 @@
 #include "mvcc_txn_store/pessimistic_txn_store/write_committed_txn_store.h"
 #include "mvcc_txn_store/pessimistic_txn_store/write_prepared_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class TxnStoreFactory {
  public:
@@ -85,4 +85,4 @@ Status TransactionStore::Open(const StoreOptions& store_options,
   return s;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

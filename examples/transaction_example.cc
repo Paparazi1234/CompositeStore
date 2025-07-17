@@ -2,15 +2,15 @@
 
 #include "include/transaction_store.h"
 
-using MULTI_VERSIONS_NAMESPACE::Status;
-using MULTI_VERSIONS_NAMESPACE::TransactionStore;
-using MULTI_VERSIONS_NAMESPACE::StoreOptions;
-using MULTI_VERSIONS_NAMESPACE::TransactionStoreOptions;
-using MULTI_VERSIONS_NAMESPACE::StoreTraits;
-using MULTI_VERSIONS_NAMESPACE::TransactionOptions;
-using MULTI_VERSIONS_NAMESPACE::WriteOptions;
-using MULTI_VERSIONS_NAMESPACE::ReadOptions;
-using MULTI_VERSIONS_NAMESPACE::Transaction;
+using COMPOSITE_STORE_NAMESPACE::Status;
+using COMPOSITE_STORE_NAMESPACE::TransactionStore;
+using COMPOSITE_STORE_NAMESPACE::StoreOptions;
+using COMPOSITE_STORE_NAMESPACE::TransactionStoreOptions;
+using COMPOSITE_STORE_NAMESPACE::StoreTraits;
+using COMPOSITE_STORE_NAMESPACE::TransactionOptions;
+using COMPOSITE_STORE_NAMESPACE::WriteOptions;
+using COMPOSITE_STORE_NAMESPACE::ReadOptions;
+using COMPOSITE_STORE_NAMESPACE::Transaction;
 
 int main() {
   TransactionStore* txn_store_ptr;

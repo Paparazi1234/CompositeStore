@@ -18,7 +18,7 @@
 
 #include "include/status.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class SystemClock {
  public:
@@ -97,4 +97,4 @@ class SystemClock {
   SystemClock() {}
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

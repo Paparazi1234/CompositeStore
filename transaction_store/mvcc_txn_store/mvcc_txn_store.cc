@@ -1,6 +1,6 @@
 #include "mvcc_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 MVCCTxnStore::MVCCTxnStore(
     const StoreOptions& store_options,
@@ -186,4 +186,4 @@ Transaction* MVCCTxnStore::BeginInternalTransaction(
   return txn;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

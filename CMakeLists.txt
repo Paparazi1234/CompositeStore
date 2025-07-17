@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(multi-vesions LANGUAGES CXX C ASM)
+project(CompositeStore LANGUAGES CXX C ASM)
 
 set(CMAKE_MESSAGE_LOG_LEVEL "DEBUG")
 

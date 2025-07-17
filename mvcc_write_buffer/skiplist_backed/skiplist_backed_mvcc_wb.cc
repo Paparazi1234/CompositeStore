@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 Status SkipListBackedMVCCWriteBuffer::Insert(const std::string& key,
                                              const std::string& value,
@@ -32,4 +32,4 @@ void SkipListBackedMVCCWriteBuffer::Dump(std::stringstream* oss,
       <<", dump count: "<<actual_dump<<"\n";
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

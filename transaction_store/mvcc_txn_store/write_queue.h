@@ -5,7 +5,7 @@
 #include "include/multi_versions.h"
 #include "port/port.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WriteQueue {
  public:
@@ -48,4 +48,4 @@ class ManagedWriteQueue {
   WriteQueue *const write_queue_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

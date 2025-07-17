@@ -4,7 +4,7 @@
 #include "multi_versions/sequence_based/seq_limits.h"
 #include "infinite_commit_table.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WritePreparedSeqBasedSnapshot : public SeqBasedSnapshot {
  public:
@@ -78,4 +78,4 @@ class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
   static const WritePreparedSeqBasedSnapshot wp_snapshot_limits_max_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

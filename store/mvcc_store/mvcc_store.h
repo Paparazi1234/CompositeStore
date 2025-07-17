@@ -1,6 +1,6 @@
 #include "transaction_store/mvcc_txn_store/mvcc_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MVCCStore : public MVCCTxnStore {
  public:
@@ -28,4 +28,4 @@ class MVCCStore : public MVCCTxnStore {
   virtual void ReleaseSnapshot(const Snapshot* /*snapshot*/) override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

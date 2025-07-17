@@ -2,7 +2,7 @@
 
 #include "transaction_store/mvcc_txn_store/mvcc_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class OptimisticTxnStore : public MVCCTxnStore {
  public:
@@ -11,4 +11,4 @@ class OptimisticTxnStore : public MVCCTxnStore {
   OptimisticTxnStore& operator=(const OptimisticTxnStore&) = delete;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

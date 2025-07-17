@@ -3,7 +3,7 @@
 #include "sequence_based/write_prepared/write_prepared_multi_versions.h"
 #include "sequence_based/write_prepared/write_prepared_snapshot.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 // write committed
 MultiVersionsManager* WriteCommittedMultiVersionsManagerFactory::
@@ -34,4 +34,4 @@ SnapshotManager* WritePreparedMultiVersionsManagerFactory::
   return new WritePreparedSnapshotManager(sbmvm);
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

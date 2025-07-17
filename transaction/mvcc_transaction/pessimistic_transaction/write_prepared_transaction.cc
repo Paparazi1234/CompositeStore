@@ -2,7 +2,7 @@
 
 #include "transaction_store/mvcc_txn_store/pessimistic_txn_store/write_prepared_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 using VersionImpl = SeqBasedVersion;
 
@@ -559,4 +559,4 @@ Status WritePreparedTransaction::RollbackImpl() {
       txn_store->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

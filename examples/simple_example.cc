@@ -2,12 +2,12 @@
 
 #include "include/store.h"
 
-using MULTI_VERSIONS_NAMESPACE::Status;
-using MULTI_VERSIONS_NAMESPACE::Store;
-using MULTI_VERSIONS_NAMESPACE::StoreOptions;
-using MULTI_VERSIONS_NAMESPACE::StoreTraits;
-using MULTI_VERSIONS_NAMESPACE::ReadOptions;
-using MULTI_VERSIONS_NAMESPACE::WriteOptions;
+using COMPOSITE_STORE_NAMESPACE::Status;
+using COMPOSITE_STORE_NAMESPACE::Store;
+using COMPOSITE_STORE_NAMESPACE::StoreOptions;
+using COMPOSITE_STORE_NAMESPACE::StoreTraits;
+using COMPOSITE_STORE_NAMESPACE::ReadOptions;
+using COMPOSITE_STORE_NAMESPACE::WriteOptions;
 
 int main() {
   Store* store_ptr;
@@ -75,4 +75,4 @@ int main() {
   // close store
   delete store_ptr;
   return 0;
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}

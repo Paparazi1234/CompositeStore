@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class CommonPessimisticTxnTest : public testing::Test {
  public:
@@ -197,7 +197,7 @@ TEST_F(InspectPessimisticTxnTest,
   }
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

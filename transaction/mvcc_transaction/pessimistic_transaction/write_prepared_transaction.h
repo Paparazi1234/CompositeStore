@@ -2,7 +2,7 @@
 
 #include "pessimistic_transaction.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WritePreparedTransaction : public PessimisticTransaction {
  public:
@@ -79,4 +79,4 @@ class WritePreparedTransaction : public PessimisticTransaction {
   uint64_t num_rollbacked_uncommitted_seq_ = 0;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

@@ -6,7 +6,7 @@
 #include "include/multi_versions.h"
 #include "util/cast_util.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class SeqBasedVersion : public Version {
  public:
@@ -164,4 +164,4 @@ class SeqBasedMultiVersionsManager : public MultiVersionsManager {
   static const SeqBasedVersion version_limits_max_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

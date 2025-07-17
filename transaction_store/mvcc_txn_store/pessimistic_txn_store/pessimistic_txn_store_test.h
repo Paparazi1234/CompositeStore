@@ -6,7 +6,7 @@
 #include "include/txn_lock_manager.h"
 #include "third-party/gtest/gtest.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class PessimisticTxnTestsBase {
  public:
@@ -1517,4 +1517,4 @@ void InspectPessimisticTxnTests::
   delete txn;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

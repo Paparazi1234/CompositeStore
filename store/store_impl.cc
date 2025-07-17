@@ -1,6 +1,6 @@
 #include "mvcc_store/mvcc_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class StoreFactory {
  public:
@@ -39,4 +39,4 @@ Status Store::Open(const StoreOptions& store_options,
   return s;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

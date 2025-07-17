@@ -1,6 +1,6 @@
 #include "write_committed_snapshot.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 const SeqBasedSnapshot* WriteCommittedSnapshotManager::TakeSnapshotInternal(
     Snapshot* reused) {
@@ -17,4 +17,4 @@ const SeqBasedSnapshot* WriteCommittedSnapshotManager::TakeSnapshotInternal(
   }
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

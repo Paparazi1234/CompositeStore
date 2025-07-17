@@ -5,7 +5,7 @@
 #include "options.h"
 #include "include/status.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class TransactionStore;
 
@@ -66,4 +66,4 @@ class WritePreparedTransactionFactory : public TransactionFactory {
                                  Transaction* reused = nullptr) override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

@@ -2,7 +2,7 @@
 
 #include "multi_versions/sequence_based/seq_based_multi_versions.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {
  public:
@@ -67,4 +67,4 @@ class WriteCommittedMultiVersionsManager : public SeqBasedMultiVersionsManager {
   std::atomic<uint64_t> max_committed_rep_ = {0};
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

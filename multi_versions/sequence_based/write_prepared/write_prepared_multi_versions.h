@@ -3,7 +3,7 @@
 #include "multi_versions/sequence_based/seq_based_multi_versions.h"
 #include "infinite_commit_table.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
  public:
@@ -105,4 +105,4 @@ class WritePreparedMultiVersionsManager : public SeqBasedMultiVersionsManager {
   InfiniteCommitTable commit_table_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

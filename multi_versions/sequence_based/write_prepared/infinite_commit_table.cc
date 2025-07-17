@@ -1,6 +1,6 @@
 #include "infinite_commit_table.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 void HistoryCommitteds::AddHistoryCommitted(
     const SequenceNumber& prepared_version,
@@ -454,4 +454,4 @@ void InfiniteCommitTable::TakeSnapshot(uint64_t* snapshot_seq,
   *snapshot_seq = max_committed;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

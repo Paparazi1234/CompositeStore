@@ -19,7 +19,7 @@
 #include "util/mutex_lock.h"
 #include "port/likely.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 using SequenceNumber = uint64_t;
 
@@ -803,4 +803,4 @@ class InfiniteCommitTable {
       advance_max_committed_by_one_cb;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

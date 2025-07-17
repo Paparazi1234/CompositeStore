@@ -6,7 +6,7 @@
 
 #include "port_posix.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 namespace port {
 
 static int PthreadCall(const char* label, int result) {
@@ -121,6 +121,6 @@ void CondVar::SignalAll() {
 }
 
 }   // namespace port
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE
 
 #endif

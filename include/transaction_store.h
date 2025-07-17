@@ -3,7 +3,7 @@
 #include "store.h"
 #include "transaction.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class TransactionStore : public Store {
  public:
@@ -28,4 +28,4 @@ class TransactionStore : public Store {
   virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

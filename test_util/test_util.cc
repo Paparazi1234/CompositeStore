@@ -1,6 +1,6 @@
 #include "test_util.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 Status TransactionExecutor::InsertStoreRdMoWr(
     uint16_t target_key_set,
@@ -203,4 +203,4 @@ bool TransactionExecutor::NextIncrement(uint64_t* remaining_increment,
   return true;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

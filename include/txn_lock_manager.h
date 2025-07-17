@@ -4,7 +4,7 @@
 
 #include "status.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class TxnLockManager {
  public:
@@ -35,4 +35,4 @@ class EmptyTxnLockManagerFactory : public TxnLockManagerFactory {
   virtual TxnLockManager* CreateTxnLockManager() const override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

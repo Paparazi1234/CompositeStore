@@ -12,9 +12,9 @@
 #include <stdint.h>
 #include <random>
 
-#include "include/multi_versions_namespace.h"
+#include "include/composite_store_namespace.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 // A very simple random number generator.  Not especially good at
 // generating truly random bits, but good enough for our needs in this
@@ -100,4 +100,4 @@ class Random {
   static Random* GetTLSInstance();
 };
 
-}  // namespace MULTI_VERSIONS_NAMESPACE
+}  // namespace COMPOSITE_STORE_NAMESPACE

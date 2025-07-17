@@ -2,7 +2,7 @@
 
 #include "transaction_store/mvcc_txn_store/mvcc_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class PessimisticTxnStore : public MVCCTxnStore {
  public:
@@ -41,4 +41,4 @@ class PessimisticTxnStore : public MVCCTxnStore {
   WriteQueue& commit_queue_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

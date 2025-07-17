@@ -7,7 +7,7 @@
 #include "util/memory_allocator.h"
 #include "third-party/rocksdb/inlineskiplist.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class SkipListLookupKey {
  public:
@@ -144,4 +144,4 @@ class SkipListBackedRep {
 	SkipListRep skiplist_rep_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

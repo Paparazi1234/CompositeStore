@@ -1,6 +1,6 @@
 #include "write_prepared_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 WritePreparedTxnStore::WritePreparedTxnStore(
     const StoreOptions& store_options,
@@ -33,4 +33,4 @@ WritePreparedTxnStore::WritePreparedTxnStore(
   PostInitializeMultiVersionManager();
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

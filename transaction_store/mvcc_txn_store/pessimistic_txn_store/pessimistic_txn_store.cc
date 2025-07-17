@@ -1,6 +1,6 @@
 #include "pessimistic_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 PessimisticTxnStore::PessimisticTxnStore(
     const StoreOptions& store_options,
@@ -23,4 +23,4 @@ PessimisticTxnStore::PessimisticTxnStore(
         prepare_queue_(prepare_queue),
         commit_queue_(commit_queue) {}
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

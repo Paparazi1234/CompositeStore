@@ -2,7 +2,7 @@
 
 #include "transaction/mvcc_transaction/mvcc_transaction.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class OptimisticTransaction : public MVCCTransaction {
  public:
@@ -21,4 +21,4 @@ class OptimisticTransaction : public MVCCTransaction {
   virtual Status Rollback() override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

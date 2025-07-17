@@ -3,7 +3,7 @@
 #include "util/cast_util.h"
 #include "util/mutex_lock.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 const WritePreparedSeqBasedSnapshot
     WritePreparedSnapshotManager::wp_snapshot_limits_min_ =
@@ -46,4 +46,4 @@ const SeqBasedSnapshot* WritePreparedSnapshotManager::TakeSnapshotInternal(
   }
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

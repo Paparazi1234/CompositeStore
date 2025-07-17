@@ -3,7 +3,7 @@
 
 #include "util/cast_util.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 Transaction* WriteCommittedTransactionFactory::CreateTransaction(
     const WriteOptions& write_options, 
@@ -39,4 +39,4 @@ Transaction* WritePreparedTransactionFactory::CreateTransaction(
   }
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

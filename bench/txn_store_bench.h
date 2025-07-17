@@ -2,7 +2,7 @@
 
 #include "include/transaction_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class TxnStoreBench {
  public:
@@ -17,4 +17,4 @@ class TxnStoreBench {
   
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

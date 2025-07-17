@@ -9,7 +9,7 @@
 #include "include/staging_write.h"
 #include "include/mvcc_write_buffer.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MaintainVersionsCallbacks {
  public:
@@ -144,4 +144,4 @@ class MVCCTxnStore : public TransactionStore {
 	Transaction* BeginInternalTransaction(const WriteOptions& write_options);
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

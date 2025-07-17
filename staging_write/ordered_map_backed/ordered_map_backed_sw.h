@@ -6,7 +6,7 @@
 #include "include/staging_write.h"
 #include "include/format.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class OrderedMapBackedStagingWrite : public StagingWrite {
  public:
@@ -88,4 +88,4 @@ class OrderedMapBackedStagingWrite : public StagingWrite {
   BufferedWrites buffered_writes_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

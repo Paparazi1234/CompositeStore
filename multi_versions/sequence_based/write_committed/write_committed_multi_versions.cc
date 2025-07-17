@@ -2,7 +2,7 @@
 
 #include "write_committed_snapshot.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 void WriteCommittedMultiVersionsManager::BeginPrepareVersions(
     const Version& /*prepared_uncommitted_started*/,
@@ -56,4 +56,4 @@ bool WriteCommittedMultiVersionsManager::IsVersionVisibleToSnapshot(
   return version_impl->Seq() <= snapshot_impl->Seq();
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

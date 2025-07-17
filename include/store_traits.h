@@ -2,7 +2,7 @@
 
 #include "multi_versions.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 enum class TxnStoreImplType : unsigned char {
   kDefault = 0x0,
@@ -58,4 +58,4 @@ struct StoreTraits {
   CommitTableOptions commit_table_options;  // used for kWritePrepared policy
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

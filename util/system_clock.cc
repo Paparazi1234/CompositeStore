@@ -2,7 +2,7 @@
 
 #include "port/likely.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 Status SystemClock::GetCurrentTime(int64_t* unix_time){
   time_t ret = time(nullptr);
@@ -32,4 +32,4 @@ SystemClock* SystemClock::GetSingleton() {
   return &singleton;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

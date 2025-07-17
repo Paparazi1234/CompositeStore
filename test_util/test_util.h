@@ -9,7 +9,7 @@
 #include "util/system_clock.h"
 #include "util/random.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 struct TxnTestsSetups {
   TxnStoreWritePolicy write_policy = TxnStoreWritePolicy::kWriteCommitted;
@@ -199,4 +199,4 @@ class TransactionExecutor {
   TransactionStore* txn_store_ = nullptr;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

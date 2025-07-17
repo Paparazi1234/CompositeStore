@@ -2,7 +2,7 @@
 
 #include "util/cast_util.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 Status WriteCommittedTransaction::PrepareImpl() {
   // in-memory only store, so nothing to do when prepare(because prepare mainly
@@ -34,4 +34,4 @@ Status WriteCommittedTransaction::RollbackImpl() {
   return Status::OK();
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

@@ -3,7 +3,7 @@
 #include "seq_limits.h"
 #include "util/mutex_lock.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 const SeqBasedSnapshot SeqBasedSnapshotManager::snapshot_limits_min_ =
     SeqBasedSnapshot(kSeqNumberLimitsMin);
@@ -63,4 +63,4 @@ void SeqBasedSnapshotManager::GetAllLivingSnapshots(
   }
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

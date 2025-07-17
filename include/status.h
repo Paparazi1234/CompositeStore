@@ -1,8 +1,8 @@
 #pragma once
 
-#include "multi_versions_namespace.h"
+#include "composite_store_namespace.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class Status {
  public:
@@ -122,4 +122,4 @@ inline bool Status::operator!=(const Status& rhs) const {
   return !(*this == rhs);
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

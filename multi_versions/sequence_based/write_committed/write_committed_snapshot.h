@@ -2,7 +2,7 @@
 
 #include "multi_versions/sequence_based/seq_based_snapshot.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class  WriteCommittedSnapshotManager : public SeqBasedSnapshotManager {
  public:
@@ -21,4 +21,4 @@ class  WriteCommittedSnapshotManager : public SeqBasedSnapshotManager {
       Snapshot* reused) override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

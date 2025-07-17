@@ -1,7 +1,7 @@
 #include "ordered_map_backed_sw.h"
 #include "third-party/gtest/gtest.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class OrderedMapBackedStagingWriteTest : public testing::Test {
  public:
@@ -134,7 +134,7 @@ TEST_F(OrderedMapBackedStagingWriteTest, IterateThroughStagingWrite) {
   ASSERT_STREQ(expected.c_str(), sw_handler.GetDumpString().c_str());
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

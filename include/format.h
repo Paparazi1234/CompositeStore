@@ -2,9 +2,9 @@
 
 #include <stdint.h>
 
-#include "include/multi_versions_namespace.h"
+#include "include/composite_store_namespace.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 enum class ValueType : uint32_t {
   kTypeValue = 0x0,
@@ -12,4 +12,4 @@ enum class ValueType : uint32_t {
   kMaxValueType
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

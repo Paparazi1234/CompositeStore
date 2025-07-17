@@ -4,9 +4,9 @@
 #include <tuple>
 #include <assert.h>
 
-#include "include/multi_versions_namespace.h"
+#include "include/composite_store_namespace.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class IteratorCursor {
  public:
@@ -285,4 +285,4 @@ class CartesianProductGenerator5 {
   std::vector<T4> vec_t4_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

@@ -3,7 +3,7 @@
 #include "skiplist_rep.h"
 #include "include/mvcc_write_buffer.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class SkipListBackedMVCCWriteBuffer : public MVCCWriteBuffer {
  public:
@@ -53,4 +53,4 @@ class SkipListBackedMVCCWriteBuffer : public MVCCWriteBuffer {
 	uint64_t raw_data_size_ = 0;	// the successfully inserted raw KV pairs size
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

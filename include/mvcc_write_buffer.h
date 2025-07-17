@@ -5,7 +5,7 @@
 #include "format.h"
 #include "multi_versions.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MVCCWriteBuffer {
  public:
@@ -47,4 +47,4 @@ class SkipListBackedMVCCWriteBufferFactory : public MVCCWriteBufferFactory {
       const MultiVersionsManager* mvm) const override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

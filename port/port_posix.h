@@ -2,9 +2,9 @@
 
 #include <thread>
 
-#include "include/multi_versions_namespace.h"
+#include "include/composite_store_namespace.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 namespace port {
 
@@ -78,4 +78,4 @@ class CondVar {
 using Thread = std::thread;
 
 }   // namespace port
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

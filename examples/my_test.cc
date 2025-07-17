@@ -9,7 +9,7 @@
     fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #cond); \
     abort();                                                   \
   }
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MyTest {
  public:
@@ -115,25 +115,25 @@ class MyTest {
   bool enable_two_write_queues_;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE
 
-using MULTI_VERSIONS_NAMESPACE::MyTest;
+using COMPOSITE_STORE_NAMESPACE::MyTest;
 
 int main() {
-  MyTest my_test0(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, true, true);
-  MyTest my_test1(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, true, false);
-  MyTest my_test2(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, false, true);
-  MyTest my_test3(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, false, false);
+  MyTest my_test0(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, true, true);
+  MyTest my_test1(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, true, false);
+  MyTest my_test2(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, false, true);
+  MyTest my_test3(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWritePrepared, false, false);
   my_test0.Run();
   my_test1.Run();
   my_test2.Run();
   my_test3.Run();
 
   std::cout<<std::endl;
-  MyTest my_test4(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, true, true);
-  MyTest my_test5(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, true, false);
-  MyTest my_test6(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, false, true);
-  MyTest my_test7(MULTI_VERSIONS_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, false, false);
+  MyTest my_test4(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, true, true);
+  MyTest my_test5(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, true, false);
+  MyTest my_test6(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, false, true);
+  MyTest my_test7(COMPOSITE_STORE_NAMESPACE::TxnStoreWritePolicy::kWriteCommitted, false, false);
   my_test4.Run();
   my_test5.Run();
   my_test6.Run();

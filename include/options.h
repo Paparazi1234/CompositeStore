@@ -2,7 +2,7 @@
 
 #include "multi_versions.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 struct ReadOptions {
   const Snapshot* snapshot = nullptr;
@@ -20,4 +20,4 @@ struct TransactionStoreOptions : public StoreOptions {
 
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

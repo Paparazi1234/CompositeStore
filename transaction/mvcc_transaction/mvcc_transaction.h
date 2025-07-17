@@ -4,7 +4,7 @@
 
 #include "transaction_store/mvcc_txn_store/mvcc_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MVCCTransaction : public Transaction {
  public:
@@ -72,4 +72,4 @@ class MVCCTransaction : public Transaction {
   std::unique_ptr<StagingWrite> staging_write_ = nullptr;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

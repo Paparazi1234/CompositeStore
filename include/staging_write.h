@@ -4,7 +4,7 @@
 
 #include "status.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class StagingWrite {
  public:
@@ -55,4 +55,4 @@ class OrderedMapBackedStagingWriteFactory : public StagingWriteFactory {
   StagingWrite* CreateStagingWrite() override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

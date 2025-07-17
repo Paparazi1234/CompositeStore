@@ -1,8 +1,8 @@
 #pragma once
 
-#include "include/multi_versions_namespace.h"
+#include "include/composite_store_namespace.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 // The helper function to assert the move from dynamic_cast<> to
 // static_cast<> is correct. This function is to deal with legacy code.
 // It is not recommended to add new code to issue class casting. The preferred
@@ -16,4 +16,4 @@ inline DestClass* static_cast_with_check(SrcClass* x) {
   return ret;
 }
 
-}  // namespace MULTI_VERSIONS_NAMESPACE
+}  // namespace COMPOSITE_STORE_NAMESPACE

@@ -1,6 +1,6 @@
 #include "ordered_map_backed_sw.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 Status OrderedMapBackedStagingWrite::Iterate(Handler* handler) {
   if (buffered_writes_.empty()) {
@@ -25,4 +25,4 @@ Status OrderedMapBackedStagingWrite::Iterate(Handler* handler) {
   return s;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

@@ -6,7 +6,7 @@
 #include "test_util/test_util.h"
 #include "third-party/gtest/gtest.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class CommonSeqBasedMultiVersionsTests {
  public:
@@ -287,7 +287,7 @@ TEST_F(SeqBasedMultiVersionsTest, DISABLED_TestSnapshotManagerTakeSnapshot) {
   }
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

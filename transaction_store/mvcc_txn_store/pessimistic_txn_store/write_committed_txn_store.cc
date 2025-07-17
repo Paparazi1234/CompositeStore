@@ -1,6 +1,6 @@
 #include "write_committed_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 WriteCommittedTxnStore::WriteCommittedTxnStore(
     const StoreOptions& store_options,
@@ -32,4 +32,4 @@ WriteCommittedTxnStore::WriteCommittedTxnStore(
   CalcuCommitQueue(store_options.enable_two_write_queues);
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

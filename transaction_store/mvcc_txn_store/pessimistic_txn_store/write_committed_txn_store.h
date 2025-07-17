@@ -2,7 +2,7 @@
 
 #include "pessimistic_txn_store.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WriteCommittedTxnStore : public PessimisticTxnStore {
  public:
@@ -54,4 +54,4 @@ class WriteCommittedTxnStore : public PessimisticTxnStore {
   }
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

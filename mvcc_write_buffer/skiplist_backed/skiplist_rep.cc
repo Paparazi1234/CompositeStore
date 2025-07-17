@@ -4,7 +4,7 @@
 
 #include "third-party/rocksdb/coding.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 int SkipListKeyComparator::operator()(const char* prefix_len_key1,
                                       const char* prefix_len_key2) const {
@@ -174,4 +174,4 @@ uint64_t SkipListBackedRep::Dump(std::stringstream* oss,
   return count;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

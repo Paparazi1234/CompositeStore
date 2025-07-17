@@ -2,7 +2,7 @@
 
 #include "include/txn_lock_manager.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class EmptyTxnLockManager : public TxnLockManager {
  public:
@@ -17,4 +17,4 @@ class EmptyTxnLockManager : public TxnLockManager {
   virtual void UnLock(const std::string& key) override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

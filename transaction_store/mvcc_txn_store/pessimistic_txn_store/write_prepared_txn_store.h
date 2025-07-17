@@ -5,7 +5,7 @@
 #include "multi_versions/sequence_based/write_prepared/write_prepared_multi_versions.h"      // Todo: 解除该依赖
 #include "multi_versions/sequence_based/write_prepared/write_prepared_snapshot.h"      // Todo: 解除该依赖
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WritePreparedTxnStore : public PessimisticTxnStore {
  public:
@@ -93,4 +93,4 @@ class WritePreparedTxnStore : public PessimisticTxnStore {
   }
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

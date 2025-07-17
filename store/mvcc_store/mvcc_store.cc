@@ -2,7 +2,7 @@
 
 #include "transaction/mvcc_transaction/pessimistic_transaction/write_committed_transaction.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 namespace {
 // just a wrapper of WriteCommittedMultiVersionsManagerFactory and
@@ -80,4 +80,4 @@ void MVCCStore::ReleaseSnapshot(const Snapshot* /*snapshot*/) {
   assert(false);
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

@@ -6,7 +6,7 @@
 #include "test_util/test_util.h"
 #include "third-party/gtest/gtest.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MVCCTxnStoreTests {
  public:
@@ -166,4 +166,4 @@ void MVCCTxnStoreTests::DumpStoreKVPairs() {
   ASSERT_STREQ(oss.str().c_str(), expected.c_str());
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

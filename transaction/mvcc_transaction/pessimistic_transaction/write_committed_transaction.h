@@ -2,7 +2,7 @@
 
 #include "pessimistic_transaction.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class WCTxnMaintainVersionsCB : public MaintainVersionsCallbacks {
  public:
@@ -51,4 +51,4 @@ class WriteCommittedTransaction : public PessimisticTransaction {
   virtual Status RollbackImpl() override;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

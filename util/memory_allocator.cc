@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 char* MemoryAllocator::Allocate(size_t bytes) {
   assert(bytes > 0);
@@ -61,4 +61,4 @@ char* MemoryAllocator::AllocateNewBlock(size_t block_bytes) {
   return new_block;
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

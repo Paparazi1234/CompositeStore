@@ -2,7 +2,7 @@
 
 #include "util/cast_util.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 MVCCTransaction::MVCCTransaction(TransactionStore* txn_store,
                                  const WriteOptions& write_options,
@@ -103,4 +103,4 @@ void MVCCTransaction::ClearTxnLocks() {
   assert(s.IsOK());
 }
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE

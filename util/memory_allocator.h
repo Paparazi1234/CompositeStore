@@ -4,9 +4,9 @@
 #include <memory>
 #include <cstddef>
 
-#include "include/multi_versions_namespace.h"
+#include "include/composite_store_namespace.h"
 
-namespace MULTI_VERSIONS_NAMESPACE {
+namespace COMPOSITE_STORE_NAMESPACE {
 
 class MemoryAllocator {
  public:
@@ -41,4 +41,4 @@ class MemoryAllocator {
   size_t active_block_remaining_bytes_ = 0;
 };
 
-}   // namespace MULTI_VERSIONS_NAMESPACE
+}   // namespace COMPOSITE_STORE_NAMESPACE
