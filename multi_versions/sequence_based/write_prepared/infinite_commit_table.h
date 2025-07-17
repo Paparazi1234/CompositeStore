@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "multi_version/sequence_based/seq_limits.h"
+#include "multi_versions/sequence_based/seq_limits.h"
 #include "include/multi_versions.h"
 #include "util/mutex_lock.h"
 #include "port/likely.h"

@@ -66,7 +66,7 @@ if(BUILD_TESTS)
   add_subdirectory(test_util)
 endif()
 
-add_subdirectory(multi_version)
+add_subdirectory(multi_versions)
 
 add_subdirectory(txn_lock_manager)
 

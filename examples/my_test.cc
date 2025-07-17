@@ -2,7 +2,7 @@
 #include <assert.h>
 
 #include "transaction_store/mvcc_txn_store/mvcc_txn_store.h"
-#include "multi_version/sequence_based/seq_based_multi_versions.h"
+#include "multi_versions/sequence_based/seq_based_multi_versions.h"
 
 #define AssertTrue(cond)                                       \
   if (!(cond)) {                                               \

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "multi_version/sequence_based/seq_based_multi_versions.h"
+#include "multi_versions/sequence_based/seq_based_multi_versions.h"
 
 namespace MULTI_VERSIONS_NAMESPACE {
 
