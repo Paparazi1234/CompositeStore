@@ -1,5 +1,7 @@
 #include "mvcc_txn_store/pessimistic_txn_store/write_committed_txn_store.h"
 #include "mvcc_txn_store/pessimistic_txn_store/write_prepared_txn_store.h"
+#include "multi_versions/sequence_based/write_prepared/write_prepared_multi_versions.h"
+#include "multi_versions/sequence_based/write_prepared/write_prepared_snapshot.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 
@@ -12,6 +14,62 @@ class TxnStoreFactory {
       const TransactionStoreOptions& txn_store_options,
       const StoreTraits& store_traits) const = 0;
 };
+
+namespace {
+class WPAdvanceMaxCommittedByOneCallback :
+    public AdvanceMaxCommittedByOneCallback {
+  public:
+  WPAdvanceMaxCommittedByOneCallback(WritePreparedTxnStore* txn_store)
+      : txn_store_(txn_store) {}
+  ~WPAdvanceMaxCommittedByOneCallback() {}
+
+  void AdvanceLatestVisibleByOne() override {
+    WriteOptions write_options;
+    TransactionOptions txn_options;
+    Transaction* txn = txn_store_->BeginTransaction(write_options,
+                                                    txn_options, nullptr);
+    // commit(without prepare) an empty staging write will consume one seq
+    // commit(with prepare) an empty staging write will consume two seq
+    Status s = txn->Commit();
+    assert(s.IsOK());
+    delete txn;
+  }
+
+  private:
+  WritePreparedTxnStore* txn_store_;         
+};
+
+class WPGetSnapshotsCallback : public GetSnapshotsCallback {
+  public:
+  WPGetSnapshotsCallback(const WritePreparedSnapshotManager* mgr) : mgr_(mgr) {}
+  ~WPGetSnapshotsCallback() {}
+
+  void GetSnapshots(uint64_t max,
+                    std::vector<uint64_t>& snapshots) const override {
+    mgr_->GetSnapshots(max, snapshots);
+  }
+  private:
+  const WritePreparedSnapshotManager* const mgr_;
+};
+
+void PostInitializationForWPTxnStore(WritePreparedTxnStore* txn_store) {
+  WritePreparedMultiVersionsManager* multi_version_manager_impl =
+      static_cast_with_check<WritePreparedMultiVersionsManager>(
+          txn_store->GetMultiVersionsManager());
+  WritePreparedSnapshotManager* snapshot_manager_impl =
+      static_cast_with_check<WritePreparedSnapshotManager>(
+          txn_store->GetSnapshotManager());
+  // set AdvanceMaxCommittedByOneCallback to multi versions manager
+  multi_version_manager_impl->SetAdvanceMaxCommittedByOneCallback(
+      new WPAdvanceMaxCommittedByOneCallback(txn_store));
+  // set SnapshotsRetrieveCallback to multi versions manager
+  multi_version_manager_impl->SetSnapshotsRetrieveCallback(
+      new WPGetSnapshotsCallback(snapshot_manager_impl));
+  // set SnapshotCreationCallback to snapshot manager
+  snapshot_manager_impl->SetSnapshotCreationCallback(
+      multi_version_manager_impl->GetSnapshotCreationCallback());
+}
+}   // anonymous namespace
 
 class MVCCTxnStoreFactory : public TxnStoreFactory {
  public:
@@ -49,6 +107,8 @@ class MVCCTxnStoreFactory : public TxnStoreFactory {
                 new WritePreparedTransactionFactory(),
                 new OrderedMapBackedStagingWriteFactory(),
                 mvcc_write_buffer_factory);
+        PostInitializationForWPTxnStore(
+            static_cast_with_check<WritePreparedTxnStore>(txn_store));
         break;
       default:
         txn_store = nullptr;

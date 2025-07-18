@@ -51,20 +51,6 @@ class  WritePreparedSnapshotManager : public SeqBasedSnapshotManager {
 
   void GetSnapshots(uint64_t max, std::vector<uint64_t>& snapshots) const;
 
-  class WPGetSnapshotsCallback : public GetSnapshotsCallback {
-   public:
-    ~WPGetSnapshotsCallback() {}
-    WPGetSnapshotsCallback(const WritePreparedSnapshotManager* mgr)
-        : mgr_(mgr) {}
-
-    virtual void GetSnapshots(
-        uint64_t max, std::vector<uint64_t>& snapshots) const override {
-      mgr_->GetSnapshots(max, snapshots);
-    }
-   private:
-    const WritePreparedSnapshotManager* const mgr_;
-  };
-
   void SetSnapshotCreationCallback(TakeSnapshotCallback* take_snapshot_cb) {
     take_snapshot_callback_.reset(take_snapshot_cb);
   }

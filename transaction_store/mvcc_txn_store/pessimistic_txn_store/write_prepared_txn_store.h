@@ -1,9 +1,6 @@
 #pragma once
 
 #include "pessimistic_txn_store.h"
-#include "multi_versions/sequence_based/write_prepared/infinite_commit_table.h"   // Todo: 解除该依赖
-#include "multi_versions/sequence_based/write_prepared/write_prepared_multi_versions.h"      // Todo: 解除该依赖
-#include "multi_versions/sequence_based/write_prepared/write_prepared_snapshot.h"      // Todo: 解除该依赖
 
 namespace COMPOSITE_STORE_NAMESPACE {
 
@@ -23,48 +20,7 @@ class WritePreparedTxnStore : public PessimisticTxnStore {
       const MVCCWriteBufferFactory& mvcc_write_buffer_factory);
   ~WritePreparedTxnStore() {}
 
-  class WPAdvanceMaxCommittedByOneCallback :
-      public AdvanceMaxCommittedByOneCallback {
-   public:
-    WPAdvanceMaxCommittedByOneCallback(WritePreparedTxnStore* txn_store)
-        : txn_store_(txn_store) {}
-    ~WPAdvanceMaxCommittedByOneCallback() {}
-
-    void AdvanceLatestVisibleByOne() override {
-      WriteOptions write_options;
-      TransactionOptions txn_options;
-      Transaction* txn = txn_store_->BeginTransaction(write_options,
-                                                      txn_options, nullptr);
-      // commit(without prepare) an empty staging write will consume a seq
-      // commit(with prepare) an empty staging write will consume two seq
-      Status s = txn->Commit();
-      assert(s.IsOK());
-      delete txn;
-    }
-   private:
-    WritePreparedTxnStore* txn_store_;         
-  };
-
  protected:
-  void PostInitializeMultiVersionManager() {
-    WritePreparedMultiVersionsManager* multi_version_manager_impl =
-        static_cast_with_check<WritePreparedMultiVersionsManager>(
-            GetMultiVersionsManager());
-    WritePreparedSnapshotManager* snapshot_manager_impl =
-        static_cast_with_check<WritePreparedSnapshotManager>(
-            GetSnapshotManager());
-    // set AdvanceMaxCommittedByOneCallback to multi versions manager
-    multi_version_manager_impl->SetAdvanceMaxCommittedByOneCallback(
-        new WPAdvanceMaxCommittedByOneCallback(this));
-    // set SnapshotsRetrieveCallback to multi versions manager
-    multi_version_manager_impl->SetSnapshotsRetrieveCallback(
-        new WritePreparedSnapshotManager::WPGetSnapshotsCallback(
-            snapshot_manager_impl));
-    // set SnapshotCreationCallback to snapshot manager
-    snapshot_manager_impl->SetSnapshotCreationCallback(
-        multi_version_manager_impl->GetSnapshotCreationCallback());
-  }
-
   uint64_t CalcuNumVersionsIncForStagingWrite(
 			const StagingWrite* staging_write) const override {
     // 1 we employ seq per batch in WritePrepared policy

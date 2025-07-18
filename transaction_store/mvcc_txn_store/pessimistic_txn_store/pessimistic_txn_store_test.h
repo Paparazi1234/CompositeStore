@@ -1,9 +1,8 @@
 #pragma once
 
-#include "write_committed_txn_store.h"
-#include "write_prepared_txn_store.h"
+#include "pessimistic_txn_store.h"
+#include "multi_versions/sequence_based/seq_based_multi_versions.h"
 #include "test_util/test_util.h"
-#include "include/txn_lock_manager.h"
 #include "third-party/gtest/gtest.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
@@ -17,36 +16,14 @@ class PessimisticTxnTestsBase {
         started_version_seq_(0) {
     StoreOptions store_options;
     TransactionStoreOptions txn_store_options;
-    EmptyTxnLockManagerFactory txn_lock_mgr_factory;
-    SkipListBackedMVCCWriteBufferFactory mvcc_write_buffer_factory;
+    StoreTraits store_traits;
     store_options.enable_two_write_queues = enable_two_write_queues_;
-    if (write_policy_ == TxnStoreWritePolicy::kWriteCommitted) {
-      txn_store_impl_ =
-          new WriteCommittedTxnStore(store_options,
-                                     txn_store_options,
-                                     WriteCommittedMultiVersionsManagerFactory(
-                                        store_options.enable_two_write_queues),
-                                     txn_lock_mgr_factory,
-                                     new WriteCommittedTransactionFactory(),
-                                     new OrderedMapBackedStagingWriteFactory(),
-                                     mvcc_write_buffer_factory);
-    } else if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
-      CommitTableOptions commit_table_options;
-      txn_store_impl_ =
-          new WritePreparedTxnStore(store_options,
-                                    txn_store_options,
-                                    WritePreparedMultiVersionsManagerFactory(
-                                        commit_table_options,
-                                        store_options.enable_two_write_queues),
-                                    txn_lock_mgr_factory,
-                                    new WritePreparedTransactionFactory(),
-                                    new OrderedMapBackedStagingWriteFactory(),
-                                    mvcc_write_buffer_factory);
-    } else {
-      assert(false);
-    }
-    assert(txn_store_impl_);
-    txn_store_ = txn_store_impl_;
+    store_traits.txn_store_impl_type = TxnStoreImplType::kMVCC;
+    store_traits.txn_store_write_policy = write_policy_;
+    Status s = TransactionStore::Open(store_options, txn_store_options,
+                                      store_traits, &txn_store_);
+    assert(s.IsOK() && txn_store_ != nullptr);
+    txn_store_impl_ = static_cast_with_check<PessimisticTxnStore>(txn_store_);
     mvm_impl_ = static_cast_with_check<SeqBasedMultiVersionsManager>(
         txn_store_impl_->GetMultiVersionsManager());
     assert(mvm_impl_);

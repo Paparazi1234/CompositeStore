@@ -1,8 +1,7 @@
 #pragma once
 
-#include "pessimistic_txn_store/write_committed_txn_store.h"
-#include "pessimistic_txn_store/write_prepared_txn_store.h"
-#include "txn_lock_manager/empty_txn_lock_manager.h"
+#include "mvcc_txn_store.h"
+#include "util/cast_util.h"
 #include "test_util/test_util.h"
 #include "third-party/gtest/gtest.h"
 
@@ -15,41 +14,19 @@ class MVCCTxnStoreTests {
         enable_two_write_queues_(setups.enable_two_write_queues) {
     StoreOptions store_options;
     TransactionStoreOptions txn_store_options;
-    EmptyTxnLockManagerFactory txn_lock_mgr_factory;
-    SkipListBackedMVCCWriteBufferFactory mvcc_write_buffer_factory;
+    StoreTraits store_traits;
     store_options.enable_two_write_queues = enable_two_write_queues_;
-    if (write_policy_ == TxnStoreWritePolicy::kWriteCommitted) {
-      store_ptr_ =
-          new WriteCommittedTxnStore(store_options,
-                                     txn_store_options,
-                                     WriteCommittedMultiVersionsManagerFactory(
-                                        store_options.enable_two_write_queues),
-                                     txn_lock_mgr_factory,
-                                     new WriteCommittedTransactionFactory(),
-                                     new OrderedMapBackedStagingWriteFactory(),
-                                     mvcc_write_buffer_factory);
-    } else if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
-      CommitTableOptions commit_table_options;
-      store_ptr_ =
-          new WritePreparedTxnStore(store_options,
-                                    txn_store_options,
-                                    WritePreparedMultiVersionsManagerFactory(
-                                        commit_table_options,
-                                        store_options.enable_two_write_queues),
-                                    txn_lock_mgr_factory,
-                                    new WritePreparedTransactionFactory(),
-                                    new OrderedMapBackedStagingWriteFactory(),
-                                    mvcc_write_buffer_factory);
-    } else {
-      assert(false);
-    }
-    assert(store_ptr_);
-
+    store_traits.txn_store_impl_type = TxnStoreImplType::kMVCC;
+    store_traits.txn_store_write_policy = write_policy_;
+    Status s = TransactionStore::Open(store_options, txn_store_options,
+                                      store_traits, &store_ptr_);
+    assert(s.IsOK() && store_ptr_ != nullptr);
+    txn_store_impl_ = static_cast_with_check<MVCCTxnStore>(store_ptr_);
     if (setups.encoded_version != "") {
-      MultiVersionsManager* mvm = store_ptr_->GetMultiVersionsManager();
+      MultiVersionsManager* mvm = txn_store_impl_->GetMultiVersionsManager();
       Version* orig = mvm->CreateVersion();
       orig->DecodeFrom(setups.encoded_version);
-      store_ptr_->RecoverMultiVersionsManagerFrom(*orig);
+      txn_store_impl_->RecoverMultiVersionsManagerFrom(*orig);
       delete orig;
     }
   }
@@ -65,7 +42,8 @@ class MVCCTxnStoreTests {
  protected:
   TxnStoreWritePolicy write_policy_;
   bool enable_two_write_queues_;
-  MVCCTxnStore* store_ptr_;
+  TransactionStore* store_ptr_;
+  MVCCTxnStore* txn_store_impl_;
 };
 
 void MVCCTxnStoreTests::SimpleReadWrite() {
@@ -162,7 +140,7 @@ void MVCCTxnStoreTests::DumpStoreKVPairs() {
 
   std::stringstream oss;
   oss.str("");
-  store_ptr_->DumpKVPairs(&oss);
+  txn_store_impl_->DumpKVPairs(&oss);
   ASSERT_STREQ(oss.str().c_str(), expected.c_str());
 }
 

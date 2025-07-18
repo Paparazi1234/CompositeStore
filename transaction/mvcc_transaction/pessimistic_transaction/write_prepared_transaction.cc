@@ -1,6 +1,6 @@
 #include "write_prepared_transaction.h"
 
-#include "transaction_store/mvcc_txn_store/pessimistic_txn_store/write_prepared_txn_store.h"
+#include "multi_versions/sequence_based/seq_based_multi_versions.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

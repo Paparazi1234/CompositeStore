@@ -29,8 +29,6 @@ WritePreparedTxnStore::WritePreparedTxnStore(
   if (!store_options.enable_two_write_queues) {
     assert(std::addressof(prepare_queue_) == std::addressof(commit_queue_));
   }
-
-  PostInitializeMultiVersionManager();
 }
 
 }   // namespace COMPOSITE_STORE_NAMESPACE
