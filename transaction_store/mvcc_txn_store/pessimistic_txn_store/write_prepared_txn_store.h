@@ -13,11 +13,7 @@ class WritePreparedTxnStore : public PessimisticTxnStore {
   WritePreparedTxnStore(
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
-      const MultiVersionsManagerFactory& multi_versions_mgr_factory,
-      const TxnLockManagerFactory& txn_lock_mgr_factory,
-      TransactionFactory* txn_factory,
-      StagingWriteFactory* staging_write_factory,
-      const MVCCWriteBufferFactory& mvcc_write_buffer_factory);
+      const MVCCTxnStoreCreationParam& creation_param);
   ~WritePreparedTxnStore() {}
 
  protected:

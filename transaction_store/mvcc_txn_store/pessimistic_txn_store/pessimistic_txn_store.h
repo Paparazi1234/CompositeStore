@@ -13,11 +13,7 @@ class PessimisticTxnStore : public MVCCTxnStore {
   PessimisticTxnStore(
       const StoreOptions& store_options,
       const TransactionStoreOptions& txn_store_options,
-      const MultiVersionsManagerFactory& multi_versions_mgr_factory,
-      const TxnLockManagerFactory& txn_lock_mgr_factory,
-      TransactionFactory* txn_factory,
-      StagingWriteFactory* staging_write_factory,
-      const MVCCWriteBufferFactory& mvcc_write_buffer_factory,
+      const MVCCTxnStoreCreationParam& creation_param,
       WriteQueue& prepare_queue,
       WriteQueue& commit_queue);
 
@@ -29,7 +25,7 @@ class PessimisticTxnStore : public MVCCTxnStore {
     return commit_queue_;
   }
 
-  virtual bool EnableTwoWriteQueues() const {
+  virtual bool IsTwoWriteQueuesEnabled() const {
     return enable_two_write_queues_;
   }
  protected:

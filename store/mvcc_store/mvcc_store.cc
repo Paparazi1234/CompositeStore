@@ -5,15 +5,6 @@
 namespace COMPOSITE_STORE_NAMESPACE {
 
 namespace {
-// just a wrapper of WriteCommittedMultiVersionsManagerFactory and
-// enable_two_write_queues == false
-class EmptyMultiVersionsManagerFactory :
-    public WriteCommittedMultiVersionsManagerFactory {
- public:
-  EmptyMultiVersionsManagerFactory() {}
-  ~EmptyMultiVersionsManagerFactory() {}
-};
-
 // just a wrapper of WCTxnMaintainVersionsCB
 class EmptyMaintainVersionsCallbacks : public WCTxnMaintainVersionsCB {
  public:
@@ -23,14 +14,9 @@ class EmptyMaintainVersionsCallbacks : public WCTxnMaintainVersionsCB {
 };
 }   // anonymous namespace
 
-MVCCStore::MVCCStore(const StoreOptions& store_options)
-    : MVCCTxnStore(store_options,
-                   TransactionStoreOptions(),
-                   EmptyMultiVersionsManagerFactory(),
-                   EmptyTxnLockManagerFactory(),
-                   nullptr,
-                   new OrderedMapBackedStagingWriteFactory(),
-                   SkipListBackedMVCCWriteBufferFactory()) {}
+MVCCStore::MVCCStore(const StoreOptions& store_options,
+                     const MVCCTxnStoreCreationParam& creation_param)
+    : MVCCTxnStore(store_options, TransactionStoreOptions(), creation_param) {}
 
 Status MVCCStore::Put(const WriteOptions& write_options,
                       const std::string& key,

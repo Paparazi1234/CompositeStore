@@ -5,20 +5,19 @@ namespace COMPOSITE_STORE_NAMESPACE {
 MVCCTxnStore::MVCCTxnStore(
     const StoreOptions& store_options,
     const TransactionStoreOptions& txn_store_options,
-    const MultiVersionsManagerFactory& multi_versions_mgr_factory,
-    const TxnLockManagerFactory& txn_lock_mgr_factory,
-    TransactionFactory* txn_factory,
-    StagingWriteFactory* staging_write_factory,
-    const MVCCWriteBufferFactory& mvcc_write_buffer_factory)
+    const MVCCTxnStoreCreationParam& creation_param)
       : multi_versions_manager_(
-            multi_versions_mgr_factory.CreateMultiVersionsManager()),
-        snapshot_manager_(multi_versions_mgr_factory.CreateSnapshotManager(
-            multi_versions_manager_.get())),
-        txn_lock_manager_(txn_lock_mgr_factory.CreateTxnLockManager()),
-        txn_factory_(txn_factory),
-        staging_write_factory_(staging_write_factory),
-        mvcc_write_buffer_(mvcc_write_buffer_factory.CreateMVCCWriteBuffer(
-            multi_versions_manager_.get())),
+            creation_param.mvm_factory->CreateMultiVersionsManager()),
+        snapshot_manager_(
+            creation_param.mvm_factory->CreateSnapshotManager(
+                multi_versions_manager_.get())),
+        txn_lock_manager_(
+            creation_param.lock_manager_factory->CreateTxnLockManager()),
+        txn_factory_(creation_param.transaction_factory),
+        staging_write_factory_(creation_param.staging_write_factory),
+        mvcc_write_buffer_(
+            creation_param.write_buffer_factory->CreateMVCCWriteBuffer(
+                multi_versions_manager_.get())),
         first_write_queue_(multi_versions_manager_.get()),
         second_write_queue_(multi_versions_manager_.get()) {
   (void)store_options;

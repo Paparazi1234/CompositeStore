@@ -410,7 +410,7 @@ Status WritePreparedTransaction::CommitWithPrepareImpl() {
 
 Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
   MVCCTxnStore* txn_store = GetTxnStore();
-  bool enable_two_write_queues = txn_store->EnableTwoWriteQueues();
+  bool enable_two_write_queues = txn_store->IsTwoWriteQueuesEnabled();
   // commit without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
   // will switch commit without prepare to commit with prepare internally
@@ -514,7 +514,7 @@ Status WritePreparedTransaction::RollbackImpl() {
   // insert the rollback_staging_write into write buffer to eliminate this txn's
   // footprint in the write buffer
 
-  bool enable_two_write_queues = txn_store->EnableTwoWriteQueues();
+  bool enable_two_write_queues = txn_store->IsTwoWriteQueuesEnabled();
   // rollback without prepare only takes effect when
   // enable_two_write_queues == false, when enable_two_write_queues == true, we
   // will switch rollback without prepare to rollback with prepare internally

@@ -13,7 +13,6 @@
 26 事务benchmark
 28 事务锁实现
 37 编译选线添加rtti针对debug和release模式的开启和关闭
-38 统一上层入口创建
 40 readme.md：项目介绍
 41 license文件
 

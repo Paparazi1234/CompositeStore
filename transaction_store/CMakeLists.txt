@@ -7,3 +7,14 @@ add_library(${TXN_STORE_SHARED_LIB} SHARED ${TRANSACTION_STORE_SOURCES})
 target_link_libraries(${TXN_STORE_SHARED_LIB}
     ${TXN_LOCK_MANAGER_SHARED_LIB} ${STAGING_WRITE_SHARED_LIB}
     ${MVCC_WRITE_BUFFER_SHARED_LIB} ${MULTI_VERSIONS_SHARED_LIB} ${TRANSACTION_SHARED_LIB})
+
+if(BUILD_TESTS)
+  set(TXN_STORE_TEST_SOURCES
+          transaction_store_impl_test.cc)
+
+  foreach(sourcefile ${TXN_STORE_TEST_SOURCES})
+    get_filename_component(exename ${sourcefile} NAME_WE)
+    add_executable(${exename} ${sourcefile})
+    target_link_libraries(${exename} ${GTEST_SHARED_LIB} ${TEST_UTIL_SHARED_LIB} ${TXN_STORE_SHARED_LIB})
+  endforeach(sourcefile ${TXN_STORE_TEST_SOURCES})
+endif()

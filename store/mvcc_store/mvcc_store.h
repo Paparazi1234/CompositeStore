@@ -8,7 +8,8 @@ class MVCCStore : public MVCCTxnStore {
   MVCCStore(const MVCCStore&) = delete;
   MVCCStore& operator=(const MVCCStore&) = delete;
 
-  MVCCStore(const StoreOptions& store_options);
+  MVCCStore(const StoreOptions& store_options,
+            const MVCCTxnStoreCreationParam& creation_param);
   virtual ~MVCCStore() {}
 
   virtual Status Put(const WriteOptions& write_options,

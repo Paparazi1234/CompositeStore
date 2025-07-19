@@ -9,12 +9,33 @@ class StoreFactory {
   virtual Store* CreateStore(const StoreOptions& store_options) const = 0;
 };
 
+namespace {
+// just a wrapper of WriteCommittedMultiVersionsManagerFactory and
+// enable_two_write_queues == false
+class EmptyMultiVersionsManagerFactory :
+    public WriteCommittedMultiVersionsManagerFactory {
+ public:
+  EmptyMultiVersionsManagerFactory() {}
+  ~EmptyMultiVersionsManagerFactory() {}
+};
+}   // anonymous namespace
+
+
 class MVCCStoreFactory : public StoreFactory {
  public:
   ~MVCCStoreFactory() {}
 
   Store* CreateStore(const StoreOptions& store_options) const override {
-    return new MVCCStore(store_options);
+    EmptyMultiVersionsManagerFactory empty_mvm_factory;
+    EmptyTxnLockManagerFactory empty_txn_lock_mgr_factory;
+    SkipListBackedMVCCWriteBufferFactory skiplist_backed_write_buffer_factory;
+    MVCCTxnStoreCreationParam param;
+    param.mvm_factory = &empty_mvm_factory;
+    param.lock_manager_factory = &empty_txn_lock_mgr_factory;
+    param.write_buffer_factory = &skiplist_backed_write_buffer_factory;
+    param.transaction_factory = nullptr;
+    param.staging_write_factory = new OrderedMapBackedStagingWriteFactory();
+    return new MVCCStore(store_options, param);
   }
 };
 

@@ -31,6 +31,14 @@ class MaintainVersionsCallbacks {
 	virtual bool NeedMaintainAfterInsertWriteBuffer() const { return false; }
 };
 
+struct MVCCTxnStoreCreationParam {
+  const MVCCWriteBufferFactory* write_buffer_factory;
+  StagingWriteFactory* staging_write_factory;
+  const MultiVersionsManagerFactory* mvm_factory;
+  TransactionFactory* transaction_factory;
+  const TxnLockManagerFactory* lock_manager_factory;
+};
+
 class MVCCTxnStore : public TransactionStore {
  public:
   // No copying allowed
@@ -39,11 +47,7 @@ class MVCCTxnStore : public TransactionStore {
 
   MVCCTxnStore(const StoreOptions& store_options,
       				 const TransactionStoreOptions& txn_store_options,
-      				 const MultiVersionsManagerFactory& multi_versions_mgr_factory,
-      				 const TxnLockManagerFactory& txn_lock_mgr_factory,
-      				 TransactionFactory* txn_factory,
-							 StagingWriteFactory* staging_write_factory,
-							 const MVCCWriteBufferFactory& mvcc_write_buffer_factory);
+							 const MVCCTxnStoreCreationParam& creation_param);
   virtual ~MVCCTxnStore() {}
 
   virtual Status Put(const WriteOptions& write_options,
@@ -115,7 +119,7 @@ class MVCCTxnStore : public TransactionStore {
 		return first_write_queue_;
 	}
 
-	virtual bool EnableTwoWriteQueues() const {
+	virtual bool IsTwoWriteQueuesEnabled() const {
     return false;
   }
 

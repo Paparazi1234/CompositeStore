@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util.h"
+#include "system_clock.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 
