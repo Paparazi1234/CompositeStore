@@ -42,6 +42,24 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/static)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/bin)
 
+include(CheckCXXSourceCompiles)
+CHECK_CXX_SOURCE_COMPILES("
+#include <pthread.h>
+#include <time.h>
+int main() {
+  pthread_mutex_t mu;
+  pthread_mutex_init(&mu, nullptr);
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  pthread_mutex_timedlock(&mu, &ts);
+  return 0;
+}
+" HAVE_PTHREAD_MUTEX_TIMEDLOCK)
+if(HAVE_PTHREAD_MUTEX_TIMEDLOCK)
+  message(STATUS "pthread_mutex_timedlock available")
+  add_definitions(-DPTHREAD_MUTEX_TIMEDLOCK_AVAILABLE)
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")

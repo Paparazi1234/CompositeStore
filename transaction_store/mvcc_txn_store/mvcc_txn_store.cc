@@ -12,14 +12,17 @@ MVCCTxnStore::MVCCTxnStore(
             creation_param.mvm_factory->CreateSnapshotManager(
                 multi_versions_manager_.get())),
         txn_lock_manager_(
-            creation_param.lock_manager_factory->CreateTxnLockManager()),
+            creation_param.lock_manager_factory->CreateTxnLockManager(
+                SystemClock::GetSingleton())),
+        txn_lock_tracker_factory_(creation_param.txn_lock_tracker_factory),
         txn_factory_(creation_param.transaction_factory),
         staging_write_factory_(creation_param.staging_write_factory),
         mvcc_write_buffer_(
             creation_param.write_buffer_factory->CreateMVCCWriteBuffer(
                 multi_versions_manager_.get())),
         first_write_queue_(multi_versions_manager_.get()),
-        second_write_queue_(multi_versions_manager_.get()) {
+        second_write_queue_(multi_versions_manager_.get()),
+        system_clock_(SystemClock::GetSingleton()){
   (void)store_options;
   (void)txn_store_options;
 }
@@ -69,12 +72,17 @@ void MVCCTxnStore::ReleaseSnapshot(const Snapshot* snapshot) {
   snapshot_manager_->ReleaseSnapshot(snapshot);
 }
 
-Status MVCCTxnStore::TryLock(const std::string& key) {
-  return txn_lock_manager_->TryLock(key);
+Status MVCCTxnStore::TryLock(uint64_t txn_id, const std::string& key,
+                             bool exclusive, int64_t timeout_time_ms) {
+  return txn_lock_manager_->TryLock(txn_id, key, exclusive, timeout_time_ms);
 }
 
-void MVCCTxnStore::UnLock(const std::string& key) {
-  txn_lock_manager_->UnLock(key);
+void MVCCTxnStore::UnLock(uint64_t txn_id, const std::string& key) {
+  txn_lock_manager_->UnLock(txn_id, key);
+}
+
+void MVCCTxnStore::UnLock(uint64_t txn_id, const TxnLockTracker& tracker) {
+  txn_lock_manager_->UnLock(txn_id, tracker);
 }
 
 namespace {

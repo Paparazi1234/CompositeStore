@@ -10,19 +10,11 @@ MVCCTransaction::MVCCTransaction(TransactionStore* txn_store,
   Reinitialize(txn_store, write_options, txn_options);
 }
 
-Status MVCCTransaction::TryLock(const std::string& key) {
-  return txn_store_->TryLock(key);
-}
-
-void MVCCTransaction::UnLock(const std::string& key) {
-  txn_store_->TryLock(key);
-}
-
 Status MVCCTransaction::Put(const std::string& key, const std::string& value) {
   if (!IsInWriteStage()) {
     return Status::InvalidArgument();
   }
-  Status s = TryLock(key);
+  Status s = TryLock(key, true /* exclusive */, GetLockTimeOutMs());
   if (s.IsOK()) {
     GetStagingWrite()->Put(key, value);
   }
@@ -33,7 +25,7 @@ Status MVCCTransaction::Delete(const std::string& key) {
   if (!IsInWriteStage()) {
     return Status::InvalidArgument();
   }
-  Status s = TryLock(key);
+  Status s = TryLock(key, true /* exclusive */, GetLockTimeOutMs());
   if (s.IsOK()) {
     GetStagingWrite()->Delete(key);
   }
@@ -71,36 +63,33 @@ void MVCCTransaction::Reinitialize(TransactionStore* txn_store,
     staging_write_.reset(
         txn_store_->GetStagingWriteFactory()->CreateStagingWrite());
   }
+
+  if (txn_lock_tracker_.get() == nullptr) {
+    txn_lock_tracker_.reset(
+        txn_store_->GetTxnLockTrackerFactory()->CreateTxnLockTracker());
+  }
+
+  if (txn_id_ == 0) {   // reuse txn id if not first time initialized
+    txn_id_ = txn_store_->NextTxnId();
+  }
+
+  lock_timeout_ms_ = txn_options.lock_timeout_ms;
+  txn_started_ts_us_ = txn_store_->GetSystemClock()->NowMicros();
+  if (txn_options.txn_duration_ms > 0) {
+    txn_expired_ts_us_ =
+        txn_started_ts_us_ + txn_options.txn_duration_ms * 1000;
+  } else {
+    txn_expired_ts_us_ = 0;
+  }
+
   Clear();
 }
 
-class MVCCTransaction::ReleaseTxnLockHandler : public StagingWrite::Handler {
- public:
-  ReleaseTxnLockHandler(MVCCTransaction* txn) : txn_(txn) {}
-  ~ReleaseTxnLockHandler() {}
-  virtual Status Put(const std::string& key,
-                     const std::string& value) override {
-    txn_->UnLock(key);
-    return Status::OK();
+bool MVCCTransaction::IsExpired() const {
+  if (txn_expired_ts_us_ > 0) {
+    return txn_store_->GetSystemClock()->NowMicros() >= txn_expired_ts_us_;
   }
-
-  virtual Status Delete(const std::string& key) override {
-    txn_->UnLock(key);
-    return Status::OK();
-  }
-
- private:
-  MVCCTransaction* txn_;
-};
-
-void MVCCTransaction::ClearTxnLocks() {
-  StagingWrite* staging_write = GetStagingWrite();
-  if (staging_write->IsEmpty()) {
-    return;
-  }
-  ReleaseTxnLockHandler handler(this);
-  Status s = staging_write->Iterate(&handler);
-  assert(s.IsOK());
+  return false;
 }
 
 }   // namespace COMPOSITE_STORE_NAMESPACE

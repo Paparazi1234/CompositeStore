@@ -18,12 +18,14 @@ class Status {
 
   enum Code : unsigned char {
     kOK = 0x0,
-    kNotFound = 0x1,
-    kNotSupported = 0x2,
-    kInvalidArgument = 0x3,
-    kCorruption = 0x4,
-    kBusy = 0x5,
-    kTryAgain = 0x6,
+    kNotFound,
+    kNotSupported,
+    kInvalidArgument,
+    kCorruption,
+    kTimedOut,
+    kBusy,
+    kExpired,
+    kTryAgain,
     kMaxCode
   };
 
@@ -53,8 +55,16 @@ class Status {
     return Status(kCorruption);
   }
 
+  static Status TimedOut() {
+    return Status(kTimedOut);
+  }
+
   static Status Busy() {
     return Status(kBusy);
+  }
+
+  static Status Expired() {
+    return Status(kExpired);
   }
 
   static Status TryAgain() {
@@ -81,8 +91,16 @@ class Status {
     return code() == kCorruption;
   }
 
+  bool IsTimedOut() const {
+    return code() == kTimedOut;
+  }
+
   bool IsBusy() const {
     return code() == kBusy;
+  }
+
+  bool IsExpired() const {
+    return code() == kExpired;
   }
 
   bool IsTryAgain() const {

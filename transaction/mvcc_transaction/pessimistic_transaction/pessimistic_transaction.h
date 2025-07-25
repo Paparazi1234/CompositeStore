@@ -25,6 +25,15 @@ class PessimisticTransaction : public MVCCTransaction {
   virtual Status CommitWithPrepareImpl() = 0;
   virtual Status CommitWithoutPrepareImpl() = 0;
   virtual Status RollbackImpl() = 0;
+
+  virtual Status TryLock(const std::string& key, bool exclusive,
+                         int64_t timeout_time_ms) override;
+
+  virtual void Clear() override {
+    TxnLockManager* txn_lock_manager = GetTxnStore()->GetTxnLockManager();
+    txn_lock_manager->UnLock(TxnId(), *GetTxnLockTracker());
+    MVCCTransaction::Clear();
+  }
 };
 
 }   // namespace COMPOSITE_STORE_NAMESPACE

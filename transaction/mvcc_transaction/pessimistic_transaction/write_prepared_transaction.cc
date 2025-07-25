@@ -502,7 +502,7 @@ class WritePreparedTransaction::RollbackStagingWriteBuilder :
 Status WritePreparedTransaction::RollbackImpl() {
   // build the rollback staging write
   MVCCTxnStore* txn_store = GetTxnStore();
-  StagingWriteFactory* factory = txn_store->GetStagingWriteFactory();
+  const StagingWriteFactory* factory = txn_store->GetStagingWriteFactory();
   std::unique_ptr<StagingWrite>
       rollback_staging_write(factory->CreateStagingWrite());
   RollbackStagingWriteBuilder

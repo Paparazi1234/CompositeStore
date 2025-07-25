@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <atomic>
 
 #include "write_queue.h"
 #include "include/transaction_store.h"
@@ -8,6 +9,7 @@
 #include "include/txn_lock_manager.h"
 #include "include/staging_write.h"
 #include "include/mvcc_write_buffer.h"
+#include "util/system_clock.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 
@@ -37,6 +39,7 @@ struct MVCCTxnStoreCreationParam {
   const MultiVersionsManagerFactory* mvm_factory;
   TransactionFactory* transaction_factory;
   const TxnLockManagerFactory* lock_manager_factory;
+	TxnLockTrackerFactory* txn_lock_tracker_factory;
 };
 
 class MVCCTxnStore : public TransactionStore {
@@ -65,8 +68,10 @@ class MVCCTxnStore : public TransactionStore {
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
 
-	Status TryLock(const std::string& key);
-  void UnLock(const std::string& key);
+	Status TryLock(uint64_t txn_id, const std::string& key, bool exclusive,
+								 int64_t timeout_time_ms);
+  void UnLock(uint64_t txn_id, const std::string& key);
+	void UnLock(uint64_t txn_id, const TxnLockTracker& tracker);
 
 	void DumpKVPairs(std::stringstream* oss, const size_t dump_count = -1) {
 		mvcc_write_buffer_->Dump(oss, dump_count);
@@ -88,7 +93,15 @@ class MVCCTxnStore : public TransactionStore {
 		return snapshot_manager_.get();
 	}
 
-	StagingWriteFactory* GetStagingWriteFactory() {
+	TxnLockManager* GetTxnLockManager() const {
+		return txn_lock_manager_.get();
+	}
+
+	const TxnLockTrackerFactory* GetTxnLockTrackerFactory() {
+		return txn_lock_tracker_factory_.get();
+	}
+
+	const StagingWriteFactory* GetStagingWriteFactory() {
 		return staging_write_factory_.get();
 	}
 
@@ -123,6 +136,14 @@ class MVCCTxnStore : public TransactionStore {
     return false;
   }
 
+	SystemClock* GetSystemClock() const {
+		return system_clock_;
+	}
+
+	uint64_t NextTxnId() {
+    return txn_id_counter_.fetch_add(1);
+  }
+
 	void TEST_Crash() override {
     multi_versions_manager_->TEST_Crash();
   }
@@ -131,6 +152,7 @@ class MVCCTxnStore : public TransactionStore {
 	std::unique_ptr<MultiVersionsManager> multi_versions_manager_;
 	std::unique_ptr<SnapshotManager> snapshot_manager_;
 	std::unique_ptr<TxnLockManager> txn_lock_manager_;
+	std::unique_ptr<TxnLockTrackerFactory> txn_lock_tracker_factory_;
 	std::unique_ptr<TransactionFactory> txn_factory_;
 	std::unique_ptr<StagingWriteFactory> staging_write_factory_;
 
@@ -144,6 +166,9 @@ class MVCCTxnStore : public TransactionStore {
 	// operation, like WAL persisting, etc
 	WriteQueue second_write_queue_;
 
+	SystemClock* system_clock_;
+
+	std::atomic<uint64_t> txn_id_counter_ = {1};
  private:
 	Transaction* BeginInternalTransaction(const WriteOptions& write_options);
 };

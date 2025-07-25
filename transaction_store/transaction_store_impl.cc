@@ -114,10 +114,17 @@ class MVCCTxnStoreFactory : public TxnStoreFactory {
       assert(false);
     }
 
-    EmptyTxnLockManagerFactory empty_txn_lock_mgr_factory;
+    OrdinaryTxnLockManagerFactory ordinary_txn_lock_mgr_factory;
     if (store_traits.txn_lock_manager_type ==
-        TxnLockManagerType::kEmptyTxnLoxkManager) {
-      param.lock_manager_factory = &empty_txn_lock_mgr_factory;
+        TxnLockManagerType::kOrdinaryTxnLockManager) {
+      param.lock_manager_factory = &ordinary_txn_lock_mgr_factory;
+    } else {
+      assert(false);
+    }
+
+    if (store_traits.txn_lock_tracker_type ==
+        TxnLockTrackerType::kOrdinaryTxnLockTracker) {
+      param.txn_lock_tracker_factory = new OrdinaryTxnLockTrackerFactory();
     } else {
       assert(false);
     }

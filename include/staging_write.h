@@ -44,7 +44,7 @@ class StagingWriteFactory {
  public:
   virtual ~StagingWriteFactory() {}
 
-  virtual StagingWrite* CreateStagingWrite() = 0;
+  virtual StagingWrite* CreateStagingWrite() const = 0;
 };
 
 class OrderedMapBackedStagingWriteFactory : public StagingWriteFactory {
@@ -52,7 +52,7 @@ class OrderedMapBackedStagingWriteFactory : public StagingWriteFactory {
   OrderedMapBackedStagingWriteFactory() {}
   virtual ~OrderedMapBackedStagingWriteFactory() {}
 
-  StagingWrite* CreateStagingWrite() override;
+  StagingWrite* CreateStagingWrite() const override;
 };
 
 }   // namespace COMPOSITE_STORE_NAMESPACE

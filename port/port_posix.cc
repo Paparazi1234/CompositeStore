@@ -47,6 +47,27 @@ bool Mutex::TryLock() {
   return ret;
 }
 
+bool Mutex::TryLockFor(uint64_t timeout_time_us) {
+#ifdef PTHREAD_MUTEX_TIMEDLOCK_AVAILABLE
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  ts.tv_nsec += timeout_time_us * 1000;
+  bool ret = PthreadCall("trylockfor", pthread_mutex_timedlock(&mu_, &ts)) == 0;
+#ifndef NDEBUG
+  if (ret) {
+    locked_ = true;
+  }
+#endif
+  return ret;
+#else   // if pthread_mutex_timedlock not available, then use pthread_mutex_lock
+  PthreadCall("lock", pthread_mutex_lock(&mu_));
+#ifndef NDEBUG
+  locked_ = true;
+#endif
+  return true;
+#endif  // PTHREAD_MUTEX_TIMEDLOCK_AVAILABLE
+}
+
 void Mutex::AssertHeld() {
 #ifndef NDEBUG
   assert(locked_);
@@ -100,7 +121,7 @@ bool CondVar::TimedWait(uint64_t abs_time_us) {
 
 #ifndef NDEBUG
   mu_->locked_ = false;
-#endif
+#endif  
   int err = pthread_cond_timedwait(&cv_, &mu_->mu_, &ts);
 #ifndef NDEBUG
   mu_->locked_ = true;

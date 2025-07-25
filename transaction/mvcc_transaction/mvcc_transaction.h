@@ -33,8 +33,11 @@ class MVCCTransaction : public Transaction {
     return txn_store_;
   }
 
+  void TrackKey(const std::string& key, bool exclusive) {
+    txn_lock_tracker_->TrackKey(key, exclusive);
+  }
+
  protected:
-  class ReleaseTxnLockHandler;
   enum TransactionState : unsigned char {
     STAGE_WRITING = 0x0,
     STAGE_PREPARING = 0x1,
@@ -45,15 +48,12 @@ class MVCCTransaction : public Transaction {
     STAGE_ROLLBACKED = 0x6
   };
 
-  Status TryLock(const std::string& key);
-  void UnLock(const std::string& key);
+  virtual Status TryLock(const std::string& key, bool exclusive,
+                         int64_t timeout_time_ms) = 0;
 
-  void ClearTxnLocks();
   virtual void Clear() {
-    // clear txn locks before clearing staging_write_, because clearing txn
-    // locks depends on the staging_write_
-    ClearTxnLocks();
     staging_write_->Clear();
+    txn_lock_tracker_->Clear();
   }
 
   StagingWrite* GetStagingWrite() const {
@@ -61,15 +61,37 @@ class MVCCTransaction : public Transaction {
     return staging_write_.get();
   }
 
+  TxnLockTracker* GetTxnLockTracker() const {
+    assert(txn_lock_tracker_.get() != nullptr);
+    return txn_lock_tracker_.get();
+  }
+
   bool IsInWriteStage() {
     return txn_state_ == STAGE_WRITING;
   }
+
+  uint64_t TxnId() const {
+    return txn_id_;
+  }
+
+  uint64_t GetLockTimeOutMs() const {
+    return lock_timeout_ms_;
+  }
+
+  bool IsExpired() const;
 
   MVCCTxnStore* txn_store_;
   std::atomic<TransactionState> txn_state_;
 
   WriteOptions write_options_;
   std::unique_ptr<StagingWrite> staging_write_ = nullptr;
+  std::unique_ptr<TxnLockTracker> txn_lock_tracker_ = nullptr;
+
+  uint64_t txn_id_ = 0;
+
+  uint64_t lock_timeout_ms_;
+  uint64_t txn_started_ts_us_;
+  uint64_t txn_expired_ts_us_;  // txn_expired_ts_us_==0, means txn won't expire
 };
 
 }   // namespace COMPOSITE_STORE_NAMESPACE

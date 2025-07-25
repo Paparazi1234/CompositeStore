@@ -38,8 +38,13 @@ enum class TxnStoreWritePolicy : unsigned char {
 };
 
 enum class TxnLockManagerType : unsigned char {
-  kEmptyTxnLoxkManager = 0x0,
+  kOrdinaryTxnLockManager = 0x0,
   kMaxLockManagerType
+};
+
+enum class TxnLockTrackerType : unsigned char {
+  kOrdinaryTxnLockTracker = 0x0,
+  kMaxLockTrackerType
 };
 
 struct StoreTraits {
@@ -54,7 +59,9 @@ struct StoreTraits {
   TxnStoreWritePolicy txn_store_write_policy =
       TxnStoreWritePolicy::kWriteCommitted;
   TxnLockManagerType txn_lock_manager_type =
-      TxnLockManagerType::kEmptyTxnLoxkManager;
+      TxnLockManagerType::kOrdinaryTxnLockManager;
+  TxnLockTrackerType txn_lock_tracker_type =
+      TxnLockTrackerType::kOrdinaryTxnLockTracker;
   CommitTableOptions commit_table_options;  // used for kWritePrepared policy
 };
 

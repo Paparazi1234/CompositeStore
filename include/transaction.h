@@ -10,7 +10,11 @@ namespace COMPOSITE_STORE_NAMESPACE {
 class TransactionStore;
 
 struct TransactionOptions {
-  
+  // txn_duration_ms < 0, means txn won't expired
+  int64_t txn_duration_ms = -1;
+  // lock_timeout_ms < 0: won't timeout; lock_timeout_ms == 0: just one locking
+  // attempt; lock_timeout_ms > 0: try until lock_timeout_ms
+  int64_t lock_timeout_ms = -1;
 };
 
 class Transaction {

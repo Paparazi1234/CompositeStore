@@ -47,7 +47,8 @@ class WritePreparedTransaction : public PessimisticTransaction {
 
   StagingWrite* GetEmptyStagingWrite() {
     if (empty_staging_write_.get() == nullptr) {
-      StagingWriteFactory* factory = GetTxnStore()->GetStagingWriteFactory();
+      const StagingWriteFactory* factory =
+          GetTxnStore()->GetStagingWriteFactory();
       empty_staging_write_.reset(factory->CreateStagingWrite());
     }
     assert(empty_staging_write_.get() != nullptr &&
@@ -63,11 +64,8 @@ class WritePreparedTransaction : public PessimisticTransaction {
   }
 
   virtual void Clear() override {
-    // clear txn locks before clearing staging_write_, because clearing txn locks
-    // depends on the staging_write_
-    ClearTxnLocks();
-    GetStagingWrite()->Clear();
     ResetUnCommittedSeqs();
+    PessimisticTransaction::Clear();
   }
 
   // for Commit purpose and lazy initialized

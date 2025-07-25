@@ -2,7 +2,7 @@
 
 namespace COMPOSITE_STORE_NAMESPACE {
 
-StagingWrite* OrderedMapBackedStagingWriteFactory::CreateStagingWrite() {
+StagingWrite* OrderedMapBackedStagingWriteFactory::CreateStagingWrite() const {
   return new OrderedMapBackedStagingWrite();
 }
 

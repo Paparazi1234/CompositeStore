@@ -23,6 +23,7 @@ class Mutex {
   void Unlock();
 
   bool TryLock();
+  bool TryLockFor(uint64_t timeout_time_us);
 
   // this will assert if the mutex is not locked
   // it does NOT verify that mutex is held by a calling thread
@@ -32,6 +33,9 @@ class Mutex {
   inline void lock() { Lock(); }
   inline void unlock() { Unlock(); }
   inline bool try_lock() { return TryLock(); }
+  inline bool try_lock_for(uint64_t timeout_time_us) {
+    return TryLockFor(timeout_time_us);
+  }
 
  private:
   friend class CondVar;

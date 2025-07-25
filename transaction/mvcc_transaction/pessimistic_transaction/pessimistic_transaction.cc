@@ -5,6 +5,10 @@ namespace COMPOSITE_STORE_NAMESPACE {
 // only control the transaction excution behavior, let derived class
 // implements the details
 Status PessimisticTransaction::Prepare() {
+  if (IsExpired()) {
+    return Status::Expired();
+  }
+
   Status s;
   if (txn_state_ == STAGE_WRITING) {
     txn_state_.store(STAGE_PREPARING, std::memory_order_relaxed);
@@ -25,6 +29,10 @@ Status PessimisticTransaction::Prepare() {
 }
 
 Status PessimisticTransaction::Commit() {
+  if (IsExpired()) {
+    return Status::Expired();
+  }
+
   Status s;
   if (txn_state_ == STAGE_WRITING) {
     txn_state_.store(STAGE_COMMITTING, std::memory_order_relaxed);
@@ -75,6 +83,27 @@ Status PessimisticTransaction::Rollback() {
     s = Status::InvalidArgument();
   } else {
     s = Status::InvalidArgument();
+  }
+  return s;
+}
+
+Status PessimisticTransaction::TryLock(const std::string& key, bool exclusive,
+                                       int64_t timeout_time_ms) {
+  Status s;
+  MVCCTxnStore* txn_store = GetTxnStore();
+  bool tracked_exclusive;
+  bool previously_locked = GetTxnLockTracker()->IsKeyAlreadyTracked(
+      key, &tracked_exclusive);
+  bool lock_upgrade = previously_locked && exclusive && !tracked_exclusive;
+  // not locked yet or already locked previously but need to upgrade lock
+  if (!previously_locked || lock_upgrade) {
+    s = txn_store->TryLock(TxnId(), key, exclusive, timeout_time_ms);
+    if (s.IsOK()) {
+      TrackKey(key, exclusive);
+    }
+  } else {
+    // already locked previously and no need to upgrade lock
+    assert(previously_locked && !lock_upgrade);
   }
   return s;
 }
