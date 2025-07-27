@@ -16,6 +16,12 @@ class PessimisticTxnStore : public MVCCTxnStore {
       const MVCCTxnStoreCreationParam& creation_param,
       WriteQueue& prepare_queue,
       WriteQueue& commit_queue);
+  
+  virtual ~PessimisticTxnStore() {
+    if (!IsTestCrashEnabled()) {
+      assert(txn_lock_manager_->NumLocks() == 0);
+    }
+  }
 
   virtual WriteQueue& GetPrepareQueue() {
     return prepare_queue_;

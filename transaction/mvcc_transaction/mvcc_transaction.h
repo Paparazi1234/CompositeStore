@@ -15,7 +15,11 @@ class MVCCTransaction : public Transaction {
   MVCCTransaction(TransactionStore* txn_store,
                   const WriteOptions& write_options,
                   const TransactionOptions& txn_options);
-  virtual ~MVCCTransaction() {}
+  virtual ~MVCCTransaction() {
+    if (!GetTxnStore()->IsTestCrashEnabled()) {
+      assert(txn_lock_tracker_->NumTrackedKeys() == 0);
+    }
+  }
 
   virtual Status Put(const std::string& key, const std::string& value) override; 
   virtual Status Delete(const std::string& key) override;

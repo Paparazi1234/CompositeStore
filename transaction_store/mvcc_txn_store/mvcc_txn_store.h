@@ -138,8 +138,13 @@ class MVCCTxnStore : public TransactionStore {
   }
 
 	void TEST_Crash() override {
+		is_test_crash_enabled_ = true;
     multi_versions_manager_->TEST_Crash();
   }
+
+	bool IsTestCrashEnabled() const {
+		return is_test_crash_enabled_;
+	}
 
  protected:
 	std::unique_ptr<MultiVersionsManager> multi_versions_manager_;
@@ -163,6 +168,8 @@ class MVCCTxnStore : public TransactionStore {
 	std::atomic<uint64_t> txn_id_counter_ = {1};
  private:
 	Transaction* BeginInternalTransaction(const WriteOptions& write_options);
+
+	bool is_test_crash_enabled_ = false;
 };
 
 }   // namespace COMPOSITE_STORE_NAMESPACE

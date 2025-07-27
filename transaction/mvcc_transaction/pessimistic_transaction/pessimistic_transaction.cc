@@ -71,9 +71,9 @@ Status PessimisticTransaction::Rollback() {
     txn_state_.store(STAGE_ROLLBACKING, std::memory_order_relaxed);
     s = RollbackImpl();
     if (s.IsOK()) {
-      // when rollback after prepare, Clear() only when rollback successfully
+      // when rollback with prepare, Clear() only when rollback successfully
       Clear();
-      // if rollback after prepare executed, the txn can't be used to do future 
+      // if rollback with prepare executed, the txn can't be used to do future 
       // writes any more
       txn_state_.store(STAGE_ROLLBACKED, std::memory_order_relaxed);
     }

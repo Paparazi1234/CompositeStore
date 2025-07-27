@@ -281,6 +281,7 @@ void CommonPessimisticTxnTests::ReadTxnOwnWrites() {
   s = txn_store_->Get(read_options, "foo1", &value);
   ASSERT_TRUE(s.IsNotFound());
 
+  txn_store_->TEST_Crash();
   delete txn;
 }
 
@@ -1461,8 +1462,8 @@ void InspectPessimisticTxnTests::
 
 void InspectPessimisticTxnTests::
     WriteBufferInsertTimingBetweenDifferentWritePolicy() {
-  std::string key("f", 100);
-  std::string value("b", 100);
+  std::string key(100, 'f');
+  std::string value(100, 'b');
   uint64_t expected_raw_data_size = key.size() + value.size();
 
   WriteOptions write_options;
