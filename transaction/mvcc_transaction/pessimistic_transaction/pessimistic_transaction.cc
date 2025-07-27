@@ -90,16 +90,19 @@ Status PessimisticTransaction::Rollback() {
 Status PessimisticTransaction::TryLock(const std::string& key, bool exclusive,
                                        int64_t timeout_time_ms) {
   Status s;
-  MVCCTxnStore* txn_store = GetTxnStore();
+  PessimisticTxnStore* txn_store_impl =
+      static_cast_with_check<PessimisticTxnStore>(GetTxnStore());
+  TxnLockManager* lock_manager = txn_store_impl->GetTxnLockManager();
+  TxnLockTracker* lock_tracker = GetTxnLockTracker();
   bool tracked_exclusive;
-  bool previously_locked = GetTxnLockTracker()->IsKeyAlreadyTracked(
+  bool previously_locked = lock_tracker->IsKeyAlreadyTracked(
       key, &tracked_exclusive);
   bool lock_upgrade = previously_locked && exclusive && !tracked_exclusive;
   // not locked yet or already locked previously but need to upgrade lock
   if (!previously_locked || lock_upgrade) {
-    s = txn_store->TryLock(TxnId(), key, exclusive, timeout_time_ms);
+    s = lock_manager->TryLock(TxnId(), key, exclusive, timeout_time_ms);
     if (s.IsOK()) {
-      TrackKey(key, exclusive);
+      lock_tracker->TrackKey(key, exclusive);
     }
   } else {
     // already locked previously and no need to upgrade lock

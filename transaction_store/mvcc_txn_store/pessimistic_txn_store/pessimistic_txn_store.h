@@ -28,6 +28,11 @@ class PessimisticTxnStore : public MVCCTxnStore {
   virtual bool IsTwoWriteQueuesEnabled() const {
     return enable_two_write_queues_;
   }
+
+  TxnLockManager* GetTxnLockManager() const {
+		return txn_lock_manager_.get();
+	}
+
  protected:
   virtual WriteQueue& CalcuPrepareQueue(bool enable_two_write_queues) = 0;
   virtual WriteQueue& CalcuCommitQueue(bool enable_two_write_queues) = 0;
@@ -35,6 +40,8 @@ class PessimisticTxnStore : public MVCCTxnStore {
   bool enable_two_write_queues_;
   WriteQueue& prepare_queue_;
   WriteQueue& commit_queue_;
+
+  std::unique_ptr<TxnLockManager> txn_lock_manager_;
 };
 
 }   // namespace COMPOSITE_STORE_NAMESPACE

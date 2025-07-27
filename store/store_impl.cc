@@ -18,17 +18,6 @@ class EmptyMultiVersionsManagerFactory :
   EmptyMultiVersionsManagerFactory() {}
   ~EmptyMultiVersionsManagerFactory() {}
 };
-
-class NULLTxnLockManagerFactory : public TxnLockManagerFactory {
- public:
-  NULLTxnLockManagerFactory() {}
-  ~NULLTxnLockManagerFactory() {}
-
-  TxnLockManager* CreateTxnLockManager(
-      SystemClock* system_clock, int64_t num_locks_limit) const override {
-    return nullptr;
-  }
-};
 }   // anonymous namespace
 
 
@@ -38,15 +27,15 @@ class MVCCStoreFactory : public StoreFactory {
 
   Store* CreateStore(const StoreOptions& store_options) const override {
     EmptyMultiVersionsManagerFactory empty_mvm_factory;
-    NULLTxnLockManagerFactory NULL_txn_lock_mgr_factory;
     SkipListBackedMVCCWriteBufferFactory skiplist_backed_write_buffer_factory;
     MVCCTxnStoreCreationParam param;
     param.mvm_factory = &empty_mvm_factory;
-    param.lock_manager_factory = &NULL_txn_lock_mgr_factory;
+    param.lock_manager_factory = nullptr;
     param.txn_lock_tracker_factory = nullptr;
     param.write_buffer_factory = &skiplist_backed_write_buffer_factory;
     param.transaction_factory = nullptr;
     param.staging_write_factory = new OrderedMapBackedStagingWriteFactory();
+    param.system_clock = SystemClock::GetSingleton();
     return new MVCCStore(store_options, param);
   }
 };

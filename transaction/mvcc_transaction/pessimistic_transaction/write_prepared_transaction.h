@@ -16,6 +16,17 @@ class WritePreparedTransaction : public PessimisticTransaction {
       : PessimisticTransaction(txn_store, write_options, txn_options) {}
   virtual ~WritePreparedTransaction() {}
 
+  virtual void Reinitialize(TransactionStore* txn_store,
+                            const WriteOptions& write_options,
+                            const TransactionOptions& txn_options) override {
+    // first do current class's re-initialization of it's own member variables
+    // variables and it's own resources cleanup
+    ResetUnCommittedSeqs();
+
+    // then invoke it's direct parent class's Reinitialize() explicitly
+    PessimisticTransaction::Reinitialize(txn_store, write_options, txn_options);
+  }
+
  void RecordPreparedUnCommittedSeqs(uint64_t started, uint32_t count) {
     assert(started > 0 && count > 0);
     prepared_uncommitted_started_seq_ = started;
@@ -38,7 +49,6 @@ class WritePreparedTransaction : public PessimisticTransaction {
     *count = num_rollbacked_uncommitted_seq_;
   }
 
-  class RollbackStagingWriteBuilder;
  private:
   virtual Status PrepareImpl() override;
   virtual Status CommitWithPrepareImpl() override;
@@ -64,7 +74,10 @@ class WritePreparedTransaction : public PessimisticTransaction {
   }
 
   virtual void Clear() override {
+    // first do current class's own cleanup
     ResetUnCommittedSeqs();
+
+    // then invoke direct parent's Clear()
     PessimisticTransaction::Clear();
   }
 

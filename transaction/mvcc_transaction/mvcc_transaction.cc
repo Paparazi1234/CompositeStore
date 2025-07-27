@@ -7,7 +7,7 @@ namespace COMPOSITE_STORE_NAMESPACE {
 MVCCTransaction::MVCCTransaction(TransactionStore* txn_store,
                                  const WriteOptions& write_options,
                                  const TransactionOptions& txn_options) {
-  Reinitialize(txn_store, write_options, txn_options);
+  Initialize(txn_store, write_options, txn_options);
 }
 
 Status MVCCTransaction::Put(const std::string& key, const std::string& value) {
@@ -53,25 +53,19 @@ void MVCCTransaction::SetSnapshot() {
 
 }
 
-void MVCCTransaction::Reinitialize(TransactionStore* txn_store,
-                                   const WriteOptions& write_options,
-                                   const TransactionOptions& txn_options) {
+void MVCCTransaction::Initialize(TransactionStore* txn_store,
+                                 const WriteOptions& write_options,
+                                 const TransactionOptions& txn_options) {
   txn_store_ = static_cast_with_check<MVCCTxnStore>(txn_store);
   txn_state_ = STAGE_WRITING;
+
   write_options_ = write_options;
-  if (staging_write_.get() == nullptr) {
-    staging_write_.reset(
-        txn_store_->GetStagingWriteFactory()->CreateStagingWrite());
-  }
+  staging_write_.reset(
+      txn_store_->GetStagingWriteFactory()->CreateStagingWrite());
+  txn_lock_tracker_.reset(
+      txn_store_->GetTxnLockTrackerFactory()->CreateTxnLockTracker());
 
-  if (txn_lock_tracker_.get() == nullptr) {
-    txn_lock_tracker_.reset(
-        txn_store_->GetTxnLockTrackerFactory()->CreateTxnLockTracker());
-  }
-
-  if (txn_id_ == 0) {   // reuse txn id if not first time initialized
-    txn_id_ = txn_store_->NextTxnId();
-  }
+  txn_id_ = txn_store_->NextTxnId();
 
   lock_timeout_ms_ = txn_options.lock_timeout_ms;
   txn_started_ts_us_ = txn_store_->GetSystemClock()->NowMicros();
@@ -81,8 +75,31 @@ void MVCCTransaction::Reinitialize(TransactionStore* txn_store,
   } else {
     txn_expired_ts_us_ = 0;
   }
+}
 
-  Clear();
+void MVCCTransaction::Reinitialize(TransactionStore* txn_store,
+                                   const WriteOptions& write_options,
+                                   const TransactionOptions& txn_options) {
+  txn_store_ = static_cast_with_check<MVCCTxnStore>(txn_store);
+  txn_state_ = STAGE_WRITING;
+
+  write_options_ = write_options;
+  assert(staging_write_);
+  staging_write_->Clear();
+  assert(txn_lock_tracker_);
+  txn_lock_tracker_->Clear();
+
+  // reuse txn id
+  assert(txn_id_ != 0);
+
+  lock_timeout_ms_ = txn_options.lock_timeout_ms;
+  txn_started_ts_us_ = txn_store_->GetSystemClock()->NowMicros();
+  if (txn_options.txn_duration_ms > 0) {
+    txn_expired_ts_us_ =
+        txn_started_ts_us_ + txn_options.txn_duration_ms * 1000;
+  } else {
+    txn_expired_ts_us_ = 0;
+  }
 }
 
 bool MVCCTransaction::IsExpired() const {

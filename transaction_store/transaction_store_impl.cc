@@ -82,6 +82,8 @@ class MVCCTxnStoreFactory : public TxnStoreFactory {
     MVCCTxnStore* txn_store = nullptr;
     MVCCTxnStoreCreationParam param;
 
+    param.system_clock = SystemClock::GetSingleton();
+
     SkipListBackedMVCCWriteBufferFactory skiplist_backed_write_buffer_factory;
     if (store_traits.write_buffer_backed_type ==
         MVCCWriteBufferBackedType::kSkipListBacked) {

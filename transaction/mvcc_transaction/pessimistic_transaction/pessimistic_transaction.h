@@ -1,6 +1,8 @@
 #pragma once
 
 #include "transaction/mvcc_transaction/mvcc_transaction.h"
+#include "transaction_store/mvcc_txn_store/pessimistic_txn_store/pessimistic_txn_store.h"
+#include "util/cast_util.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 
@@ -30,8 +32,13 @@ class PessimisticTransaction : public MVCCTransaction {
                          int64_t timeout_time_ms) override;
 
   virtual void Clear() override {
-    TxnLockManager* txn_lock_manager = GetTxnStore()->GetTxnLockManager();
+    // first do current class's own cleanup
+    PessimisticTxnStore* txn_store_impl =
+        static_cast_with_check<PessimisticTxnStore>(GetTxnStore());
+    TxnLockManager* txn_lock_manager = txn_store_impl->GetTxnLockManager();
     txn_lock_manager->UnLock(TxnId(), *GetTxnLockTracker());
+
+    // then invoke direct parent's Clear()
     MVCCTransaction::Clear();
   }
 };

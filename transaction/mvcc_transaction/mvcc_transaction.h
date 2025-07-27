@@ -25,16 +25,57 @@ class MVCCTransaction : public Transaction {
 
   virtual void SetSnapshot() override;
 
-  void Reinitialize(TransactionStore* txn_store,
-                    const WriteOptions& write_options,
-                    const TransactionOptions& txn_options);
+  // this func only invoked when we reuse a txn, it needs to not only re-init
+  // current class's member variables and then do the cleanup of current class
+  // but it also needs to invoke it's direct parent class's Reinitialize()
+  // explicitly, like Parent::Reinitialize() when this func is overriden,
+  // here is the funcs invoked sequence:
+  // assume we have classes as follow for example:
+  //    class Parant;
+  //    class Child : public Parent;     // Child derived from Parant
+  //    class GrandChild : public Child; // GrandChild derived from Child
+  // then each class's Reinitialize() impl will be:
+  //    Parant::Reinitialize() {
+  //      // do current class's re-initialization of it's own member variables
+  //      // and it's own resources cleanup
+  //      ...
+  //    }
+  //
+  //    Child::Reinitialize() {
+  //      // first do current class's re-initialization of it's own member
+  //      // variables and it's own resources cleanup
+  //      ...
+  //      // then invoke it's direct parent class's Reinitialize() explicitly
+  //      Parant::Reinitialize();
+  //    }
+  //
+  //    GrandChild::Reinitialize() {
+  //      // first do current class's re-initialization of it's own member
+  //      // variables and it's own resources cleanup
+  //      ...
+  //      // then invoke it's direct parent class's Reinitialize() explicitly
+  //      Child::Reinitialize();
+  //    }
+  //
+  // when we have code like this:
+  //    Parent* ptr = new GrandChild();
+  //    // do some job to *ptr
+  //    ...
+  //    // then reuse *ptr after job done
+  //    ptr->Reinitialize();
+  //
+  // we will have following sequences of re-initialization calls
+  //    GrandChild's own re-initialization jobs and resources cleanup done
+  //    Child's own re-initialization jobs and resources cleanup done
+  //    Parant's own re-initialization jobs and resources cleanup done
+  // this seems a kind of ideal sequences of re-initialization jobs and
+  // resources cleanup done and we please stick to this principle
+  virtual void Reinitialize(TransactionStore* txn_store,
+                            const WriteOptions& write_options,
+                            const TransactionOptions& txn_options);
 
   MVCCTxnStore* GetTxnStore() const {
     return txn_store_;
-  }
-
-  void TrackKey(const std::string& key, bool exclusive) {
-    txn_lock_tracker_->TrackKey(key, exclusive);
   }
 
  protected:
@@ -48,9 +89,47 @@ class MVCCTransaction : public Transaction {
     STAGE_ROLLBACKED = 0x6
   };
 
+  // let derived class impl the locking detail, because different concurrency
+  // control policy has different locking logic, like Pessimistic txn and
+  // Optimistic txn.
   virtual Status TryLock(const std::string& key, bool exclusive,
                          int64_t timeout_time_ms) = 0;
 
+  // this func only invoked in the ctor, and derived class's overridens of this
+  // func only need to do their own member variables initialization jobs and
+  // invokeed in their own ctor(if needed)
+  virtual void Initialize(TransactionStore* txn_store,
+                          const WriteOptions& write_options,
+                          const TransactionOptions& txn_options);
+
+  // this func will be invoked when a txn finished, and it needs to cleanup all
+  // txn's helding resources, so when derived classes override this func, they
+  // need to cleanup their own specific resources firstly and then invoke their
+  // direct parent class's cleanup func explicitly, like Parent::Clear();
+  // assume we have classes as follow for example:
+  //    class Parant;
+  //    class Child : public Parent;     // Child derived from Parant
+  //    class GrandChild : public Child; // GrandChild derived from Child
+  // then each class's Clear() impl will be:
+  //    Parant::Clear() {
+  //      // do current class's own cleanup
+  //      ...
+  //    }
+  //
+  //    Child::Clear() {
+  //      // first do current class's own cleanup
+  //      ...
+  //      // then invoke direct parent's Clear()
+  //      Parant::Clear();
+  //    }
+  //
+  //    GrandChild::Clear() {
+  //      // first do current class's own cleanup
+  //      ...
+  //      // then invoke direct parent's Clear()
+  //      Child::Clear();
+  //    }
+  // please stick to this cleanup principle
   virtual void Clear() {
     staging_write_->Clear();
     txn_lock_tracker_->Clear();

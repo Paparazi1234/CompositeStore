@@ -454,8 +454,8 @@ Status WritePreparedTransaction::CommitWithoutPrepareImpl() {
       txn_store->GetCommitQueue()); // Todo: 失败的话可能需要清理prepared Heap里面本次事务插入的seq
 }
 
-class WritePreparedTransaction::RollbackStagingWriteBuilder :
-    public StagingWrite::Handler {
+namespace {
+class RollbackStagingWriteBuilder : public StagingWrite::Handler {
  public:
   RollbackStagingWriteBuilder(MVCCTxnStore* txn_store,
                               StagingWrite* rollback_staging_write)
@@ -498,6 +498,7 @@ class WritePreparedTransaction::RollbackStagingWriteBuilder :
   // committed of target key 
   const Snapshot& snapshot_limit_max_;
 };
+}   // anonymous namespace
 
 Status WritePreparedTransaction::RollbackImpl() {
   // build the rollback staging write

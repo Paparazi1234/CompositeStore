@@ -40,6 +40,8 @@ struct MVCCTxnStoreCreationParam {
   TransactionFactory* transaction_factory;
   const TxnLockManagerFactory* lock_manager_factory;
 	TxnLockTrackerFactory* txn_lock_tracker_factory;
+
+	SystemClock* system_clock;
 };
 
 class MVCCTxnStore : public TransactionStore {
@@ -68,11 +70,6 @@ class MVCCTxnStore : public TransactionStore {
   virtual const Snapshot* TakeSnapshot() override;
   virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
 
-	Status TryLock(uint64_t txn_id, const std::string& key, bool exclusive,
-								 int64_t timeout_time_ms);
-  void UnLock(uint64_t txn_id, const std::string& key);
-	void UnLock(uint64_t txn_id, const TxnLockTracker& tracker);
-
 	void DumpKVPairs(std::stringstream* oss, const size_t dump_count = -1) {
 		mvcc_write_buffer_->Dump(oss, dump_count);
 	}
@@ -91,10 +88,6 @@ class MVCCTxnStore : public TransactionStore {
 
 	SnapshotManager* GetSnapshotManager() const {
 		return snapshot_manager_.get();
-	}
-
-	TxnLockManager* GetTxnLockManager() const {
-		return txn_lock_manager_.get();
 	}
 
 	const TxnLockTrackerFactory* GetTxnLockTrackerFactory() {
@@ -151,7 +144,6 @@ class MVCCTxnStore : public TransactionStore {
  protected:
 	std::unique_ptr<MultiVersionsManager> multi_versions_manager_;
 	std::unique_ptr<SnapshotManager> snapshot_manager_;
-	std::unique_ptr<TxnLockManager> txn_lock_manager_;
 	std::unique_ptr<TxnLockTrackerFactory> txn_lock_tracker_factory_;
 	std::unique_ptr<TransactionFactory> txn_factory_;
 	std::unique_ptr<StagingWriteFactory> staging_write_factory_;
