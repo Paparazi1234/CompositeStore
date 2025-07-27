@@ -1,20 +1,22 @@
 1 重构（永久）
+2 清理 Todo注释
 6 infinite Commit table 代码review
 7 WAL支持
 8 乐观事务支持
 12 测试用例：
   2 Commit cache满发生evict
-  3 commit table多线程交互
+  3 commit table多线程测试
   4 commit table内部各组件的单独测试（包含每个组件的多线程并发测试）
-15 内存泄漏检测：ASAN
 18 上github
 19 通用P90测试
 24 考虑将Get/Write path上频繁创建的临时堆变量改造为thread local storage（这种TLS实现需要详细考虑）
 26 事务benchmark
-28 事务锁实现
-37 编译选线添加rtti针对debug和release模式的开启和关闭
 40 readme.md：项目介绍
 41 license文件
+43 测试用例适配事务锁（多线程测试）,需要支持GetForUpdate或者SetSnapshot
+44 ASSERT_OK实现
+45 UBSAN在linux环境下检测到问题，需要解决
+46 Status添加statement字符串
 
 TodoList表头：
 

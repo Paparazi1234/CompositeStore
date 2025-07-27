@@ -38,6 +38,8 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
+include(cmake/sanitize_check.cmake)
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/static)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/bin)

@@ -1,5 +1,3 @@
 .vscode
 .DS_store
 build/
-BAR.sh
-Build.sh
