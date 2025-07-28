@@ -11,7 +11,7 @@ MVCCTransaction::MVCCTransaction(TransactionStore* txn_store,
 }
 
 Status MVCCTransaction::Put(const std::string& key, const std::string& value) {
-  if (!IsInWriteStage()) {
+  if (!IsInWritingStage()) {
     return Status::InvalidArgument();
   }
   Status s = TryLock(key, true /* exclusive */, GetLockTimeOutMs());
@@ -22,7 +22,7 @@ Status MVCCTransaction::Put(const std::string& key, const std::string& value) {
 }
 
 Status MVCCTransaction::Delete(const std::string& key) {
-  if (!IsInWriteStage()) {
+  if (!IsInWritingStage()) {
     return Status::InvalidArgument();
   }
   Status s = TryLock(key, true /* exclusive */, GetLockTimeOutMs());
@@ -80,6 +80,9 @@ void MVCCTransaction::Initialize(TransactionStore* txn_store,
 void MVCCTransaction::Reinitialize(TransactionStore* txn_store,
                                    const WriteOptions& write_options,
                                    const TransactionOptions& txn_options) {
+  // just do an assertion
+  assert(IsReusable());
+
   txn_store_ = static_cast_with_check<MVCCTxnStore>(txn_store);
   txn_state_ = STAGE_WRITING;
 

@@ -149,7 +149,7 @@ class MVCCTransaction : public Transaction {
     return txn_lock_tracker_.get();
   }
 
-  bool IsInWriteStage() {
+  bool IsInWritingStage() {
     return txn_state_ == STAGE_WRITING;
   }
 
@@ -162,6 +162,14 @@ class MVCCTransaction : public Transaction {
   }
 
   bool IsExpired() const;
+
+  bool IsReusable() const {
+    // when NumTrackedKeys() == 0, we have:
+    // 1. txn started, but hasn't successfully performed any writes yet, or
+    // 2. txn has successfully performed Commit() or Rollback()
+    // in any of these states, we can reuse the txn
+    return txn_lock_tracker_->NumTrackedKeys() == 0;
+  }
 
   MVCCTxnStore* txn_store_;
   std::atomic<TransactionState> txn_state_;
