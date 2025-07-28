@@ -15,8 +15,7 @@
 41 license文件
 43 测试用例适配事务锁（多线程测试）,需要支持GetForUpdate或者SetSnapshot
 44 ASSERT_OK实现  (明天)
-45 UBSAN在linux环境下检测到问题，需要解决
-46 Status添加statement字符串  (明天)
+45 UBSAN在linux环境下检测到问题，需要解决(明天)
 
 TodoList表头：
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "composite_store_namespace.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
@@ -106,6 +108,8 @@ class Status {
   bool IsTryAgain() const {
     return code() == kTryAgain;
   }
+
+  std::string ToString() const;
 
  private:
   Code code_;

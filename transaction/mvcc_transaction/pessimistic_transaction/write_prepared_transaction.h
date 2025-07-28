@@ -13,7 +13,8 @@ class WritePreparedTransaction : public PessimisticTransaction {
   WritePreparedTransaction(TransactionStore* txn_store,
                            const WriteOptions& write_options,
                            const TransactionOptions& txn_options)
-      : PessimisticTransaction(txn_store, write_options, txn_options) {}
+      : PessimisticTransaction(txn_store, write_options, txn_options),
+        empty_staging_write_(nullptr) {}
   virtual ~WritePreparedTransaction() {}
 
   virtual void Reinitialize(TransactionStore* txn_store,
@@ -82,7 +83,7 @@ class WritePreparedTransaction : public PessimisticTransaction {
   }
 
   // for Commit purpose and lazy initialized
-  std::unique_ptr<StagingWrite> empty_staging_write_ = nullptr;
+  std::unique_ptr<StagingWrite> empty_staging_write_;
 
   uint64_t prepared_uncommitted_started_seq_ = 0;
   uint64_t num_prepared_uncommitted_seq_ = 0;
