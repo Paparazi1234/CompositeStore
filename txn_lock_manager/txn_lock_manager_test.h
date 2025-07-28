@@ -24,6 +24,7 @@ class CommonTxnLockManagerTests {
   void ReentrantSharedLock();
   void LockUpgrade();
   void LockDowngrade();
+  void LockTimeOut();
   void LockConflict();
   void SharedLocks();
   void Deadlock();
@@ -166,6 +167,43 @@ void CommonTxnLockManagerTests::LockDowngrade() {
   lock_manager->UnLock(txn_id2, "foo");
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
+  lock_manager->UnLock(txn_id1, "foo");
+  ASSERT_EQ(lock_manager->NumLocks(), 0ull);
+
+  delete lock_manager;
+}
+
+void CommonTxnLockManagerTests::LockTimeOut() {
+  const uint64_t txn_id1 = 1;
+  const uint64_t txn_id2 = 2;
+  TxnLockManager* lock_manager =
+      lock_manager_factory_->CreateTxnLockManager(SystemClock::GetSingleton());
+  
+  // first exclusive locked by txn1
+  Status s = lock_manager->TryLock(txn_id1, "foo", true, WONT_TIMEOUE);
+  ASSERT_TRUE(s.IsOK());
+  ASSERT_EQ(lock_manager->NumLocks(), 1ull);
+
+  // txn2 try lock for 3ms and timeout failed
+  s = lock_manager->TryLock(txn_id2, "foo", true, TIMEOUT_TIME_3MS);
+  ASSERT_TRUE(s.IsTimedOut());
+  ASSERT_EQ(lock_manager->NumLocks(), 1ull);
+
+  s = lock_manager->TryLock(txn_id2, "foo", false, TIMEOUT_TIME_3MS);
+  ASSERT_TRUE(s.IsTimedOut());
+  ASSERT_EQ(lock_manager->NumLocks(), 1ull);
+
+  // txn1 downgrades lock
+  s = lock_manager->TryLock(txn_id1, "foo", false, WONT_TIMEOUE);
+  ASSERT_TRUE(s.IsOK());
+  ASSERT_EQ(lock_manager->NumLocks(), 1ull);
+
+  // txn2 try exclusively lock for 3ms and timeout failed
+  s = lock_manager->TryLock(txn_id2, "foo", true, TIMEOUT_TIME_3MS);
+  ASSERT_TRUE(s.IsTimedOut());
+  ASSERT_EQ(lock_manager->NumLocks(), 1ull);
+
+  // cleanup
   lock_manager->UnLock(txn_id1, "foo");
   ASSERT_EQ(lock_manager->NumLocks(), 0ull);
 

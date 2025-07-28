@@ -1,31 +1,36 @@
 #!/bin/bash
 
-bin_path=`pwd`/build/bin
+build_dir=`pwd`/build
+bin_dir=$build_dir/bin
+
+function cleanup_build_dir() {
+  rm -rf $build_dir
+}
 
 function clear_build_dir() {
-  rm -rf build
-  mkdir build
+  rm -rf $build_dir
+  mkdir $build_dir
 }
 
 function build_src() {
-  cd build
-  cmake $1 ..
+  cd $build_dir
+  cmake $1 -DBUILD_DIR="$build_dir" ..
   make -j8
   cd -
 }
 
 function run_one() {
-  printf "\n\e[36m\e[1mBegin run $bin_path/$1\e[0m\n"
-  cd $bin_path
-  printf "\e[35m\e[1mrun $bin_path/$1\e[0m\n"
+  printf "\n\e[36m\e[1mBegin run $bin_dir/$1\e[0m\n"
+  cd $bin_dir
+  printf "\e[35m\e[1mrun $bin_dir/$1\e[0m\n"
   ./$1
   cd -
 }
 
 function run_all() {
-  printf "\n\e[36m\e[1mBegin run all executables in $bin_path\e[0m\n"
-  cd $bin_path
-  for exe in $bin_path/*; do
+  printf "\n\e[36m\e[1mBegin run all executables in $bin_dir\e[0m\n"
+  cd $bin_dir
+  for exe in $bin_dir/*; do
       printf "\e[35m\e[1mrun $exe\e[0m\n"
       $exe
       printf "\n"
@@ -33,13 +38,15 @@ function run_all() {
   cd -
 }
 
+cleanup_only="false"
 brand_new_build="false"
 build_only="false"
 build_with_san="non"
 run_target="all"
 
-while getopts "bos:e:" opt; do
+while getopts "cbos:e:" opt; do
   case $opt in
+    c) cleanup_only="true";;
     b) brand_new_build="true";;
     o) build_only="true";;
     s) build_with_san=$OPTARG;;
@@ -58,6 +65,13 @@ elif [ "$build_with_san" = "tsan" ] || [ "$build_with_san" = "TSAN" ]; then
 elif [ "$build_with_san" = "ubsan" ] || [ "$build_with_san" = "UBSAN" ]; then
   cmake_san_opt="-DWITH_UBSAN=ON"
   brand_new_build="true"
+fi
+
+# cleanup build dir only
+if [ "$cleanup_only" = "true" ]; then
+  printf "Cleanup build dir only\n"
+  cleanup_build_dir
+  exit 0
 fi
 
 # build

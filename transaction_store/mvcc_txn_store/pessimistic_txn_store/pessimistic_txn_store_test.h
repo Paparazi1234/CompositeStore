@@ -92,6 +92,9 @@ class CommonPessimisticTxnTests : public PessimisticTxnTestsBase {
   void ReadUnderSnapshot();
   void ReuseTransaction();
   void SingleTxnExcutionFlowTest();
+
+  void LockTimeOut();
+  void TxnExpired();
 };
 
 class MultiThreadingPessimisticTxnTests : public PessimisticTxnTestsBase {
@@ -281,7 +284,10 @@ void CommonPessimisticTxnTests::ReadTxnOwnWrites() {
   s = txn_store_->Get(read_options, "foo1", &value);
   ASSERT_TRUE(s.IsNotFound());
 
-  txn_store_->TEST_Crash();
+  // cleanup
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsOK());
+
   delete txn;
 }
 
@@ -993,6 +999,66 @@ void CommonPessimisticTxnTests::SingleTxnExcutionFlowTest() {
   ASSERT_TRUE(s.IsInvalidArgument());
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar2");
+
+  delete txn;
+}
+
+void CommonPessimisticTxnTests::LockTimeOut() {
+  TransactionOptions txn_options;
+  WriteOptions write_options;
+  Status s;
+
+  // key locked by txn1
+  Transaction* txn1 = txn_store_->BeginTransaction(write_options);
+  s = txn1->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+
+  // txn2 try lock for 2ms and timeout failed
+  txn_options.lock_timeout_ms = 2;
+  Transaction* txn2 = txn_store_->BeginTransaction(write_options, txn_options);
+  s = txn2->Put("foo", "bar1");
+  ASSERT_TRUE(s.IsTimedOut());
+
+  // txn2 try lock and failed immediately
+  txn_options.lock_timeout_ms = 0;
+  txn2 = txn_store_->BeginTransaction(write_options, txn_options, txn2);
+  s = txn2->Put("foo", "bar2");
+  ASSERT_TRUE(s.IsTimedOut());
+
+  // cleanup
+  s = txn1->Commit();
+  ASSERT_TRUE(s.IsOK());
+
+  delete txn1;
+  delete txn2;
+}
+
+void CommonPessimisticTxnTests::TxnExpired() {
+  TransactionOptions txn_options;
+  WriteOptions write_options;
+  Status s;
+
+  txn_options.txn_duration_ms = 2;    // txn will expire after 2ms
+  Transaction* txn = txn_store_->BeginTransaction(write_options, txn_options);
+  // write stage
+  s = txn->Put("foo", "bar");
+  ASSERT_TRUE(s.IsOK());
+
+  // wait 3ms
+  const int SLEEP_DURATION_3MS = 3 * 1000;
+  SystemClock::GetSingleton()->SleepForMicroseconds(SLEEP_DURATION_3MS);
+
+  // preapre failed
+  s = txn->Prepare();
+  ASSERT_TRUE(s.IsExpired());
+
+  // commit failed
+  s = txn->Commit();
+  ASSERT_TRUE(s.IsExpired());
+
+  // cleanup
+  s = txn->Rollback();
+  ASSERT_TRUE(s.IsOK());
 
   delete txn;
 }

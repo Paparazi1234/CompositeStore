@@ -10,13 +10,14 @@
 18 上github
 19 通用P90测试
 24 考虑将Get/Write path上频繁创建的临时堆变量改造为thread local storage（这种TLS实现需要详细考虑）
-26 事务benchmark
+26 事务benchmark (明天)
 40 readme.md：项目介绍
 41 license文件
 43 测试用例适配事务锁（多线程测试）,需要支持GetForUpdate或者SetSnapshot
-44 ASSERT_OK实现
+44 ASSERT_OK实现  (明天)
 45 UBSAN在linux环境下检测到问题，需要解决
-46 Status添加statement字符串
+46 Status添加statement字符串  (明天)
+47 事务在reuse时是否需要保证不持有事务锁（需要添加检查）
 
 TodoList表头：
 

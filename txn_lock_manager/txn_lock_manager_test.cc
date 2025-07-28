@@ -33,6 +33,10 @@ TEST_F(CommonTxnLockManagerTest, LockDowngrade) {
   TestTxnLockManagerFunc(&CommonTxnLockManagerTests::LockDowngrade);
 }
 
+TEST_F(CommonTxnLockManagerTest, LockTimeOut) {
+  TestTxnLockManagerFunc(&CommonTxnLockManagerTests::LockTimeOut);
+}
+
 TEST_F(CommonTxnLockManagerTest, LockConflict) {
   TestTxnLockManagerFunc(&CommonTxnLockManagerTests::LockConflict);
 }

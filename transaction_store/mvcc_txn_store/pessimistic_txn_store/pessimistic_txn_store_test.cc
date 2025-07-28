@@ -96,6 +96,14 @@ TEST_F(CommonPessimisticTxnTest, SingleTxnExcutionFlowTest) {
  TestCommonFunc(&CommonPessimisticTxnTests::SingleTxnExcutionFlowTest);
 }
 
+TEST_F(CommonPessimisticTxnTest, LockTimeOut) {
+ TestCommonFunc(&CommonPessimisticTxnTests::LockTimeOut);
+}
+
+TEST_F(CommonPessimisticTxnTest, TxnExpired) {
+ TestCommonFunc(&CommonPessimisticTxnTests::TxnExpired);
+}
+
 class MultiThreadingPessimisticTxnTest : public testing::Test {
  public:
   MultiThreadingPessimisticTxnTest() {}
