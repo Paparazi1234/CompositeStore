@@ -10,8 +10,8 @@ target_link_libraries(${MVCC_TXN_STORE_SHARED_LIB} ${UTIL_SHARED_LIB})
 
 if(BUILD_TESTS)
   set(MVCC_TXN_STORE_TEST_SOURCES
-          mvcc_txn_store_test.cc
-          pessimistic_txn_store/pessimistic_txn_store_test.cc)
+          pessimistic_txn_store/pessimistic_txn_store_test.cc
+          mvcc_txn_store_test.cc)
 
   foreach(sourcefile ${MVCC_TXN_STORE_TEST_SOURCES})
     get_filename_component(exename ${sourcefile} NAME_WE)
