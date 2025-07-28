@@ -1,7 +1,7 @@
 #pragma once
 
 #include "skiplist_rep.h"
-#include "include/mvcc_write_buffer.h"
+#include "composite_store/mvcc_write_buffer.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

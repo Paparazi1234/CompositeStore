@@ -1,4 +1,4 @@
-#include "include/status.h"
+#include "composite_store/status.h"
 
 #include <assert.h>
 

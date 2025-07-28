@@ -4,11 +4,11 @@
 #include <atomic>
 
 #include "write_queue.h"
-#include "include/transaction_store.h"
-#include "include/multi_versions.h"
-#include "include/txn_lock_manager.h"
-#include "include/staging_write.h"
-#include "include/mvcc_write_buffer.h"
+#include "composite_store/transaction_store.h"
+#include "composite_store/multi_versions.h"
+#include "composite_store/txn_lock_manager.h"
+#include "composite_store/staging_write.h"
+#include "composite_store/mvcc_write_buffer.h"
 #include "util/system_clock.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {

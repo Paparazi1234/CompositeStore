@@ -67,6 +67,7 @@ if(HAVE_PTHREAD_MUTEX_TIMEDLOCK)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 include(cmake/third_party_defines.cmake)

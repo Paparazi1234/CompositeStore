@@ -15,7 +15,7 @@
 #include <functional>
 
 #include "multi_versions/sequence_based/seq_limits.h"
-#include "include/multi_versions.h"
+#include "composite_store/multi_versions.h"
 #include "util/mutex_lock.h"
 #include "port/likely.h"
 

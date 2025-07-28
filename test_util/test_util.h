@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "cartesian_product.h"
-#include "include/transaction_store.h"
+#include "composite_store/transaction_store.h"
 #include "util/system_clock.h"
 #include "util/random.h"
 

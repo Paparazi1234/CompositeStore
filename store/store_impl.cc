@@ -20,7 +20,6 @@ class EmptyMultiVersionsManagerFactory :
 };
 }   // anonymous namespace
 
-
 class MVCCStoreFactory : public StoreFactory {
  public:
   ~MVCCStoreFactory() {}

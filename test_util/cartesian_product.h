@@ -4,7 +4,7 @@
 #include <tuple>
 #include <assert.h>
 
-#include "include/composite_store_namespace.h"
+#include "composite_store/composite_store_namespace.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "include/txn_lock_manager.h"
+#include "composite_store/txn_lock_manager.h"
 #include "third-party/gtest/gtest.h"
 #include "port/port.h"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/transaction_store.h"
+#include "composite_store/transaction_store.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

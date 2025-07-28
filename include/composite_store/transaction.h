@@ -3,7 +3,7 @@
 #include <string>
 
 #include "options.h"
-#include "include/status.h"
+#include "status.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

@@ -16,7 +16,7 @@
 #include <chrono>
 #endif
 
-#include "include/status.h"
+#include "composite_store/status.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

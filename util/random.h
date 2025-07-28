@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <random>
 
-#include "include/composite_store_namespace.h"
+#include "composite_store/composite_store_namespace.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

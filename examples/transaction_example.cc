@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "include/transaction_store.h"
+#include "composite_store/transaction_store.h"
 
 using COMPOSITE_STORE_NAMESPACE::Status;
 using COMPOSITE_STORE_NAMESPACE::TransactionStore;

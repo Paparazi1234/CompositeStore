@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "include/store.h"
+#include "composite_store/store.h"
 
 using COMPOSITE_STORE_NAMESPACE::Status;
 using COMPOSITE_STORE_NAMESPACE::Store;

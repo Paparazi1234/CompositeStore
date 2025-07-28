@@ -3,8 +3,8 @@
 #include <map>
 #include <assert.h>
 
-#include "include/staging_write.h"
-#include "include/format.h"
+#include "composite_store/staging_write.h"
+#include "composite_store/format.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

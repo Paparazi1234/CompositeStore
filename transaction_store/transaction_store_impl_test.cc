@@ -1,4 +1,4 @@
-#include "include/transaction_store.h"
+#include "composite_store/transaction_store.h"
 #include "test_util/test_util.h"
 #include "third-party/gtest/gtest.h"
 

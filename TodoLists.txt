@@ -16,7 +16,7 @@
 43 测试用例适配事务锁（多线程测试）,需要支持GetForUpdate或者SetSnapshot
 44 ASSERT_OK实现  (明天)
 45 UBSAN在linux环境下检测到问题，需要解决(明天)
-
+47 添加源文件检查脚本、代码规范检测、覆盖率检测
 TodoList表头：
 
 event   priority     duration

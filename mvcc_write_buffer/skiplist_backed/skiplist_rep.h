@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "include/format.h"
-#include "include/multi_versions.h"
+#include "composite_store/format.h"
+#include "composite_store/multi_versions.h"
 #include "util/memory_allocator.h"
 #include "third-party/rocksdb/inlineskiplist.h"
 

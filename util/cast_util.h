@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/composite_store_namespace.h"
+#include "composite_store/composite_store_namespace.h"
 #include <assert.h>
 
 namespace COMPOSITE_STORE_NAMESPACE {
