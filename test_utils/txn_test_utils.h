@@ -1,13 +1,8 @@
 #pragma once
 
-#include <assert.h>
-#include <thread>
-#include <unordered_map>
-
-#include "cartesian_product.h"
 #include "composite_store/transaction_store.h"
-#include "util/system_clock.h"
-#include "util/random.h"
+#include "cartesian_product.h"
+#include "test_utils.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 
@@ -57,57 +52,6 @@ class TxnTestSetupsGenerator {
       CartesianProductGenerator4<TxnStoreWritePolicy, bool, bool, std::string>;
   CPGenerator generator_;
   CPGenerator::Iterator iter_;
-};
-
-
-class RandomKeyGenerator {
- public:
-  RandomKeyGenerator() {}
-
-
- private:
-};
-
-enum class GenType : unsigned char {
-  kRandom = 0x0,
-  kMin,
-  kMedian,
-  kMax,
-};
-
-class UIntRange {
- public:
-  UIntRange(uint32_t min, uint32_t max, GenType gen_type)
-      : min_(min), max_(max), gen_type_(gen_type) {
-    assert(min_ <= max_);
-    median_ = (min_ + max_) / 2;
-    interval_ = max_ - min_;
-  }
-  ~UIntRange() {}
-
-  uint32_t Next() {
-    uint32_t res;
-    if (gen_type_ == GenType::kMin) {
-      res = min_;
-    } else if (gen_type_ == GenType::kMedian) {
-      res = median_;
-    } else if (gen_type_ == GenType::kMax) {
-      res = max_;
-    } else {
-      uint32_t rnd_percentage = Random::GetTLSInstance()->Uniform(101);
-      res = (interval_ * rnd_percentage) / 100 + min_;
-      res = std::max(min_, res);
-      res = std::min(max_, res);
-    }
-    return res;
-  }
-
- private:
-  uint32_t min_;
-  uint32_t max_;
-  uint32_t median_;
-  uint32_t interval_;
-  GenType gen_type_;
 };
 
 // cfg for TransactionExecutor

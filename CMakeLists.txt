@@ -94,7 +94,7 @@ endif()
 add_subdirectory(third-party/rocksdb)
 
 if(BUILD_TESTS)
-  add_subdirectory(test_util)
+  add_subdirectory(test_utils)
 endif()
 
 add_subdirectory(multi_versions)

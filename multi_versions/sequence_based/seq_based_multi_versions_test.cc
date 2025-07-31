@@ -3,7 +3,7 @@
 #include "write_prepared/write_prepared_multi_versions.h"
 #include "write_prepared/write_prepared_snapshot.h"
 
-#include "test_util/test_util.h"
+#include "test_utils/txn_test_utils.h"
 #include "third-party/gtest/gtest.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {

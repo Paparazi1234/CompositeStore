@@ -2,7 +2,7 @@
 
 #include "pessimistic_txn_store.h"
 #include "multi_versions/sequence_based/seq_based_multi_versions.h"
-#include "test_util/test_util.h"
+#include "test_utils/txn_test_utils.h"
 #include "third-party/gtest/gtest.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
