@@ -187,7 +187,7 @@ void CommonPessimisticTxnTests::SimpleTransactionalReadWrite() {
   Transaction* txn = txn_store_->BeginTransaction(write_options);
 
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // read txn's own writes
   s = txn->Get(read_options, "foo", &value);
@@ -199,9 +199,9 @@ void CommonPessimisticTxnTests::SimpleTransactionalReadWrite() {
 
   // commit with prepare
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // transactional read
   s = txn->Get(read_options, "foo", &value);
@@ -226,25 +226,25 @@ void CommonPessimisticTxnTests::SimpleNonTransactionalReadWrite() {
 
   // read existence
   s = txn_store_->Put(write_options, "foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn_store_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar");
 
   // read after overwritten
   s = txn_store_->Put(write_options, "foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn_store_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar1");
 
   // read after deletion
   s = txn_store_->Delete(write_options, "foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn_store_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
   // delete non-existence
   s = txn_store_->Delete(write_options, "foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 }
 
 void CommonPessimisticTxnTests::ReadTxnOwnWrites() {
@@ -255,11 +255,11 @@ void CommonPessimisticTxnTests::ReadTxnOwnWrites() {
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // read txn's own writes
   s = txn->Get(read_options, "foo", &value);
@@ -269,12 +269,12 @@ void CommonPessimisticTxnTests::ReadTxnOwnWrites() {
 
   // read txn's own write during write stage
   s = txn->Delete("foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
   s = txn->Put("foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar2");
 
@@ -286,7 +286,7 @@ void CommonPessimisticTxnTests::ReadTxnOwnWrites() {
 
   // cleanup
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   delete txn;
 }
@@ -299,15 +299,15 @@ void CommonPessimisticTxnTests::ReadAfterPrepare() {
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // read after prepare
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // transactional read can see the prepared writes equivalent to read txn's
   // own write
@@ -335,17 +335,17 @@ void CommonPessimisticTxnTests::ReadAfterCommit() {
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // commit with prepare
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // read after commit
   // transactional read can see the committed writes
@@ -362,15 +362,15 @@ void CommonPessimisticTxnTests::ReadAfterCommit() {
 
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo", "bar3");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // commit without prepare
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // read after commit
   // transactional read can see the committed writes
@@ -398,9 +398,9 @@ void CommonPessimisticTxnTests::ReadAfterRollback() {
 
   // first write somthing
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar");
   s = txn_store_->Get(read_options, "foo", &value);
@@ -408,11 +408,11 @@ void CommonPessimisticTxnTests::ReadAfterRollback() {
 
   Transaction* txn1 = txn_store_->BeginTransaction(write_options);
   s = txn1->Delete("foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // rollback without prepare
   s = txn1->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // read after rollback
   s = txn1->Get(read_options, "foo", &value);
@@ -422,15 +422,15 @@ void CommonPessimisticTxnTests::ReadAfterRollback() {
 
   // can reuse txn after rollback without prepare
   s = txn1->Delete("foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn1->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // rollback with prepare
   s = txn1->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn1->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // read after rollback
   s = txn1->Get(read_options, "foo", &value);
@@ -456,17 +456,17 @@ void CommonPessimisticTxnTests::CommitWithPrepare() {
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // commit with prepare
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // transactional read can see the committed writes
   s = txn->Get(read_options, "foo", &value);
@@ -492,15 +492,15 @@ void CommonPessimisticTxnTests::CommitWithoutPrepare() {
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // commit without prepare
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // transactional read can see the committed writes
   s = txn->Get(read_options, "foo", &value);
@@ -527,11 +527,11 @@ void CommonPessimisticTxnTests::RollbackWithPrepare() {
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   // insert something to underlying store initially
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar");
   s = txn->Get(read_options, "foo1", &value);
@@ -540,16 +540,16 @@ void CommonPessimisticTxnTests::RollbackWithPrepare() {
   // start a new round of txn write and rollback it after Prepare()
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // rollback after prepare
   s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // won't read the rollbacked value
   s = txn->Get(read_options, "foo", &value);
@@ -574,11 +574,11 @@ void CommonPessimisticTxnTests::RollbackWithoutPrepare() {
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   // insert something to underlying store initially
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar");
   s = txn->Get(read_options, "foo1", &value);
@@ -587,13 +587,13 @@ void CommonPessimisticTxnTests::RollbackWithoutPrepare() {
   // start a new round of txn write and rollback it during write stage
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // rollback during write stage
   s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // won't read the rollbacked value
   s = txn->Get(read_options, "foo", &value);
@@ -603,9 +603,9 @@ void CommonPessimisticTxnTests::RollbackWithoutPrepare() {
 
   // can reuse txn direct after rollback(without Prepare)
   s = txn->Put("foo2", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo2", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar1");
 
@@ -625,7 +625,7 @@ void CommonPessimisticTxnTests::PrepareEmptyStagingWrite() {
 
   // prepare an empty staging write
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // nothing in txn's own write and store still
   s = txn->Get(read_options, "foo", &value);
@@ -649,9 +649,9 @@ void CommonPessimisticTxnTests::CommitEmptyStagingWrite() {
 
   // commit(with prepare) an empty staging write
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // nothing in txn's own write and store still
   s = txn->Get(read_options, "foo", &value);
@@ -664,7 +664,7 @@ void CommonPessimisticTxnTests::CommitEmptyStagingWrite() {
 
   // commit(without prepare) an empty staging write
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // nothing in txn's own write and store still
   s = txn->Get(read_options, "foo", &value);
@@ -687,7 +687,7 @@ void CommonPessimisticTxnTests::RollbackEmptyStagingWrite() {
 
   // rollback(without prepare) an empty staging write
   s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // nothing in txn's own write and store still
   s = txn->Get(read_options, "foo", &value);
@@ -700,9 +700,9 @@ void CommonPessimisticTxnTests::RollbackEmptyStagingWrite() {
 
   // rollback(with prepare) an empty staging write
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // nothing in txn's own write and store still
   s = txn->Get(read_options, "foo", &value);
@@ -722,27 +722,27 @@ void CommonPessimisticTxnTests::InterleavingPrepareCommitBetweenMultiTxns() {
   Transaction* txn2 = txn_store_->BeginTransaction(write_options);
 
   s = txn0->Put("foo0", "bar0");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn1->Put("foo1", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn2->Put("foo2", "bar2");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // Prepare()
   s = txn0->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn1->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn2->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // Interleave Commit()
   s = txn1->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn2->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn0->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // Verify
   s = txn_store_->Get(read_options, "foo0", &value);
@@ -768,27 +768,27 @@ void CommonPessimisticTxnTests::InterleavingPrepareRollbackBetweenMultiTxns() {
   Transaction* txn2 = txn_store_->BeginTransaction(write_options);
 
   s = txn0->Put("foo0", "bar0");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn1->Put("foo1", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn2->Put("foo2", "bar2");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // Prepare()
   s = txn0->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn1->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn2->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // Interleave Rollback()
   s = txn1->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn2->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn0->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // Verify
   s = txn_store_->Get(read_options, "foo0", &value);
@@ -814,28 +814,28 @@ void CommonPessimisticTxnTests::ReadUnderSnapshot() {
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();  // commit without prepare
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   snapshot1 = txn_store_->TakeSnapshot();   // take a snapshot
 
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();  // commit without prepare
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   snapshot2 = txn_store_->TakeSnapshot();   // take another snapshot
 
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   read_options.snapshot = snapshot1;
   s = txn->Get(read_options, "foo", &value);
   // txn's own write preceding even though a snapshot provided
   ASSERT_TRUE(s.IsOK() && value == "bar2");
 
   s = txn->Commit();  // commit without prepare
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // transactional read
   read_options.snapshot = snapshot1;
@@ -877,26 +877,26 @@ void CommonPessimisticTxnTests::ReuseTransaction() {
 
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Delete("foo1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // reuse transaction
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar1");
@@ -917,11 +917,11 @@ void CommonPessimisticTxnTests::SingleTxnExcutionFlowTest() {
   Transaction* txn = txn_store_->BeginTransaction(write_options);
   // write stage
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   
   // can't write after prepared
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("foo1", "bar");
   ASSERT_TRUE(s.IsInvalidArgument());
 
@@ -931,7 +931,7 @@ void CommonPessimisticTxnTests::SingleTxnExcutionFlowTest() {
 
   // can't write after committed(2PC here)
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Delete("foo");
   ASSERT_TRUE(s.IsInvalidArgument());
   s = txn->Get(read_options, "foo", &value);
@@ -952,35 +952,35 @@ void CommonPessimisticTxnTests::SingleTxnExcutionFlowTest() {
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   // write stage
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // rollback during write stage(equivalent to rollback to savepoint, txn will
   // be in initial state after rollback so act as a newly created txn)
   s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar");
 
   // can write、prepare and commit
   s = txn->Put("foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar2");
 
   txn = txn_store_->BeginTransaction(write_options, txn_options, txn);
   // write stage
   s = txn->Put("foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // rollback after prepared
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // can't write after rollback with prepare executed
   s = txn->Delete("foo1");
@@ -1011,7 +1011,7 @@ void CommonPessimisticTxnTests::LockTimeOut() {
   // key locked by txn1
   Transaction* txn1 = txn_store_->BeginTransaction(write_options);
   s = txn1->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // txn2 try lock for 2ms and timeout failed
   txn_options.lock_timeout_ms = 2;
@@ -1027,7 +1027,7 @@ void CommonPessimisticTxnTests::LockTimeOut() {
 
   // cleanup
   s = txn1->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   delete txn1;
   delete txn2;
@@ -1042,7 +1042,7 @@ void CommonPessimisticTxnTests::TxnExpired() {
   Transaction* txn = txn_store_->BeginTransaction(write_options, txn_options);
   // write stage
   s = txn->Put("foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   // wait 3ms
   const int SLEEP_DURATION_3MS = 3 * 1000;
@@ -1058,7 +1058,7 @@ void CommonPessimisticTxnTests::TxnExpired() {
 
   // cleanup
   s = txn->Rollback();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   delete txn;
 }
@@ -1119,7 +1119,7 @@ void ThreadFuncInsertStoreWrOnly(
   TransactionExecutor executor(txn_store, cfg);
   Status s = executor.InsertStoreWrOnly(target_key_set, num_keys_in_set,
                                         target_increment);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   writer_finished->store(true);
 }
 
@@ -1347,32 +1347,32 @@ void InspectPessimisticTxnTests::VersionIncrement() {
 
   // Write keys in this transaction
   Status s = txn->Put("abc", "def");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("abc1", "def");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("abc2", "def");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = txn->Put("abc3", "def");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   // After write
   CheckSeqInfos((*expected)[1]);
 
   if (with_prepare_) {
     // Prepare transaction
     s = txn->Prepare();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After prepare
     CheckSeqInfos((*expected)[2]);
 
     // Commit transaction after prepare
     s = txn->Commit();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After commit with prepare
     CheckSeqInfos((*expected)[3]);
   } else {
     // Commit transaction
     s = txn->Commit();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After commit without prepare
     CheckSeqInfos((*expected)[2]);
   }
@@ -1408,7 +1408,7 @@ void InspectPessimisticTxnTests::
 
   // prepare an empty staging write
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   // After prepare
   CheckSeqInfos((*expected)[1]);
 
@@ -1451,19 +1451,19 @@ void InspectPessimisticTxnTests::
   if (with_prepare_) {
     // Prepare transaction
     s = txn->Prepare();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After prepare
     CheckSeqInfos((*expected)[1]);
 
     // Commit transaction after prepare
     s = txn->Commit();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After commit with prepare
     CheckSeqInfos((*expected)[2]);
   } else {
     // Commit transaction
     s = txn->Commit();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After commit without prepare
     CheckSeqInfos((*expected)[1]);
   }
@@ -1506,19 +1506,19 @@ void InspectPessimisticTxnTests::
   if (with_prepare_) {
     // Prepare transaction
     s = txn->Prepare();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After prepare
     CheckSeqInfos((*expected)[1]);
 
     // Rollback transaction after prepare
     s = txn->Rollback();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After rollback with prepare
     CheckSeqInfos((*expected)[2]);
   } else {
     // Rollback transaction
     s = txn->Rollback();
-    ASSERT_TRUE(s.IsOK());
+    ASSERT_OK(s);
     // After rollback without prepare
     CheckSeqInfos((*expected)[1]);
   }
@@ -1541,11 +1541,11 @@ void InspectPessimisticTxnTests::
   ASSERT_TRUE(txn != nullptr);
 
   Status s = txn->Put(key, value);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(txn_store_impl_->RawDataSize(), 0ull);
 
   s = txn->Prepare();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   // write prepared txn insert data to store during Prepare()
   if (write_policy_ == TxnStoreWritePolicy::kWritePrepared) {
     ASSERT_EQ(txn_store_impl_->RawDataSize(), expected_raw_data_size);
@@ -1555,7 +1555,7 @@ void InspectPessimisticTxnTests::
   }
 
   s = txn->Commit();
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(txn_store_impl_->RawDataSize(), expected_raw_data_size);
 
   delete txn;

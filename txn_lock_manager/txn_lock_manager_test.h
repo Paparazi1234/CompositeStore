@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include "composite_store/txn_lock_manager.h"
+#include "test_utils/test_utils.h"
 #include "third-party/gtest/gtest.h"
 #include "port/port.h"
 
@@ -64,9 +65,9 @@ void CommonTxnLockManagerTests::ReentrantExclusiveLock() {
       lock_manager_factory_->CreateTxnLockManager(SystemClock::GetSingleton());
 
   Status s = lock_manager->TryLock(txn_id, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // cleanup
@@ -82,9 +83,9 @@ void CommonTxnLockManagerTests::ReentrantSharedLock() {
       lock_manager_factory_->CreateTxnLockManager(SystemClock::GetSingleton());
 
   Status s = lock_manager->TryLock(txn_id, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // cleanup
@@ -102,9 +103,9 @@ void CommonTxnLockManagerTests::LockUpgrade() {
 
   // first shared by txn1 and txn2
   Status s = lock_manager->TryLock(txn_id1, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id2, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // upgrade by txn1 failed
@@ -118,7 +119,7 @@ void CommonTxnLockManagerTests::LockUpgrade() {
 
   // upgraded by txn1 succeed
   s = lock_manager->TryLock(txn_id1, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // txn2 re-lock failed
@@ -143,7 +144,7 @@ void CommonTxnLockManagerTests::LockDowngrade() {
 
   // first exclusive locked by txn1
   Status s = lock_manager->TryLock(txn_id1, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // txn2 lock failed
@@ -155,12 +156,12 @@ void CommonTxnLockManagerTests::LockDowngrade() {
 
   // downgraded by txn1
   s = lock_manager->TryLock(txn_id1, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // txn2 shared succeed
   s = lock_manager->TryLock(txn_id2, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // cleanup
@@ -181,7 +182,7 @@ void CommonTxnLockManagerTests::LockTimeOut() {
   
   // first exclusive locked by txn1
   Status s = lock_manager->TryLock(txn_id1, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // txn2 try lock for 3ms and timeout failed
@@ -195,7 +196,7 @@ void CommonTxnLockManagerTests::LockTimeOut() {
 
   // txn1 downgrades lock
   s = lock_manager->TryLock(txn_id1, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // txn2 try exclusively lock for 3ms and timeout failed
@@ -218,21 +219,21 @@ void CommonTxnLockManagerTests::LockConflict() {
 
   // exclusive-exclusive conflict.
   Status s = lock_manager->TryLock(txn_id1, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id2, "foo", true, TIMEOUT_TIME_3MS);
   ASSERT_TRUE(s.IsTimedOut());
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // exclusive-shared conflict.
   s = lock_manager->TryLock(txn_id1, "foo1", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id2, "foo1", false, TIMEOUT_TIME_3MS);
   ASSERT_TRUE(s.IsTimedOut());
   ASSERT_EQ(lock_manager->NumLocks(), 2ull);
 
   // shared-exclusive conflict.
   s = lock_manager->TryLock(txn_id1, "foo2", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id2, "foo2", true, TIMEOUT_TIME_3MS);
   ASSERT_TRUE(s.IsTimedOut());
   ASSERT_EQ(lock_manager->NumLocks(), 3ull);
@@ -257,9 +258,9 @@ void CommonTxnLockManagerTests::SharedLocks() {
       lock_manager_factory_->CreateTxnLockManager(SystemClock::GetSingleton());
 
   Status s = lock_manager->TryLock(txn_id1, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id2, "foo", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_EQ(lock_manager->NumLocks(), 1ull);
 
   // cleanup
@@ -285,26 +286,26 @@ void CommonTxnLockManagerTests::UnlockKeyTracker() {
   TxnLockTracker* lock_tracker2 = lock_tracker_factory_->CreateTxnLockTracker();
 
   Status s = lock_manager->TryLock(txn_id1, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   lock_tracker1->TrackKey("foo", true);
   s = lock_manager->TryLock(txn_id2, "bar", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   lock_tracker2->TrackKey("bar", true);
   ASSERT_EQ(lock_manager->NumLocks(), 2ull);
 
   s = lock_manager->TryLock(txn_id1, "foo1", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   lock_tracker1->TrackKey("foo1", false);
   s = lock_manager->TryLock(txn_id2, "foo1", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   lock_tracker2->TrackKey("foo1", false);
   ASSERT_EQ(lock_manager->NumLocks(), 3ull);
 
   s = lock_manager->TryLock(txn_id1, "foo2", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   lock_tracker1->TrackKey("foo2", true);
   s = lock_manager->TryLock(txn_id2, "bar2", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   lock_tracker2->TrackKey("bar2", true);
   ASSERT_EQ(lock_manager->NumLocks(), 5ull);
 
@@ -326,9 +327,9 @@ void CommonTxnLockManagerTests::ExceedNumLocksLimit() {
       SystemClock::GetSingleton(), NUM_LOCKS_LIMIT);
 
   Status s = lock_manager->TryLock(txn_id, "foo", true, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = lock_manager->TryLock(txn_id, "foo1", false, WONT_TIMEOUE);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   s = lock_manager->TryLock(txn_id, "foo2", true, TIMEOUT_TIME_3MS);
   ASSERT_TRUE(s.IsBusy());
@@ -348,7 +349,7 @@ void CommonTxnLockManagerTests::ExceedNumLocksLimit() {
 void LockFunc(TxnLockManager* lock_manager, uint64_t txn_id,
               const std::string& key, int64_t timeout_time_ms){
   Status s = lock_manager->TryLock(txn_id, key, true, timeout_time_ms);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 
   SystemClock::GetSingleton()->SleepForMicroseconds(100);
 

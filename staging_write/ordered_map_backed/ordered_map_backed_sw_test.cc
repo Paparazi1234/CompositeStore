@@ -1,4 +1,6 @@
 #include "ordered_map_backed_sw.h"
+
+#include "test_utils/test_utils.h"
 #include "third-party/gtest/gtest.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
@@ -107,7 +109,7 @@ TEST_F(OrderedMapBackedStagingWriteTest, IterateThroughStagingWrite) {
   OrderedMapBackedStagingWrite empty_sw;
   DumpStagingWriteHandler empty_sw_handler;
   Status s = empty_sw.Iterate(&empty_sw_handler);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_STREQ("", empty_sw_handler.GetDumpString().c_str());
 
   OrderedMapBackedStagingWrite sw;
@@ -130,7 +132,7 @@ TEST_F(OrderedMapBackedStagingWriteTest, IterateThroughStagingWrite) {
     "{key: foo5,\ttype: Put\tvalue: bar}";
   DumpStagingWriteHandler sw_handler;
   s = sw.Iterate(&sw_handler);
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   ASSERT_STREQ(expected.c_str(), sw_handler.GetDumpString().c_str());
 }
 

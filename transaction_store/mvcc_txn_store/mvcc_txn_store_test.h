@@ -58,25 +58,25 @@ void MVCCTxnStoreTests::SimpleReadWrite() {
 
   // read existence
   s = store_ptr_->Put(write_options, "foo", "bar");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar");
 
   // read after overwritten
   s = store_ptr_->Put(write_options, "foo", "bar1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar1");
 
   // read after deletion
   s = store_ptr_->Delete(write_options, "foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsNotFound());
 
   // delete non-existence
   s = store_ptr_->Delete(write_options, "foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
 }
 
 void MVCCTxnStoreTests::MultiKeysInterleavedManipulation() {
@@ -86,23 +86,23 @@ void MVCCTxnStoreTests::MultiKeysInterleavedManipulation() {
   Status s;
   // multi keys interleaved manipulation
   s = store_ptr_->Put(write_options, "foo", "bar2");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Put(write_options, "foo1", "bar3");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Delete(write_options, "foo");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Put(write_options, "foo", "bar4");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Put(write_options, "foo", "bar5");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Delete(write_options, "foo1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Delete(write_options, "foo1");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Put(write_options, "foo1", "bar6");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Put(write_options, "foo1", "bar6");
-  ASSERT_TRUE(s.IsOK());
+  ASSERT_OK(s);
   s = store_ptr_->Get(read_options, "foo", &value);
   ASSERT_TRUE(s.IsOK() && value == "bar5");
   s = store_ptr_->Get(read_options, "foo1", &value);

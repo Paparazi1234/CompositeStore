@@ -6,7 +6,9 @@ namespace COMPOSITE_STORE_NAMESPACE {
   if (s.IsOK()) {
     return ::testing::AssertionSuccess();
   } else {
-    return ::testing::AssertionFailure() << s_expr << std::endl << s.ToString();
+    return ::testing::AssertionFailure() << "Expected: " << s_expr << " is OK"
+                                         << std::endl << "Actual: it's "
+                                         << s.ToString();
   }
 }
 
