@@ -4,7 +4,7 @@
 
 #include "composite_store/format.h"
 #include "composite_store/multi_versions.h"
-#include "util/memory_allocator.h"
+#include "utils/memory_allocator.h"
 #include "third-party/rocksdb/inlineskiplist.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {

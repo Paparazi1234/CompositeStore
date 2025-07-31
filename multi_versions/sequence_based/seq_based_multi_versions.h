@@ -4,7 +4,7 @@
 #include <assert.h>
 
 #include "composite_store/multi_versions.h"
-#include "util/cast_util.h"
+#include "utils/cast_util.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

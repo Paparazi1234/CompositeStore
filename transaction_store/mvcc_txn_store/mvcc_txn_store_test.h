@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mvcc_txn_store.h"
-#include "util/cast_util.h"
+#include "utils/cast_util.h"
 #include "test_utils/txn_test_utils.h"
 #include "third-party/gtest/gtest.h"
 

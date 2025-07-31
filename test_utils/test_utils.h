@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "composite_store/status.h"
-#include "util/random.h"
+#include "utils/random.h"
 #include "third-party/gtest/gtest.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {

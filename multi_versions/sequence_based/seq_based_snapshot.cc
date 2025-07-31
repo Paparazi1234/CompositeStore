@@ -1,7 +1,7 @@
 #include "seq_based_snapshot.h"
 
 #include "seq_limits.h"
-#include "util/mutex_lock.h"
+#include "utils/mutex_lock.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

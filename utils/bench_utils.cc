@@ -1,4 +1,4 @@
-#include "bench_util.h"
+#include "bench_utils.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

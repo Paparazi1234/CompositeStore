@@ -1,7 +1,7 @@
 #include "write_prepared_snapshot.h"
 
-#include "util/cast_util.h"
-#include "util/mutex_lock.h"
+#include "utils/cast_util.h"
+#include "utils/mutex_lock.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

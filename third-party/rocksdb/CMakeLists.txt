@@ -3,4 +3,4 @@ set(ROCKSDB_SOURCES
         slice.cc)
 
 add_library(${ROCKSDB_SHARED_LIB} SHARED ${ROCKSDB_SOURCES})
-target_link_libraries(${ROCKSDB_SHARED_LIB} ${UTIL_SHARED_LIB})
+target_link_libraries(${ROCKSDB_SHARED_LIB} ${UTILS_SHARED_LIB})

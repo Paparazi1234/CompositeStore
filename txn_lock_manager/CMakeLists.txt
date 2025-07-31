@@ -4,7 +4,7 @@ set(TXN_LOCK_MANAGER_SOURCES
         txn_lock_manager_impl.cc)
 
 add_library(${TXN_LOCK_MANAGER_SHARED_LIB} SHARED ${TXN_LOCK_MANAGER_SOURCES})
-target_link_libraries(${TXN_LOCK_MANAGER_SHARED_LIB} ${UTIL_SHARED_LIB})
+target_link_libraries(${TXN_LOCK_MANAGER_SHARED_LIB} ${UTILS_SHARED_LIB})
 
 if(BUILD_TESTS)
   set(TXN_LOCK_MANAGER_TEST_SOURCES

@@ -2,7 +2,7 @@
 
 #include "transaction/mvcc_transaction/mvcc_transaction.h"
 #include "transaction_store/mvcc_txn_store/pessimistic_txn_store/pessimistic_txn_store.h"
-#include "util/cast_util.h"
+#include "utils/cast_util.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

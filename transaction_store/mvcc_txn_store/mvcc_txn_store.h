@@ -9,7 +9,7 @@
 #include "composite_store/txn_lock_manager.h"
 #include "composite_store/staging_write.h"
 #include "composite_store/mvcc_write_buffer.h"
-#include "util/system_clock.h"
+#include "utils/system_clock.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

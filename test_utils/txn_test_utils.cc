@@ -1,6 +1,6 @@
 #include "txn_test_utils.h"
 
-#include "util/system_clock.h"
+#include "utils/system_clock.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

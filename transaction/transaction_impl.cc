@@ -1,7 +1,7 @@
 #include "mvcc_transaction/pessimistic_transaction/write_committed_transaction.h"
 #include "mvcc_transaction/pessimistic_transaction/write_prepared_transaction.h"
 
-#include "util/cast_util.h"
+#include "utils/cast_util.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
 

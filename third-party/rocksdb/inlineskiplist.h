@@ -53,7 +53,7 @@
 #include "coding.h"
 #include "port/likely.h"
 #include "port/prefetch.h"
-#include "util/random.h"
+#include "utils/random.h"
 namespace ROCKSDB_NAMESPACE {
 
 class KeyComparator {

@@ -82,7 +82,7 @@ include(cmake/pluggables_defines.cmake)
 
 add_subdirectory(port)
 
-add_subdirectory(util)
+add_subdirectory(utils)
 
 # if need to build test, then build gtest first
 option(BUILD_TESTS "build with tests" ON)

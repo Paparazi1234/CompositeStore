@@ -16,7 +16,7 @@
 
 #include "multi_versions/sequence_based/seq_limits.h"
 #include "composite_store/multi_versions.h"
-#include "util/mutex_lock.h"
+#include "utils/mutex_lock.h"
 #include "port/likely.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {

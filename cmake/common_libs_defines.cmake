@@ -4,7 +4,7 @@
 set(PORT_SHARED_LIB port-shared)
 
 # util lib building name
-set(UTIL_SHARED_LIB util-shared)
+set(UTILS_SHARED_LIB utils-shared)
 
 # test util lib building name
 set(TEST_UTILS_SHARED_LIB test_utils-shared)

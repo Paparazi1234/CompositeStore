@@ -6,7 +6,7 @@ set(MVCC_TXN_STORE_SOURCES
         pessimistic_txn_store/write_prepared_txn_store.cc)
 
 add_library(${MVCC_TXN_STORE_SHARED_LIB} SHARED ${MVCC_TXN_STORE_SOURCES})
-target_link_libraries(${MVCC_TXN_STORE_SHARED_LIB} ${UTIL_SHARED_LIB})
+target_link_libraries(${MVCC_TXN_STORE_SHARED_LIB} ${UTILS_SHARED_LIB})
 
 if(BUILD_TESTS)
   set(MVCC_TXN_STORE_TEST_SOURCES

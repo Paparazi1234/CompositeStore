@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <functional>
 
-#include "util/system_clock.h"
+#include "utils/system_clock.h"
 #include "port/port.h"
 
 namespace COMPOSITE_STORE_NAMESPACE {
