@@ -7,12 +7,9 @@
   2 Commit cache满发生evict
   3 commit table多线程测试
   4 commit table内部各组件的单独测试（包含每个组件的多线程并发测试）
-18 上github
-19 通用P90测试
+18 上github (明天)
 24 考虑将Get/Write path上频繁创建的临时堆变量改造为thread local storage（这种TLS实现需要详细考虑）
-26 事务benchmark (明天)
-40 readme.md：项目介绍
-41 license文件
+26 事务benchmark
 43 测试用例适配事务锁（多线程测试）,需要支持GetForUpdate或者SetSnapshot
 45 UBSAN在linux环境下检测到问题，需要解决(明天)
 
