@@ -2,9 +2,11 @@
 
 build_dir=`pwd`/build
 bin_dir=$build_dir/bin
+coverage_dir=`pwd`/coverage
 
 function cleanup_build_dir() {
   rm -rf $build_dir
+  rm -rf "$coverage_dir/COVERAGE_REPORT"
 }
 
 function clear_build_dir() {
@@ -14,7 +16,7 @@ function clear_build_dir() {
 
 function build_src() {
   cd $build_dir
-  cmake $1 -DBUILD_DIR="$build_dir" ..
+  cmake $1 ..
   make -j8
   cd -
 }
@@ -38,33 +40,47 @@ function run_all() {
   cd -
 }
 
+function generate_coverage_report() {
+  cd $coverage_dir
+  ./test_coverage.sh
+  cd -
+}
+
 cleanup_only="false"
 brand_new_build="false"
 build_only="false"
 build_with_san="non"
+test_coverage="false"
 run_target="all"
 
-while getopts "cbos:e:" opt; do
+while getopts "cbos:te:" opt; do
   case $opt in
     c) cleanup_only="true";;
     b) brand_new_build="true";;
     o) build_only="true";;
     s) build_with_san=$OPTARG;;
+    t) test_coverage="true";;
     e) run_target=$OPTARG;;
     \?) exit 1;;
   esac
 done
 
-cmake_san_opt=""
+cmake_opts="-DBUILD_DIR=$build_dir"
 if [ "$build_with_san" = "asan" ] || [ "$build_with_san" = "ASAN" ]; then
-  cmake_san_opt="-DWITH_ASAN=ON"
+  cmake_opts=" -DWITH_ASAN=ON"
   brand_new_build="true"
 elif [ "$build_with_san" = "tsan" ] || [ "$build_with_san" = "TSAN" ]; then
-  cmake_san_opt="-DWITH_TSAN=ON"
+  cmake_opts=" -DWITH_TSAN=ON"
   brand_new_build="true"
 elif [ "$build_with_san" = "ubsan" ] || [ "$build_with_san" = "UBSAN" ]; then
-  cmake_san_opt="-DWITH_UBSAN=ON"
+  cmake_opts=" -DWITH_UBSAN=ON"
   brand_new_build="true"
+fi
+
+if [ "$test_coverage" = "true" ]; then
+  cmake_opts="$cmake_opts -DTEST_COVERAGE=ON"
+  brand_new_build="true"
+  run_target="all"
 fi
 
 # cleanup build dir only
@@ -75,16 +91,17 @@ if [ "$cleanup_only" = "true" ]; then
 fi
 
 # build
-if [ "$brand_new_build" = "true" ]; then
+if [ "$brand_new_build" = "true" ] || ! [ -d "$build_dir" ]; then
   printf "Brand new build\n"
   clear_build_dir
 else
   printf "Not brand new build\n"
 fi
-build_src $cmake_san_opt
+build_src "$cmake_opts"
 
 # no need to run
 if [ "$build_only" = "true" ]; then
+  printf "Build only\n"
   exit 0
 fi
 
@@ -93,4 +110,10 @@ if [ "$run_target" = "all" ]; then
   run_all
 else
   run_one $run_target
+fi
+
+# generate coverage report(if needed) after run
+if [ "$test_coverage" = "true" ]; then
+  printf "\n\e[35m\e[1mGenerating coverage report...\e[0m\n"
+  generate_coverage_report
 fi
