@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "composite_store/transaction_store.h"
 #include "cartesian_product.h"
 #include "test_utils.h"

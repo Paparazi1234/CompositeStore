@@ -1,5 +1,6 @@
 #include "memory_allocator.h"
 
+#include <stdint.h>
 #include <assert.h>
 
 namespace COMPOSITE_STORE_NAMESPACE {
